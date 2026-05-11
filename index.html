@@ -80,6 +80,12 @@
   .diff-btn.normal {background:#1d4ed8;color:#fff;}
   .diff-btn.dificil{background:#991b1b;color:#fff;}
   .diff-btn.active {border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.5);}
+  .lang-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  .lang-btn{min-width:118px;padding:12px 14px;font-size:8px;font-family:'Press Start 2P',monospace;
+    border-radius:10px;border:2px solid rgba(78,205,196,.25);cursor:pointer;
+    background:rgba(20,30,55,.82);color:#c8dde8;line-height:1.8;
+    transition:transform .12s,border-color .15s,box-shadow .15s;}
+  .lang-btn:hover{transform:translateY(-2px);border-color:#4ecdc4;box-shadow:0 8px 28px rgba(78,205,196,.25);}
   .credits{font-size:6px;color:#3a4a5a;letter-spacing:.3px;margin-top:4px;line-height:2;}
 
   /* ── CHARACTER SELECT ── */
@@ -107,15 +113,15 @@
   <canvas id="c" width="800" height="450"></canvas>
   <div id="overlay">
     <div class="ocard" id="menuCard">
-      <h1>🦕 DinoGame</h1>
+      <h1>🌎 DinoGame</h1>
       <div class="divider"></div>
-      <p class="sub">Colete os ovos 🥚 · Elimine inimigos · Atravesse o portal</p>
-      <div class="khint">
-        <b>↑ W Espaço</b> — Pular (duplo) &nbsp;·&nbsp; <b>↓ S</b> — Agachar<br>
-        <b>← A</b> — Voltar &nbsp;·&nbsp; <b>→ D</b> — Avançar<br>
-        <b style="color:#fb923c">Z / X</b> — 🔥 Fogo (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Clava (Caveman)
+      <h2>Escolha o idioma</h2>
+      <p class="sub">Choose language · Elige idioma</p>
+      <div class="lang-row">
+        <button class="lang-btn" onclick="setLanguage('pt')">🇧🇷<br>Português</button>
+        <button class="lang-btn" onclick="setLanguage('en')">🇺🇸<br>English</button>
+        <button class="lang-btn" onclick="setLanguage('es')">🇪🇸<br>Español</button>
       </div>
-      <button class="btn" onclick="showCharSelect()">▶ Jogar</button>
       <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>
     </div>
   </div>
@@ -147,6 +153,59 @@ let difficulty = 'normal'; // 'facil' | 'normal' | 'dificil'
 let phaseFramesLeft = 0;
 let paused = false;
 let cutsceneTimer = 0;
+let currentLang = localStorage.getItem('dinogame_lang') || 'pt';
+
+const I18N = {
+  pt: {
+    play:'Jogar', back:'Voltar', start:'Começar', continue:'Continuar', nextPhase:'Próxima Fase', newGame:'Novo Jogo', playAgain:'Jogar Novamente',
+    tagline:'Colete os ovos 🥚 · Elimine inimigos · Atravesse o portal',
+    controls1:'<b>↑ W Espaço</b> — Pular (duplo) &nbsp;·&nbsp; <b>↓ S</b> — Agachar',
+    controls2:'<b>← A</b> — Voltar &nbsp;·&nbsp; <b>→ D</b> — Avançar',
+    controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fogo (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Clava (Caveman)',
+    chooseCharacter:'Escolha seu personagem', agile:'Ágil · Pulo duplo', fire:'fogo', robust:'Robusto · Clava', attack:'atacar',
+    difficulty:'DIFICULDADE', easy:'🌿 FÁCIL', normal:'⚔ NORMAL', hard:'💀 DIFÍCIL',
+    gameOver:'💀 Game Over', betterLuck:'Melhor sorte na próxima!', youDied:'☠ Você morreu!', livesLeft:'Vidas restantes',
+    phaseComplete:p=>`✅ Fase ${p} Completa!`, timeBonus:(s,b)=>`Tempo restante: ${s}s · Bônus: +${b} pts`,
+    paused:'PAUSADO', pauseHint:'Pressione P ou clique ⏸ para continuar',
+    quitTitle:'Sair para o menu principal?', quitBody:'O progresso será perdido.', language:'Idioma',
+    phaseHud:'FASE', ptsHud:'PTS', enter:'ENTRAR', collectEggs:'COLETE OS OVOS',
+    win:'VOCÊ VENCEU!', hatching:'os ovos estão nascendo...', finalScore:s=>`PONTUAÇÃO FINAL: ${s} pts`,
+  },
+  en: {
+    play:'Play', back:'Back', start:'Start', continue:'Continue', nextPhase:'Next Phase', newGame:'New Game', playAgain:'Play Again',
+    tagline:'Collect eggs 🥚 · Defeat enemies · Cross the portal',
+    controls1:'<b>↑ W Space</b> — Jump (double) &nbsp;·&nbsp; <b>↓ S</b> — Duck',
+    controls2:'<b>← A</b> — Move left &nbsp;·&nbsp; <b>→ D</b> — Move right',
+    controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fire (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Club (Caveman)',
+    chooseCharacter:'Choose your character', agile:'Agile · Double jump', fire:'fire', robust:'Strong · Club', attack:'attack',
+    difficulty:'DIFFICULTY', easy:'🌿 EASY', normal:'⚔ NORMAL', hard:'💀 HARD',
+    gameOver:'💀 Game Over', betterLuck:'Better luck next time!', youDied:'☠ You died!', livesLeft:'Lives left',
+    phaseComplete:p=>`✅ Phase ${p} Complete!`, timeBonus:(s,b)=>`Time left: ${s}s · Bonus: +${b} pts`,
+    paused:'PAUSED', pauseHint:'Press P or click ⏸ to continue',
+    quitTitle:'Exit to main menu?', quitBody:'Progress will be lost.', language:'Language',
+    phaseHud:'PHASE', ptsHud:'PTS', enter:'ENTER', collectEggs:'COLLECT EGGS',
+    win:'YOU WON!', hatching:'the eggs are hatching...', finalScore:s=>`FINAL SCORE: ${s} pts`,
+  },
+  es: {
+    play:'Jugar', back:'Volver', start:'Empezar', continue:'Continuar', nextPhase:'Siguiente Fase', newGame:'Nuevo Juego', playAgain:'Jugar de Nuevo',
+    tagline:'Recoge huevos 🥚 · Elimina enemigos · Cruza el portal',
+    controls1:'<b>↑ W Espacio</b> — Saltar (doble) &nbsp;·&nbsp; <b>↓ S</b> — Agacharse',
+    controls2:'<b>← A</b> — Volver &nbsp;·&nbsp; <b>→ D</b> — Avanzar',
+    controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fuego (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Garrote (Caveman)',
+    chooseCharacter:'Elige tu personaje', agile:'Ágil · Doble salto', fire:'fuego', robust:'Fuerte · Garrote', attack:'atacar',
+    difficulty:'DIFICULTAD', easy:'🌿 FÁCIL', normal:'⚔ NORMAL', hard:'💀 DIFÍCIL',
+    gameOver:'💀 Game Over', betterLuck:'¡Mejor suerte la próxima!', youDied:'☠ ¡Has muerto!', livesLeft:'Vidas restantes',
+    phaseComplete:p=>`✅ Fase ${p} Completa!`, timeBonus:(s,b)=>`Tiempo restante: ${s}s · Bono: +${b} pts`,
+    paused:'PAUSADO', pauseHint:'Presiona P o haz clic en ⏸ para continuar',
+    quitTitle:'¿Salir al menú principal?', quitBody:'Se perderá el progreso.', language:'Idioma',
+    phaseHud:'FASE', ptsHud:'PTS', enter:'ENTRAR', collectEggs:'RECOGE LOS HUEVOS',
+    win:'¡GANASTE!', hatching:'los huevos están naciendo...', finalScore:s=>`PUNTUACIÓN FINAL: ${s} pts`,
+  },
+};
+function tr(key,...args){
+  const value = (I18N[currentLang] || I18N.pt)[key] ?? I18N.pt[key] ?? key;
+  return typeof value === 'function' ? value(...args) : value;
+}
 
 // ── NEW FEATURE STATE ──────────────────────────────────────────────────────────
 let phaseCoins = []; let totalCoins = 0;
@@ -604,6 +663,51 @@ function generatePhase(p){
 }
 
 // ─── GAME FLOW ────────────────────────────────────────────────────────────────
+function showLanguageSelect(){
+  const ov = document.getElementById('overlay');
+  ov.classList.remove('win-mode');
+  ov.style.display = 'flex';
+  ov.innerHTML = `<div class="ocard" id="menuCard">
+    <h1>🌎 DinoGame</h1>
+    <div class="divider"></div>
+    <h2>Escolha o idioma</h2>
+    <p class="sub">Choose language · Elige idioma</p>
+    <div class="lang-row">
+      <button class="lang-btn" onclick="setLanguage('pt')">🇧🇷<br>Português</button>
+      <button class="lang-btn" onclick="setLanguage('en')">🇺🇸<br>English</button>
+      <button class="lang-btn" onclick="setLanguage('es')">🇪🇸<br>Español</button>
+    </div>
+    <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>
+  </div>`;
+  state = 'menu';
+}
+
+function setLanguage(lang){
+  currentLang = lang;
+  localStorage.setItem('dinogame_lang', lang);
+  renderMainMenu();
+}
+
+function renderMainMenu(){
+  const ov = document.getElementById('overlay');
+  ov.classList.remove('win-mode');
+  ov.style.display = 'flex';
+  ov.innerHTML = `<div class="ocard" id="menuCard">
+    <h1>🦕 DinoGame</h1>
+    <div class="divider"></div>
+    <p class="sub">${tr('tagline')}</p>
+    <div class="khint">
+      ${tr('controls1')}<br>
+      ${tr('controls2')}<br>
+      ${tr('controls3')}
+    </div>
+    <button class="btn" onclick="showCharSelect()">▶ ${tr('play')}</button>
+    <button class="btn sec" onclick="showLanguageSelect()" style="font-size:7px;padding:8px 18px;">🌎 ${tr('language')}</button>
+    <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>
+  </div>`;
+  state = 'menu';
+}
+
 function selectDifficulty(d){
   difficulty = d;
   document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
@@ -614,30 +718,30 @@ function showCharSelect(){
   const ov = document.getElementById('overlay');
   ov.innerHTML = `
   <div class="ocard">
-    <h2>Escolha seu personagem</h2>
+    <h2>${tr('chooseCharacter')}</h2>
     <div class="divider"></div>
     <div class="char-row">
       <div class="char-card selected" id="cc-dino" onclick="selectChar('dino')">
         <canvas id="prev-dino" width="90" height="90"></canvas>
         <span class="char-name">DINOSSAURO</span>
-        <span class="char-desc">Ágil · Pulo duplo<br><b style="color:#fb923c">Z/X</b> = fogo 🔥</span>
+        <span class="char-desc">${tr('agile')}<br><b style="color:#fb923c">Z/X</b> = ${tr('fire')} 🔥</span>
       </div>
       <div class="char-card" id="cc-caveman" onclick="selectChar('caveman')">
         <canvas id="prev-caveman" width="90" height="90"></canvas>
         <span class="char-name">CAVEMAN</span>
-        <span class="char-desc">Robusto · Clava<br><b style="color:#ffe66d">Z/X</b> = atacar</span>
+        <span class="char-desc">${tr('robust')}<br><b style="color:#ffe66d">Z/X</b> = ${tr('attack')}</span>
       </div>
     </div>
     <div class="divider"></div>
-    <p class="sub" style="margin-bottom:4px">DIFICULDADE</p>
+    <p class="sub" style="margin-bottom:4px">${tr('difficulty')}</p>
     <div class="diff-row">
-      <button class="diff-btn facil"   onclick="selectDifficulty('facil')">🌿 FÁCIL</button>
-      <button class="diff-btn normal active" onclick="selectDifficulty('normal')">⚔ NORMAL</button>
-      <button class="diff-btn dificil" onclick="selectDifficulty('dificil')">💀 DIFÍCIL</button>
+      <button class="diff-btn facil"   onclick="selectDifficulty('facil')">${tr('easy')}</button>
+      <button class="diff-btn normal active" onclick="selectDifficulty('normal')">${tr('normal')}</button>
+      <button class="diff-btn dificil" onclick="selectDifficulty('dificil')">${tr('hard')}</button>
     </div>
     <div class="divider"></div>
-    <button class="btn" onclick="startGame()">▶ Começar</button>
-    <button class="btn sec" onclick="backToMenu()" style="font-size:7px;padding:8px 18px;">← Voltar</button>
+    <button class="btn" onclick="startGame()">▶ ${tr('start')}</button>
+    <button class="btn sec" onclick="backToMenu()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
   </div>`;
   ov.style.display = 'flex';
   // reset to current difficulty selection
@@ -672,19 +776,7 @@ function selectChar(ch){
 }
 
 function backToMenu(){
-  const ov = document.getElementById('overlay');
-  ov.innerHTML = `<div class="ocard" id="menuCard">
-    <h1>🦕 DinoGame</h1>
-    <div class="divider"></div>
-    <p class="sub">Colete os ovos 🥚 · Elimine inimigos · Atravesse o portal</p>
-    <div class="khint">
-      <b>↑ W Espaço</b> — Pular (duplo) &nbsp;·&nbsp; <b>↓ S</b> — Agachar<br>
-      <b>← A</b> — Voltar &nbsp;·&nbsp; <b>→ D</b> — Avançar
-    </div>
-    <button class="btn" onclick="showCharSelect()">▶ Jogar</button>
-    <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>
-  </div>`;
-  state = 'menu';
+  renderMainMenu();
 }
 
 function startGame(){
@@ -742,32 +834,32 @@ function showOverlay(type){
   ov.classList.remove('win-mode');
   const hearts = '♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,3-lives));
   if(type==='gameover'){
-    ov.innerHTML=card(`<h2>💀 Game Over</h2><div class="divider"></div>
-      <p class="sub">Melhor sorte na próxima!</p>
+    ov.innerHTML=card(`<h2>${tr('gameOver')}</h2><div class="divider"></div>
+      <p class="sub">${tr('betterLuck')}</p>
       <span class="score-big">${score} pts</span>
-      <button class="btn" onclick="showCharSelect()">▶ Novo Jogo</button>
+      <button class="btn" onclick="showCharSelect()">▶ ${tr('newGame')}</button>
       <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>`);
     state='dead';
   } else if(type==='dead'){
-    ov.innerHTML=card(`<h2>☠ Você morreu!</h2><div class="divider"></div>
-      <p class="sub">Vidas restantes</p>
+    ov.innerHTML=card(`<h2>${tr('youDied')}</h2><div class="divider"></div>
+      <p class="sub">${tr('livesLeft')}</p>
       <span style="font-size:18px;letter-spacing:4px">${hearts}</span>
-      <button class="btn" onclick="restartPhase()">▶ Continuar</button>`);
+      <button class="btn" onclick="restartPhase()">▶ ${tr('continue')}</button>`);
     state='dead';
   } else if(type==='phaseclear'){
     const secsLeft = Math.ceil(phaseFramesLeft/60);
     const timeBonus = secsLeft * 10;
     score += timeBonus; updateUI();
-    const diffLabel = {facil:'🌿 Fácil',normal:'⚔ Normal',dificil:'💀 Difícil'}[difficulty];
-    ov.innerHTML=card(`<h2>✅ Fase ${phase} Completa!</h2><div class="divider"></div>
-      <p class="sub">Tempo restante: ${secsLeft}s · Bônus: +${timeBonus} pts</p>
+    const diffLabel = {facil:tr('easy'),normal:tr('normal'),dificil:tr('hard')}[difficulty];
+    ov.innerHTML=card(`<h2>${tr('phaseComplete', phase)}</h2><div class="divider"></div>
+      <p class="sub">${tr('timeBonus', secsLeft, timeBonus)}</p>
       <p class="sub" style="color:#94a3b8">${diffLabel}</p>
       <span class="score-big">${score} pts</span>
-      <button class="btn" onclick="nextPhase()">▶ Próxima Fase</button>`);
+      <button class="btn" onclick="nextPhase()">▶ ${tr('nextPhase')}</button>`);
     state='phaseclear';
   } else if(type==='win'){
     ov.classList.add('win-mode');
-    ov.innerHTML=`<button class="btn" onclick="showCharSelect()">▶ Jogar Novamente</button><p class="credits" style="margin-top:8px">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>`;
+    ov.innerHTML=`<button class="btn" onclick="showCharSelect()">▶ ${tr('playAgain')}</button><p class="credits" style="margin-top:8px">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>`;
     state='win';
     winTimer=0;
     return;
@@ -1531,7 +1623,7 @@ function draw(){
     ctx.fillText(currentTheme.name, W/2, H/2-10);
     ctx.font='10px "Press Start 2P"';
     ctx.fillStyle='#4ecdc4';
-    ctx.fillText(`FASE ${phase}`, W/2, H/2+16);
+    ctx.fillText(`${tr('phaseHud')} ${phase}`, W/2, H/2+16);
     ctx.textAlign='left'; ctx.globalAlpha=1;
   }
 
@@ -1555,7 +1647,7 @@ function drawHUD(){
   // fase
   ctx.fillStyle='#4ecdc4';
   ctx.textAlign='left';
-  ctx.fillText(`FASE ${phase}`,20,my);
+  ctx.fillText(`${tr('phaseHud')} ${phase}`,20,my);
 
   // ovos
   const eggsCol=phaseEggs.filter(e=>e.collected).length;
@@ -1567,7 +1659,7 @@ function drawHUD(){
 
   // pontos
   ctx.fillStyle='#4ecdc4';
-  ctx.fillText(`PTS ${score}`,270,my);
+  ctx.fillText(`${tr('ptsHud')} ${score}`,270,my);
 
   // timer (centro)
   if(state==='playing' && phaseFramesLeft>0){
@@ -2297,7 +2389,7 @@ function drawPortal(x,active){
   ctx.fillStyle=active?'#14b8a6':'#64748b';
   ctx.font='7px "Press Start 2P"';
   ctx.textAlign='center';
-  ctx.fillText(active?'ENTRAR':'COLETE OS OVOS',cx2,py-10);
+  ctx.fillText(active?tr('enter'):tr('collectEggs'),cx2,py-10);
   ctx.textAlign='left';
 }
 
@@ -2873,9 +2965,9 @@ function drawWinScene(){
     ctx.globalAlpha=ta;
     ctx.fillStyle='#fbbf24'; ctx.font='bold 20px "Press Start 2P"';
     ctx.textAlign='center';
-    ctx.fillText('VOCÊ VENCEU!', W/2, 68);
+    ctx.fillText(tr('win'), W/2, 68);
     ctx.fillStyle='#a5f3fc'; ctx.font='8px "Press Start 2P"';
-    ctx.fillText('os ovos estão nascendo...', W/2, 96);
+    ctx.fillText(tr('hatching'), W/2, 96);
     ctx.globalAlpha=1;
   }
 
@@ -2895,7 +2987,7 @@ function drawWinScene(){
     ctx.globalAlpha=sa;
     ctx.fillStyle='#fef9c3'; ctx.font='11px "Press Start 2P"';
     ctx.textAlign='center';
-    ctx.fillText(`PONTUAÇÃO FINAL: ${score} pts`, W/2, 400);
+    ctx.fillText(tr('finalScore', score), W/2, 400);
     ctx.globalAlpha=1;
   }
   ctx.textAlign='left';
@@ -2903,24 +2995,11 @@ function drawWinScene(){
 
 function quitGame(){
   if(state === 'menu') return;
-  if(!confirm('Sair para o menu principal?\nO progresso será perdido.')) return;
+  if(!confirm(`${tr('quitTitle')}\n${tr('quitBody')}`)) return;
   paused = false;
   stopBGM();
   state = 'menu';
-  const ov = document.getElementById('overlay');
-  ov.classList.remove('win-mode');
-  ov.style.display = 'flex';
-  ov.innerHTML = `<div class="ocard">
-    <h1>🦕 DinoGame</h1>
-    <div class="divider"></div>
-    <p class="sub">Colete os ovos 🥚 · Elimine inimigos · Atravesse o portal</p>
-    <div class="khint">
-      <b>↑ W Espaço</b> — Pular (duplo) &nbsp;·&nbsp; <b>↓ S</b> — Agachar<br>
-      <b>← A</b> — Voltar &nbsp;·&nbsp; <b>→ D</b> — Avançar<br>
-      <b style="color:#fb923c">Z / X</b> — 🔥 Fogo (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Clava (Caveman)
-    </div>
-    <button class="btn" onclick="showCharSelect()">▶ Jogar</button>
-  </div>`;
+  renderMainMenu();
 }
 
 function togglePause(){
@@ -2937,10 +3016,10 @@ function drawPauseOverlay(){
   ctx.fillStyle='#fbbf24';
   ctx.font='bold 28px "Press Start 2P"';
   ctx.textAlign='center';
-  ctx.fillText('PAUSADO',W/2,H/2-18);
+  ctx.fillText(tr('paused'),W/2,H/2-18);
   ctx.fillStyle='#7a8fa8';
   ctx.font='8px "Press Start 2P"';
-  ctx.fillText('Pressione P ou clique ⏸ para continuar',W/2,H/2+16);
+  ctx.fillText(tr('pauseHint'),W/2,H/2+16);
   ctx.textAlign='left';
 }
 
