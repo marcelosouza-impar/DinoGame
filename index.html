@@ -170,6 +170,19 @@ const I18N = {
     quitTitle:'Sair para o menu principal?', quitBody:'O progresso será perdido.', language:'Idioma',
     phaseHud:'FASE', ptsHud:'PTS', enter:'ENTRAR', collectEggs:'COLETE OS OVOS',
     win:'VOCÊ VENCEU!', hatching:'os ovos estão nascendo...', finalScore:s=>`PONTUAÇÃO FINAL: ${s} pts`,
+    muteTitle:'Música [M]', pauseTitle:'Pausar [P]', quitShortTitle:'Sair para o Menu',
+    creditsText:'Martin Coradi de Souza · 2026 · Co-autoria: Claude Code',
+    themeNames:['Floresta Jurássica','Deserto Vulcânico','Caverna Glacial','Floresta Bioluminescente'],
+    cutsceneDino:['Até logo,','família! 🦕'], cutsceneCaveman:['Tchau,','pessoal! 🪓'], cutsceneStart:'Uma nova aventura começa...', cutsceneSkip:'[ESPAÇO] Pular',
+    petLines:{
+      idle:['Vamos lá!','Que aventura!','Por aqui!','Siga em frente!'],
+      lowHp:['Cuidado!','Você tá bem?','Vai devagar!','Atenção!'],
+      enemy:['Inimigo!','Perigo!','Cuidado!','Vai neles!'],
+      egg:['Uhu!','Mais um!','Isso aí!','Boa!'],
+      portal:['O portal!','Quase lá!','Chegamos!','É por lá!'],
+      night:['Que escuro...','Tem estrelas!','Noite boa...'],
+      weather:['Que chuva!','Brr, frio!','Que cinzas!','Lindos esporos!'],
+    },
   },
   en: {
     play:'Play', back:'Back', start:'Start', continue:'Continue', nextPhase:'Next Phase', newGame:'New Game', playAgain:'Play Again',
@@ -185,6 +198,19 @@ const I18N = {
     quitTitle:'Exit to main menu?', quitBody:'Progress will be lost.', language:'Language',
     phaseHud:'PHASE', ptsHud:'PTS', enter:'ENTER', collectEggs:'COLLECT EGGS',
     win:'YOU WON!', hatching:'the eggs are hatching...', finalScore:s=>`FINAL SCORE: ${s} pts`,
+    muteTitle:'Music [M]', pauseTitle:'Pause [P]', quitShortTitle:'Exit to Menu',
+    creditsText:'Martin Coradi de Souza · 2026 · Co-authorship: Claude Code',
+    themeNames:['Jurassic Forest','Volcanic Desert','Glacial Cave','Bioluminescent Forest'],
+    cutsceneDino:['Goodbye,','family! 🦕'], cutsceneCaveman:['Bye,','everyone! 🪓'], cutsceneStart:'A new adventure begins...', cutsceneSkip:'[SPACE] Skip',
+    petLines:{
+      idle:["Let's go!",'Adventure time!','This way!','Keep going!'],
+      lowHp:['Careful!','Are you okay?','Take it slow!','Watch out!'],
+      enemy:['Enemy!','Danger!','Careful!','Get them!'],
+      egg:['Woohoo!','Another one!','Nice!','Great!'],
+      portal:['The portal!','Almost there!','We made it!','This way!'],
+      night:['So dark...','Look, stars!','Nice night...'],
+      weather:['Rainy!','Brr, cold!','So much ash!','Pretty spores!'],
+    },
   },
   es: {
     play:'Jugar', back:'Volver', start:'Empezar', continue:'Continuar', nextPhase:'Siguiente Fase', newGame:'Nuevo Juego', playAgain:'Jugar de Nuevo',
@@ -200,11 +226,32 @@ const I18N = {
     quitTitle:'¿Salir al menú principal?', quitBody:'Se perderá el progreso.', language:'Idioma',
     phaseHud:'FASE', ptsHud:'PTS', enter:'ENTRAR', collectEggs:'RECOGE LOS HUEVOS',
     win:'¡GANASTE!', hatching:'los huevos están naciendo...', finalScore:s=>`PUNTUACIÓN FINAL: ${s} pts`,
+    muteTitle:'Música [M]', pauseTitle:'Pausar [P]', quitShortTitle:'Salir al Menú',
+    creditsText:'Martin Coradi de Souza · 2026 · Coautoría: Claude Code',
+    themeNames:['Bosque Jurásico','Desierto Volcánico','Cueva Glacial','Bosque Bioluminiscente'],
+    cutsceneDino:['Adiós,','familia! 🦕'], cutsceneCaveman:['¡Adiós,','todos! 🪓'], cutsceneStart:'Una nueva aventura comienza...', cutsceneSkip:'[ESPACIO] Saltar',
+    petLines:{
+      idle:['¡Vamos!','¡Qué aventura!','¡Por aquí!','¡Sigue adelante!'],
+      lowHp:['¡Cuidado!','¿Estás bien?','¡Ve despacio!','¡Atención!'],
+      enemy:['¡Enemigo!','¡Peligro!','¡Cuidado!','¡A por ellos!'],
+      egg:['¡Uhu!','¡Otro más!','¡Eso es!','¡Bien!'],
+      portal:['¡El portal!','¡Casi llegamos!','¡Llegamos!','¡Es por ahí!'],
+      night:['Qué oscuro...','¡Hay estrellas!','Linda noche...'],
+      weather:['¡Qué lluvia!','Brr, frío!','¡Cuánta ceniza!','¡Lindas esporas!'],
+    },
   },
 };
 function tr(key,...args){
   const value = (I18N[currentLang] || I18N.pt)[key] ?? I18N.pt[key] ?? key;
   return typeof value === 'function' ? value(...args) : value;
+}
+function trArray(key){
+  return (I18N[currentLang] || I18N.pt)[key] || I18N.pt[key] || [];
+}
+function setHudButtonTitles(){
+  document.getElementById('muteBtn')?.setAttribute('title', tr('muteTitle'));
+  document.getElementById('pauseBtn')?.setAttribute('title', tr('pauseTitle'));
+  document.querySelector('.hbtn.quit')?.setAttribute('title', tr('quitShortTitle'));
 }
 
 // ── NEW FEATURE STATE ──────────────────────────────────────────────────────────
@@ -218,15 +265,10 @@ let weatherParticles = [];
 let lastTimeOfDay = 'day';
 let nightMusicActive = false;
 let petSpeech = {text:'', timer:0};
-const PET_LINES = {
-  idle:    ['Vamos lá!','Que aventura!','Por aqui!','Siga em frente!'],
-  lowHp:   ['Cuidado!','Você tá bem?','Vai devagar!','Atenção!'],
-  enemy:   ['Inimigo!','Perigo!','Cuidado!','Vai neles!'],
-  egg:     ['Uhu!','Mais um!','Isso aí!','Boa!'],
-  portal:  ['O portal!','Quase lá!','Chegamos!','É por lá!'],
-  night:   ['Que escuro...','Tem estrelas!','Noite boa...'],
-  weather: ['Que chuva!','Brr, frio!','Que cinzas!','Lindos esporos!'],
-};
+function petLine(group){
+  const lines = tr('petLines')[group] || I18N.pt.petLines[group] || ['...'];
+  return lines[Math.floor(Math.random()*lines.length)];
+}
 
 const DIFF = {
   facil:   { timeMult:1.7, speedMult:0.70, enemyBase:1, obsBase:2  },
@@ -664,6 +706,7 @@ function generatePhase(p){
 
 // ─── GAME FLOW ────────────────────────────────────────────────────────────────
 function showLanguageSelect(){
+  setHudButtonTitles();
   const ov = document.getElementById('overlay');
   ov.classList.remove('win-mode');
   ov.style.display = 'flex';
@@ -677,7 +720,7 @@ function showLanguageSelect(){
       <button class="lang-btn" onclick="setLanguage('en')">🇺🇸<br>English</button>
       <button class="lang-btn" onclick="setLanguage('es')">🇪🇸<br>Español</button>
     </div>
-    <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>
+    <p class="credits">${tr('creditsText')}</p>
   </div>`;
   state = 'menu';
 }
@@ -685,10 +728,12 @@ function showLanguageSelect(){
 function setLanguage(lang){
   currentLang = lang;
   localStorage.setItem('dinogame_lang', lang);
+  setHudButtonTitles();
   renderMainMenu();
 }
 
 function renderMainMenu(){
+  setHudButtonTitles();
   const ov = document.getElementById('overlay');
   ov.classList.remove('win-mode');
   ov.style.display = 'flex';
@@ -703,7 +748,7 @@ function renderMainMenu(){
     </div>
     <button class="btn" onclick="showCharSelect()">▶ ${tr('play')}</button>
     <button class="btn sec" onclick="showLanguageSelect()" style="font-size:7px;padding:8px 18px;">🌎 ${tr('language')}</button>
-    <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>
+    <p class="credits">${tr('creditsText')}</p>
   </div>`;
   state = 'menu';
 }
@@ -838,7 +883,7 @@ function showOverlay(type){
       <p class="sub">${tr('betterLuck')}</p>
       <span class="score-big">${score} pts</span>
       <button class="btn" onclick="showCharSelect()">▶ ${tr('newGame')}</button>
-      <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>`);
+      <p class="credits">${tr('creditsText')}</p>`);
     state='dead';
   } else if(type==='dead'){
     ov.innerHTML=card(`<h2>${tr('youDied')}</h2><div class="divider"></div>
@@ -859,7 +904,7 @@ function showOverlay(type){
     state='phaseclear';
   } else if(type==='win'){
     ov.classList.add('win-mode');
-    ov.innerHTML=`<button class="btn" onclick="showCharSelect()">▶ ${tr('playAgain')}</button><p class="credits" style="margin-top:8px">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>`;
+    ov.innerHTML=`<button class="btn" onclick="showCharSelect()">▶ ${tr('playAgain')}</button><p class="credits" style="margin-top:8px">${tr('creditsText')}</p>`;
     state='win';
     winTimer=0;
     return;
@@ -1123,7 +1168,7 @@ function update(){
       sfxEgg();
       spawnParticles(ex, ey, '#fde68a', 12);
       pet.facing = ex > pet.x ? 1 : -1;
-      petSpeech.text = PET_LINES.egg[Math.floor(Math.random()*PET_LINES.egg.length)];
+      petSpeech.text = petLine('egg');
       petSpeech.timer = 120;
     }
   });
@@ -1133,14 +1178,12 @@ function update(){
   if(petSpeech.timer === 0 && Math.random() < 0.014){
     const nearEnemy = phaseEnemies.some(e=>e.alive && Math.abs((e.x-scrollX)-(pet.x+14))<160);
     const portalNear = Math.abs(portalX-scrollX-pet.x) < 220;
-    let pool;
-    if(player.hp <= 1)                               pool = PET_LINES.lowHp;
-    else if(nearEnemy)                               pool = PET_LINES.enemy;
-    else if(portalNear && phaseEggs.every(e=>e.collected)) pool = PET_LINES.portal;
-    else if(dayNight < 0.35)                         pool = PET_LINES.night;
-    else if(Math.random() < 0.3)                     pool = PET_LINES.weather;
-    else                                             pool = PET_LINES.idle;
-    petSpeech.text = pool[Math.floor(Math.random()*pool.length)];
+    if(player.hp <= 1)                               petSpeech.text = petLine('lowHp');
+    else if(nearEnemy)                               petSpeech.text = petLine('enemy');
+    else if(portalNear && phaseEggs.every(e=>e.collected)) petSpeech.text = petLine('portal');
+    else if(dayNight < 0.35)                         petSpeech.text = petLine('night');
+    else if(Math.random() < 0.3)                     petSpeech.text = petLine('weather');
+    else                                             petSpeech.text = petLine('idle');
     petSpeech.timer = 200;
   }
 
@@ -1275,9 +1318,7 @@ function drawCutscene(){
   // speech bubble (T 55-135)
   if(T>55 && T<138){
     const a = T<75?(T-55)/20 : T>118?(138-T)/20 : 1;
-    const lines = selectedChar==='dino'
-      ? ['Até logo,','família! 🦕']
-      : ['Tchau,','pessoal! 🪓'];
+    const lines = selectedChar==='dino' ? trArray('cutsceneDino') : trArray('cutsceneCaveman');
     drawCutsceneBubble(charX+18, GROUND-88, lines, a);
   }
 
@@ -1287,7 +1328,7 @@ function drawCutscene(){
     ctx.globalAlpha=a;
     ctx.fillStyle='#fff'; ctx.font='bold 13px "Press Start 2P"';
     ctx.textAlign='center';
-    ctx.fillText('Uma nova aventura começa...',W/2,H/2+8);
+    ctx.fillText(tr('cutsceneStart'),W/2,H/2+8);
     ctx.textAlign='left'; ctx.globalAlpha=1;
   }
 
@@ -1299,7 +1340,7 @@ function drawCutscene(){
   // skip hint
   if(T<450){
     ctx.fillStyle='rgba(255,255,255,.38)'; ctx.font='7px "Press Start 2P"';
-    ctx.textAlign='right'; ctx.fillText('[ESPAÇO] Pular',W-14,H-12); ctx.textAlign='left';
+    ctx.textAlign='right'; ctx.fillText(tr('cutsceneSkip'),W-14,H-12); ctx.textAlign='left';
   }
 }
 
@@ -1620,7 +1661,8 @@ function draw(){
     roundRect(ctx, W/2-160, H/2-38, 320, 64, 12, true, false);
     ctx.fillStyle='#fff'; ctx.font='bold 18px "Press Start 2P"';
     ctx.textAlign='center';
-    ctx.fillText(currentTheme.name, W/2, H/2-10);
+    const themeIdx = Math.max(0, THEMES.indexOf(currentTheme));
+    ctx.fillText(trArray('themeNames')[themeIdx] || currentTheme.name, W/2, H/2-10);
     ctx.font='10px "Press Start 2P"';
     ctx.fillStyle='#4ecdc4';
     ctx.fillText(`${tr('phaseHud')} ${phase}`, W/2, H/2+16);
@@ -3022,6 +3064,8 @@ function drawPauseOverlay(){
   ctx.fillText(tr('pauseHint'),W/2,H/2+16);
   ctx.textAlign='left';
 }
+
+setHudButtonTitles();
 
 function loop(){
   if(!paused){ update(); draw(); }
