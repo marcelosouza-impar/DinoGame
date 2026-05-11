@@ -1021,13 +1021,16 @@ function update(){
   phaseEggs.forEach(egg=>{
     if(egg.collected) return;
     const ex = egg.x - scrollX;
-    const dist = Math.hypot(ex - (pet.x+14), egg.y - pet.y);
-    if(dist < 44){
+    const ey = egg.y + Math.sin(egg.bob) * 5;
+    const petDist = Math.hypot(ex - (pet.x+14), ey - (pet.y-18));
+    const playerDist = Math.hypot(ex - (player.x+player.w/2), ey - (player.y-28));
+    if(petDist < 64 || playerDist < 76){
       egg.collected = true;
       score += 100;
       updateUI();
       sfxEgg();
-      spawnParticles(ex, egg.y, '#fde68a', 12);
+      spawnParticles(ex, ey, '#fde68a', 12);
+      pet.facing = ex > pet.x ? 1 : -1;
       petSpeech.text = PET_LINES.egg[Math.floor(Math.random()*PET_LINES.egg.length)];
       petSpeech.timer = 120;
     }
@@ -2535,7 +2538,7 @@ function drawPetHUD(){
   // aura de coleta de ovos (raio de detecção, bem sutil)
   ctx.strokeStyle = 'rgba(253,230,138,.18)'; ctx.lineWidth = 1.5;
   ctx.setLineDash([3,5]);
-  ctx.beginPath(); ctx.arc(pet.x+14, pet.y, 44, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(pet.x+14, pet.y-18, 64, 0, Math.PI*2); ctx.stroke();
   ctx.setLineDash([]);
 }
 
