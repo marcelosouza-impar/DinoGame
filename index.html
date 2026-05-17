@@ -324,6 +324,35 @@ function skinPalette(char){
   const id = selectedSkin[char] || 'classic';
   return SKINS[char].find(s=>s.id===id) || SKINS[char][0];
 }
+function saveProgress(){
+  const data = {
+    totalCoins, unlockedPhase, petXP, petLevel,
+    shopUpgrades,
+    selectedSkin,
+    ownedSkins:{dino:[...ownedSkins.dino], caveman:[...ownedSkins.caveman]},
+  };
+  localStorage.setItem('dinogame_save', JSON.stringify(data));
+}
+function loadProgress(){
+  try{
+    const data = JSON.parse(localStorage.getItem('dinogame_save') || '{}');
+    totalCoins = Number(data.totalCoins || 0);
+    unlockedPhase = Math.max(1, Number(data.unlockedPhase || 1));
+    petXP = Number(data.petXP || 0);
+    petLevel = Math.max(1, Number(data.petLevel || 1));
+    shopUpgrades = Object.assign({petRange:0, extraLife:false, starterShield:false}, data.shopUpgrades || {});
+    selectedSkin = Object.assign({dino:'classic', caveman:'classic'}, data.selectedSkin || {});
+    ownedSkins = {
+      dino:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.dino) || [])]),
+      caveman:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.caveman) || [])]),
+    };
+  }catch(e){
+    totalCoins=0; unlockedPhase=1; petXP=0; petLevel=1;
+    shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
+    ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic'])};
+    selectedSkin = {dino:'classic', caveman:'classic'};
+  }
+}
 
 // ── FEATURE STATE ──────────────────────────────────────────────────────────────
 let weatherParticles = [];
@@ -345,10 +374,12 @@ function addPetXP(value){
     petLevel++;
     spawnParticles(pet.x+14, pet.y-24, '#a7f3d0', 18);
   }
+  saveProgress();
 }
 function discoverCreature(type){
   if(type) discoveredCreatures.add(type);
 }
+loadProgress();
 
 const DIFF = {
   facil:   { timeMult:1.7, speedMult:0.70, enemyBase:1, obsBase:2  },
@@ -870,6 +901,7 @@ function showCharSelect(){
       <button class="diff-btn dificil" onclick="selectDifficulty('dificil')">${tr('hard')}</button>
     </div>
     <div class="divider"></div>
+    <button class="btn sec" onclick="renderWardrobe()" style="font-size:7px;padding:8px 18px;">👕 ${tr('wardrobe')}</button>
     <button class="btn" onclick="startGame()">▶ ${tr('start')}</button>
     <button class="btn sec" onclick="backToMenu()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
   </div>`;
@@ -910,11 +942,8 @@ function backToMenu(){
 }
 
 function startGame(){
-  phase=1; score=0; lives=3; totalCoins=0; unlockedPhase=1;
-  petXP=0; petLevel=1; discoveredCreatures=new Set();
-  shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
-  ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic'])};
-  selectedSkin = {dino:'classic', caveman:'classic'};
+  phase=1; score=0; lives=3; discoveredCreatures=new Set();
+  loadProgress();
   renderWorldMap();
 }
 
@@ -989,6 +1018,7 @@ function buyShopItem(id){
     shopUpgrades[id]=true;
     if(id==='extraLife') lives = Math.min(5, lives+1);
   }
+  saveProgress();
   renderShop();
 }
 
@@ -1024,6 +1054,7 @@ function chooseSkin(char,id){
     ownedSkins[char].add(id);
   }
   selectedSkin[char] = id;
+  saveProgress();
   renderWardrobe();
 }
 
@@ -1101,6 +1132,7 @@ function nextPhase(){
   phase++;
   if(phase>MAX_PHASES){ showOverlay('win'); return; }
   unlockedPhase = Math.max(unlockedPhase, phase);
+  saveProgress();
   showStoryBetweenPhases();
 }
 
@@ -1326,6 +1358,7 @@ function update(){
     const cx = coin.x - scrollX;
     if(Math.abs(cx - (player.x + player.w/2)) < 24 && Math.abs(coin.y - player.y) < 50){
       coin.collected = true; totalCoins++; score += 25;
+      saveProgress();
       updateUI(); spawnParticles(cx, coin.y, '#fbbf24', 8); sfxEgg();
     }
   });
@@ -1493,6 +1526,7 @@ function collectEgg(egg, ex, ey, byPet=false){
   if(egg.kind==='gold'){
     bonus = 250;
     totalCoins += 2;
+    saveProgress();
     petSpeech.text = tr('specialEggGold');
   } else if(egg.kind==='blue'){
     phaseFramesLeft += 600;
