@@ -113,6 +113,11 @@
   .shop-item:hover{border-color:#fbbf24;}
   .shop-item.bought{opacity:.48;cursor:default;}
   .story-art{width:100%;height:110px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(78,205,196,.14);}
+  .skin-card{width:128px;border:1.5px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(255,255,255,.06);
+    color:#dce8f1;font-family:inherit;font-size:6px;line-height:1.8;padding:8px;cursor:pointer;text-align:center;}
+  .skin-card canvas{width:74px;height:64px;margin:0 auto 5px;border-radius:8px;background:rgba(5,10,22,.45);}
+  .skin-card:hover{border-color:#4ecdc4;}
+  .skin-card.selected{border-color:#ffe66d;box-shadow:0 0 0 2px rgba(255,230,109,.32);}
 </style>
 </head>
 <body>
@@ -184,6 +189,7 @@ const I18N = {
     win:'VOCÊ VENCEU!', hatching:'os ovos estão nascendo...', finalScore:s=>`PONTUAÇÃO FINAL: ${s} pts`,
     worldMap:'Mapa das fases', shop:'Loja', album:'Álbum', locked:'Bloqueado', playPhase:'Jogar fase',
     coins:'Moedas', petLevel:'Pet nível', checkpoint:'Checkpoint salvo!', bought:'Comprado', notEnough:'Moedas insuficientes',
+    wardrobe:'Guarda-roupa', select:'Selecionar', selected:'Selecionado', price:'Preço',
     shopPet:'Pet Coletor', shopPetDesc:'Aumenta o alcance do pet', shopLife:'Vida Extra', shopLifeDesc:'+1 vida nesta partida', shopShield:'Escudo Inicial', shopShieldDesc:'Começa a fase com escudo',
     specialEggGold:'Ovo dourado: +250 pts', specialEggBlue:'Ovo azul: +10s', specialEggRed:'Ovo vermelho: escudo',
     storyNext:p=>`O portal abre caminho para a fase ${p}.`, storyBody:'O grupo segue para um novo lugar, levando os ovos em segurança.',
@@ -219,6 +225,7 @@ const I18N = {
     win:'YOU WON!', hatching:'the eggs are hatching...', finalScore:s=>`FINAL SCORE: ${s} pts`,
     worldMap:'Phase Map', shop:'Shop', album:'Album', locked:'Locked', playPhase:'Play phase',
     coins:'Coins', petLevel:'Pet level', checkpoint:'Checkpoint saved!', bought:'Bought', notEnough:'Not enough coins',
+    wardrobe:'Wardrobe', select:'Select', selected:'Selected', price:'Price',
     shopPet:'Collector Pet', shopPetDesc:'Increases pet pickup range', shopLife:'Extra Life', shopLifeDesc:'+1 life this run', shopShield:'Starter Shield', shopShieldDesc:'Start the phase shielded',
     specialEggGold:'Golden egg: +250 pts', specialEggBlue:'Blue egg: +10s', specialEggRed:'Red egg: shield',
     storyNext:p=>`The portal opens the way to phase ${p}.`, storyBody:'The group moves toward a new place, keeping the eggs safe.',
@@ -254,6 +261,7 @@ const I18N = {
     win:'¡GANASTE!', hatching:'los huevos están naciendo...', finalScore:s=>`PUNTUACIÓN FINAL: ${s} pts`,
     worldMap:'Mapa de fases', shop:'Tienda', album:'Álbum', locked:'Bloqueado', playPhase:'Jugar fase',
     coins:'Monedas', petLevel:'Nivel del pet', checkpoint:'Checkpoint guardado!', bought:'Comprado', notEnough:'Monedas insuficientes',
+    wardrobe:'Guardarropa', select:'Seleccionar', selected:'Seleccionado', price:'Precio',
     shopPet:'Pet Colector', shopPetDesc:'Aumenta el alcance del pet', shopLife:'Vida Extra', shopLifeDesc:'+1 vida en esta partida', shopShield:'Escudo Inicial', shopShieldDesc:'Empieza la fase con escudo',
     specialEggGold:'Huevo dorado: +250 pts', specialEggBlue:'Huevo azul: +10s', specialEggRed:'Huevo rojo: escudo',
     storyNext:p=>`El portal abre camino a la fase ${p}.`, storyBody:'El grupo sigue hacia un nuevo lugar, llevando los huevos a salvo.',
@@ -297,6 +305,25 @@ let petXP = 0, petLevel = 1;
 let checkpointX = 0, checkpointReached = false;
 let discoveredCreatures = new Set();
 let shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
+let ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic'])};
+let selectedSkin = {dino:'classic', caveman:'classic'};
+
+const SKINS = {
+  dino: [
+    {id:'classic', name:'Dino Verde', cost:0, primary:'#4ade80', light:'#86efac', dark:'#166534', foot:'#15803d', belly:'#bbf7d0', spike:'#fbbf24', eye:'#1e3a8a'},
+    {id:'blue', name:'Dino Azul', cost:8, primary:'#38bdf8', light:'#7dd3fc', dark:'#075985', foot:'#0284c7', belly:'#dbeafe', spike:'#facc15', eye:'#1e40af'},
+    {id:'rose', name:'Dino Coral', cost:10, primary:'#fb7185', light:'#fda4af', dark:'#9f1239', foot:'#e11d48', belly:'#ffe4e6', spike:'#fde047', eye:'#7c2d12'},
+  ],
+  caveman: [
+    {id:'classic', name:'Caveman Bronze', cost:0, skin:'#fbbf24', body:'#d97706', bodyDark:'#92400e', hair:'#292524', boot:'#1c1917', club:'#78350f'},
+    {id:'forest', name:'Caveman Floresta', cost:8, skin:'#fdba74', body:'#16a34a', bodyDark:'#166534', hair:'#14532d', boot:'#1c1917', club:'#854d0e'},
+    {id:'ice', name:'Caveman Gelo', cost:10, skin:'#fcd9a5', body:'#60a5fa', bodyDark:'#1d4ed8', hair:'#334155', boot:'#0f172a', club:'#64748b'},
+  ],
+};
+function skinPalette(char){
+  const id = selectedSkin[char] || 'classic';
+  return SKINS[char].find(s=>s.id===id) || SKINS[char][0];
+}
 
 // ── FEATURE STATE ──────────────────────────────────────────────────────────────
 let weatherParticles = [];
@@ -886,6 +913,8 @@ function startGame(){
   phase=1; score=0; lives=3; totalCoins=0; unlockedPhase=1;
   petXP=0; petLevel=1; discoveredCreatures=new Set();
   shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
+  ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic'])};
+  selectedSkin = {dino:'classic', caveman:'classic'};
   renderWorldMap();
 }
 
@@ -909,6 +938,7 @@ function renderWorldMap(){
     <div class="map-grid">${nodes}</div>
     <div class="shop-row">
       <button class="btn sec" onclick="renderShop()" style="font-size:7px;padding:8px 14px;">💰 ${tr('shop')}</button>
+      <button class="btn sec" onclick="renderWardrobe()" style="font-size:7px;padding:8px 14px;">👕 ${tr('wardrobe')}</button>
       <button class="btn sec" onclick="renderAlbum()" style="font-size:7px;padding:8px 14px;">📖 ${tr('album')}</button>
     </div>
     <button class="btn sec" onclick="showCharSelect()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
@@ -942,6 +972,7 @@ function renderShop(){
       ${item('extraLife',tr('shopLife'),tr('shopLifeDesc'),10,shopUpgrades.extraLife)}
       ${item('starterShield',tr('shopShield'),tr('shopShieldDesc'),8,shopUpgrades.starterShield)}
     </div>
+    <button class="btn sec" onclick="renderWardrobe()" style="font-size:7px;padding:8px 18px;">👕 ${tr('wardrobe')}</button>
     <button class="btn sec" onclick="renderWorldMap()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
   </div>`;
 }
@@ -959,6 +990,59 @@ function buyShopItem(id){
     if(id==='extraLife') lives = Math.min(5, lives+1);
   }
   renderShop();
+}
+
+function renderWardrobe(){
+  const ov = document.getElementById('overlay');
+  const skinCards = char => SKINS[char].map(s=>{
+    const owned = ownedSkins[char].has(s.id);
+    const selected = selectedSkin[char] === s.id;
+    const action = owned ? `${tr('select')}` : `${tr('price')}: ${s.cost}`;
+    return `<button class="skin-card ${selected?'selected':''}" onclick="chooseSkin('${char}','${s.id}')">
+      <canvas id="skin-${char}-${s.id}" width="90" height="70"></canvas>
+      <b>${s.name}</b><br>${selected?'✅ '+tr('selected'):owned?action:'💰 '+action}
+    </button>`;
+  }).join('');
+  ov.innerHTML = `<div class="ocard">
+    <h2>${tr('wardrobe')}</h2>
+    <p class="sub">${tr('coins')}: ${totalCoins}</p>
+    <p class="sub">DINO</p>
+    <div class="shop-row">${skinCards('dino')}</div>
+    <p class="sub">CAVEMAN</p>
+    <div class="shop-row">${skinCards('caveman')}</div>
+    <button class="btn sec" onclick="renderWorldMap()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
+  </div>`;
+  setTimeout(renderWardrobePreviews, 20);
+}
+
+function chooseSkin(char,id){
+  const skin = SKINS[char].find(s=>s.id===id);
+  if(!skin) return;
+  if(!ownedSkins[char].has(id)){
+    if(totalCoins < skin.cost){ alert(tr('notEnough')); return; }
+    totalCoins -= skin.cost;
+    ownedSkins[char].add(id);
+  }
+  selectedSkin[char] = id;
+  renderWardrobe();
+}
+
+function renderWardrobePreviews(){
+  ['dino','caveman'].forEach(char=>{
+    SKINS[char].forEach(s=>{
+      const cvs = document.getElementById(`skin-${char}-${s.id}`);
+      if(!cvs) return;
+      const c = cvs.getContext('2d');
+      c.clearRect(0,0,cvs.width,cvs.height);
+      c.fillStyle='rgba(78,205,196,.10)';
+      roundRect(c,4,4,cvs.width-8,cvs.height-8,8,true,false);
+      const old = selectedSkin[char];
+      selectedSkin[char] = s.id;
+      if(char==='dino') drawDinoOn(c,22,62,0,false,0.72);
+      else drawCavemanOn(c,24,62,0,false,0.72);
+      selectedSkin[char] = old;
+    });
+  });
 }
 
 function renderAlbum(){
@@ -2715,19 +2799,20 @@ function drawDinoOn(c,x,y,frame,ducking,s){
   const ft=frameCount*.14;
   const moving=Math.abs(player.vx)>0.1;
   const lo=ducking?0:(moving?Math.sin(ft)*5:0);
+  const skin = skinPalette('dino');
   c.save(); c.translate(x,y); c.scale(s,s); c.translate(-x,-y);
 
   if(!ducking){
     // tail — thick bezier
-    c.strokeStyle='#166534'; c.lineWidth=13; c.lineCap='round';
+    c.strokeStyle=skin.dark; c.lineWidth=13; c.lineCap='round';
     c.beginPath(); c.moveTo(x+12,y-28);
     c.bezierCurveTo(x-2,y-18, x-18,y-6, x-22,y-1); c.stroke();
-    c.strokeStyle='#4ade80'; c.lineWidth=7; c.stroke();
+    c.strokeStyle=skin.primary; c.lineWidth=7; c.stroke();
 
     // back leg
-    c.fillStyle='#166534'; c.strokeStyle=OL; c.lineWidth=2;
+    c.fillStyle=skin.dark; c.strokeStyle=OL; c.lineWidth=2;
     c.beginPath(); c.roundRect(x+14,y-26+Math.abs(lo*.8),12,26,5); c.fill(); c.stroke();
-    c.fillStyle='#15803d'; c.strokeStyle=OL; c.lineWidth=1.5;
+    c.fillStyle=skin.foot; c.strokeStyle=OL; c.lineWidth=1.5;
     c.beginPath(); c.ellipse(x+20,y+1,14,5,0,0,Math.PI*2); c.fill(); c.stroke();
     [[-5,0],[0,1],[5,-1]].forEach(([dx])=>{
       c.strokeStyle=OL; c.lineWidth=1.5; c.lineCap='round';
@@ -2735,16 +2820,16 @@ function drawDinoOn(c,x,y,frame,ducking,s){
     });
 
     // body
-    c.fillStyle='#4ade80'; c.strokeStyle=OL; c.lineWidth=2.5;
+    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2.5;
     c.beginPath(); c.ellipse(x+26,y-36,21,24,-.05,0,Math.PI*2); c.fill(); c.stroke();
     // belly highlight
-    c.fillStyle='#bbf7d0';
+    c.fillStyle=skin.belly;
     c.beginPath(); c.ellipse(x+28,y-30,10,15,-.1,0,Math.PI*2); c.fill();
 
     // front leg
-    c.fillStyle='#166534'; c.strokeStyle=OL; c.lineWidth=2;
+    c.fillStyle=skin.dark; c.strokeStyle=OL; c.lineWidth=2;
     c.beginPath(); c.roundRect(x+28,y-24+Math.abs(lo),12,24,5); c.fill(); c.stroke();
-    c.fillStyle='#15803d'; c.strokeStyle=OL; c.lineWidth=1.5;
+    c.fillStyle=skin.foot; c.strokeStyle=OL; c.lineWidth=1.5;
     c.beginPath(); c.ellipse(x+34,y+1,14,5,0,0,Math.PI*2); c.fill(); c.stroke();
     [[-5,0],[0,1],[5,-1]].forEach(([dx])=>{
       c.strokeStyle=OL; c.lineWidth=1.5; c.lineCap='round';
@@ -2752,7 +2837,7 @@ function drawDinoOn(c,x,y,frame,ducking,s){
     });
 
     // dorsal spikes (4, alternating heights)
-    c.fillStyle='#fbbf24'; c.strokeStyle=OL; c.lineWidth=1.8;
+    c.fillStyle=skin.spike; c.strokeStyle=OL; c.lineWidth=1.8;
     [14,18,13,9].forEach((sh,i)=>{
       const sx=x+9+i*9, sy=y-57;
       c.beginPath(); c.moveTo(sx,sy);
@@ -2761,16 +2846,16 @@ function drawDinoOn(c,x,y,frame,ducking,s){
     });
 
     // arm
-    c.strokeStyle='#166534'; c.lineWidth=5; c.lineCap='round';
+    c.strokeStyle=skin.dark; c.lineWidth=5; c.lineCap='round';
     c.beginPath(); c.moveTo(x+38,y-44); c.lineTo(x+46,y-40); c.stroke();
     c.strokeStyle=OL; c.lineWidth=1.5; c.stroke();
 
     // neck
-    c.fillStyle='#4ade80'; c.strokeStyle=OL; c.lineWidth=2;
+    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2;
     c.beginPath(); c.ellipse(x+38,y-53,8,13,.25,0,Math.PI*2); c.fill(); c.stroke();
 
     // head + snout — UMA forma única integrada (sem emenda)
-    c.fillStyle='#4ade80'; c.strokeStyle=OL; c.lineWidth=2.5;
+    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2.5;
     c.beginPath();
     c.moveTo(x+32, y-57);                                        // base-esquerda (encontra o pescoço)
     c.bezierCurveTo(x+28,y-62, x+28,y-80, x+43,y-81);           // nuca arredondada
@@ -2780,11 +2865,11 @@ function drawDinoOn(c,x,y,frame,ducking,s){
     c.closePath(); c.fill(); c.stroke();
 
     // highlight do topo da cabeça
-    c.fillStyle='#86efac';
+    c.fillStyle=skin.light;
     c.beginPath(); c.ellipse(x+43,y-69,10,8,-.15,0,Math.PI*2); c.fill();
 
     // linha da boca
-    c.strokeStyle='#15803d'; c.lineWidth=2; c.lineCap='round';
+    c.strokeStyle=skin.foot; c.lineWidth=2; c.lineCap='round';
     c.beginPath(); c.moveTo(x+35,y-58); c.quadraticCurveTo(x+50,y-54,x+64,y-60); c.stroke();
 
     // 1 dentinho branco no canto da boca
@@ -2792,13 +2877,13 @@ function drawDinoOn(c,x,y,frame,ducking,s){
     c.beginPath(); c.moveTo(x+38,y-58); c.lineTo(x+36,y-53); c.lineTo(x+42,y-57); c.closePath(); c.fill(); c.stroke();
 
     // narina
-    c.fillStyle='#166534';
+    c.fillStyle=skin.dark;
     c.beginPath(); c.ellipse(x+62,y-59,2.5,1.5,-.4,0,Math.PI*2); c.fill();
 
     // olho
     c.fillStyle='#fff'; c.strokeStyle=OL; c.lineWidth=1.5;
     c.beginPath(); c.arc(x+42,y-70,6,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle='#1e3a8a'; c.beginPath(); c.arc(x+43,y-70,3.5,0,Math.PI*2); c.fill();
+    c.fillStyle=skin.eye; c.beginPath(); c.arc(x+43,y-70,3.5,0,Math.PI*2); c.fill();
     c.fillStyle='#fff'; c.beginPath(); c.arc(x+44,y-71,1.5,0,Math.PI*2); c.fill();
     // sobrancelha
     c.strokeStyle=OL; c.lineWidth=2.5; c.lineCap='round';
@@ -2806,21 +2891,21 @@ function drawDinoOn(c,x,y,frame,ducking,s){
 
   } else {
     // ducking
-    c.strokeStyle='#166534'; c.lineWidth=9; c.lineCap='round';
+    c.strokeStyle=skin.dark; c.lineWidth=9; c.lineCap='round';
     c.beginPath(); c.moveTo(x+8,y-18); c.quadraticCurveTo(x-10,y-8,x-14,y-1); c.stroke();
     c.strokeStyle=OL; c.lineWidth=2; c.stroke();
-    block(c,x+8,y-14,12,14,6,'#166534');
-    block(c,x+24,y-14,12,14,6,'#166534');
-    c.fillStyle='#4ade80'; c.strokeStyle=OL; c.lineWidth=2.5;
+    block(c,x+8,y-14,12,14,6,skin.dark);
+    block(c,x+24,y-14,12,14,6,skin.dark);
+    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2.5;
     c.beginPath(); c.ellipse(x+24,y-20,22,14,-.1,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle='#bbf7d0'; c.beginPath(); c.ellipse(x+26,y-18,10,8,0,0,Math.PI*2); c.fill();
-    c.fillStyle='#86efac'; c.strokeStyle=OL; c.lineWidth=2;
+    c.fillStyle=skin.belly; c.beginPath(); c.ellipse(x+26,y-18,10,8,0,0,Math.PI*2); c.fill();
+    c.fillStyle=skin.light; c.strokeStyle=OL; c.lineWidth=2;
     c.beginPath(); c.arc(x+44,y-26,10,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle='#4ade80'; c.strokeStyle=OL; c.lineWidth=1.5;
+    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=1.5;
     c.beginPath(); c.moveTo(x+51,y-26); c.lineTo(x+57,y-23); c.lineTo(x+57,y-29); c.closePath(); c.fill(); c.stroke();
     c.fillStyle='#fff'; c.strokeStyle=OL; c.lineWidth=1.2;
     c.beginPath(); c.arc(x+43,y-30,4.5,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle='#1e3a8a'; c.beginPath(); c.arc(x+44,y-30,2.5,0,Math.PI*2); c.fill();
+    c.fillStyle=skin.eye; c.beginPath(); c.arc(x+44,y-30,2.5,0,Math.PI*2); c.fill();
     c.fillStyle='#fff'; c.beginPath(); c.arc(x+45,y-31,1,0,Math.PI*2); c.fill();
   }
   c.restore();
@@ -2831,6 +2916,7 @@ function drawCavemanOn(c,x,y,frame,ducking,s){
   const bh=ducking?30:56;
   const moving = Math.abs(player.vx) > 0.1;
   const lo=ducking?0:(moving?Math.sin(ft)*5:0);
+  const look = skinPalette('caveman');
   // flip horizontalmente se virado para a esquerda
   const facingDir = (s===1) ? player.facing : 1;
   c.save();
@@ -2840,7 +2926,7 @@ function drawCavemanOn(c,x,y,frame,ducking,s){
     c.translate(x,y); c.scale(s,s); c.translate(-x,-y);
   }
 
-  const skinDark='#92400e', skin='#d97706', skinLight='#fbbf24';
+  const skinDark=look.bodyDark, skin=look.body, skinLight=look.skin;
 
   // club (in hand) — swing animado quando atacando
   if(!ducking){
@@ -2871,10 +2957,10 @@ function drawCavemanOn(c,x,y,frame,ducking,s){
     }
 
     // cabo
-    c.strokeStyle='#78350f'; c.lineWidth=7; c.lineCap='round';
+    c.strokeStyle=look.club; c.lineWidth=7; c.lineCap='round';
     c.beginPath(); c.moveTo(armX,armY); c.lineTo(tipX,tipY); c.stroke();
     // cabeça da clava
-    c.fillStyle='#78350f'; c.strokeStyle=OL; c.lineWidth=2;
+    c.fillStyle=look.club; c.strokeStyle=OL; c.lineWidth=2;
     c.beginPath(); c.ellipse(tipX,tipY,9,7,swingAngle,0,Math.PI*2); c.fill(); c.stroke();
     // espinhos da clava
     for(let i=0;i<5;i++){
@@ -2889,31 +2975,31 @@ function drawCavemanOn(c,x,y,frame,ducking,s){
 
   // legs
   if(!ducking){
-    block(c,x+12,y-22+Math.abs(lo),13,22,7,'#92400e');
-    block(c,x+28,y-22+Math.abs(lo),13,22,7,'#92400e');
-    block(c,x+9,y-5,16,7,4,'#1c1917');
-    block(c,x+26,y-5,16,7,4,'#1c1917');
+    block(c,x+12,y-22+Math.abs(lo),13,22,7,skinDark);
+    block(c,x+28,y-22+Math.abs(lo),13,22,7,skinDark);
+    block(c,x+9,y-5,16,7,4,look.boot);
+    block(c,x+26,y-5,16,7,4,look.boot);
   } else {
-    block(c,x+8,y-14,14,14,6,'#92400e');
-    block(c,x+26,y-14,14,14,6,'#92400e');
+    block(c,x+8,y-14,14,14,6,skinDark);
+    block(c,x+26,y-14,14,14,6,skinDark);
   }
 
   // waistband
-  c.fillStyle='#854d0e'; c.strokeStyle=OL; c.lineWidth=1.5;
+  c.fillStyle=skinDark; c.strokeStyle=OL; c.lineWidth=1.5;
   c.beginPath(); c.ellipse(x+24,y-13,17,8,0,0,Math.PI*2); c.fill(); c.stroke();
 
   // body
-  c.fillStyle='#d97706'; c.strokeStyle=OL; c.lineWidth=2.5;
+  c.fillStyle=skin; c.strokeStyle=OL; c.lineWidth=2.5;
   c.beginPath(); c.ellipse(x+24,y-(ducking?20:36),19,ducking?13:22,0,0,Math.PI*2); c.fill(); c.stroke();
 
   if(!ducking){
     // arm
-    block(c,x+36,y-40,10,5,4,'#d97706');
+    block(c,x+36,y-40,10,5,4,skin);
     // head
-    c.fillStyle='#fbbf24'; c.strokeStyle=OL; c.lineWidth=2.5;
+    c.fillStyle=skinLight; c.strokeStyle=OL; c.lineWidth=2.5;
     c.beginPath(); c.arc(x+24,y-60,15,0,Math.PI*2); c.fill(); c.stroke();
     // hair base
-    c.fillStyle='#292524'; c.strokeStyle=OL; c.lineWidth=1.5;
+    c.fillStyle=look.hair; c.strokeStyle=OL; c.lineWidth=1.5;
     c.beginPath(); c.ellipse(x+24,y-72,14,6,0,Math.PI,Math.PI*2); c.fill(); c.stroke();
     // hair triangles
     for(let i=0;i<3;i++){
@@ -2921,7 +3007,7 @@ function drawCavemanOn(c,x,y,frame,ducking,s){
       c.closePath(); c.fill(); c.stroke();
     }
     // eyebrows
-    c.strokeStyle='#292524'; c.lineWidth=3; c.lineCap='round';
+    c.strokeStyle=look.hair; c.lineWidth=3; c.lineCap='round';
     c.beginPath(); c.moveTo(x+14,y-65); c.lineTo(x+21,y-68); c.stroke();
     c.beginPath(); c.moveTo(x+27,y-68); c.lineTo(x+34,y-65); c.stroke();
     // eyes
@@ -2933,9 +3019,9 @@ function drawCavemanOn(c,x,y,frame,ducking,s){
     c.fillStyle='#fff'; c.beginPath(); c.arc(x+16,y-62,1.2,0,Math.PI*2); c.fill();
     c.fillStyle='#fff'; c.beginPath(); c.arc(x+30,y-62,1.2,0,Math.PI*2); c.fill();
     // nose (circle, simpler)
-    circle(c,x+24,y-57,4,'#b45309');
+    circle(c,x+24,y-57,4,skinDark);
     // beard (semicircle)
-    c.fillStyle='#92400e'; c.strokeStyle=OL; c.lineWidth=1.5;
+    c.fillStyle=skinDark; c.strokeStyle=OL; c.lineWidth=1.5;
     c.beginPath(); c.arc(x+24,y-50,10,.1,Math.PI-.1); c.fill(); c.stroke();
   }
   c.restore();
