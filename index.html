@@ -320,6 +320,8 @@ let petFriend = 0;
 let shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
 let ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:new Set(['classic']), saber:new Set(['classic'])};
 let selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
+let ownedAccessories = {dino:new Set(['none']), caveman:new Set(['none'])};
+let selectedAccessory = {dino:'none', caveman:'none'};
 
 const SKINS = {
   dino: [
@@ -345,14 +347,33 @@ function skinPalette(char){
   const id = selectedSkin[char] || 'classic';
   return SKINS[char].find(s=>s.id===id) || SKINS[char][0];
 }
+const ACCESSORIES = {
+  dino: [
+    {id:'none', name:'Sem acessório', cost:0},
+    {id:'sunglasses', name:'Óculos escuro', cost:3},
+    {id:'glasses', name:'Óculos de grau', cost:3},
+    {id:'cap', name:'Boné', cost:4},
+    {id:'headphones', name:'Fone', cost:5},
+    {id:'bow', name:'Dino menina', cost:5},
+  ],
+  caveman: [
+    {id:'none', name:'Sem acessório', cost:0},
+    {id:'sunglasses', name:'Óculos escuro', cost:3},
+    {id:'glasses', name:'Óculos de grau', cost:3},
+    {id:'cap', name:'Boné', cost:4},
+    {id:'headphones', name:'Fone', cost:5},
+  ],
+};
 function saveProgress(){
   const data = {
     totalCoins, unlockedPhase, petXP, petLevel,
     shopUpgrades,
     selectedSkin,
+    selectedAccessory,
     petFriend,
     discoveredEggs:[...discoveredEggs],
     ownedSkins:{dino:[...ownedSkins.dino], caveman:[...ownedSkins.caveman], baby:[...ownedSkins.baby], saber:[...ownedSkins.saber]},
+    ownedAccessories:{dino:[...ownedAccessories.dino], caveman:[...ownedAccessories.caveman]},
   };
   localStorage.setItem('dinogame_save', JSON.stringify(data));
 }
@@ -367,17 +388,24 @@ function loadProgress(){
     discoveredEggs = new Set(data.discoveredEggs || []);
     shopUpgrades = Object.assign({petRange:0, extraLife:false, starterShield:false}, data.shopUpgrades || {});
     selectedSkin = Object.assign({dino:'classic', caveman:'classic', baby:'classic', saber:'classic'}, data.selectedSkin || {});
+    selectedAccessory = Object.assign({dino:'none', caveman:'none'}, data.selectedAccessory || {});
     ownedSkins = {
       dino:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.dino) || [])]),
       caveman:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.caveman) || [])]),
       baby:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.baby) || [])]),
       saber:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.saber) || [])]),
     };
+    ownedAccessories = {
+      dino:new Set(['none', ...((data.ownedAccessories && data.ownedAccessories.dino) || [])]),
+      caveman:new Set(['none', ...((data.ownedAccessories && data.ownedAccessories.caveman) || [])]),
+    };
   }catch(e){
     totalCoins=0; unlockedPhase=1; petXP=0; petLevel=1; petFriend=0; discoveredEggs=new Set();
     shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
     ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:new Set(['classic']), saber:new Set(['classic'])};
     selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
+    ownedAccessories = {dino:new Set(['none']), caveman:new Set(['none'])};
+    selectedAccessory = {dino:'none', caveman:'none'};
   }
 }
 
@@ -1084,6 +1112,15 @@ function renderWardrobe(){
       <b>${s.name}</b><br>${selected?'✅ '+tr('selected'):owned?action:'💰 '+action}
     </button>`;
   }).join('');
+  const accessoryCards = char => ACCESSORIES[char].map(a=>{
+    const owned = ownedAccessories[char].has(a.id);
+    const selected = selectedAccessory[char] === a.id;
+    const icon = {none:'—',sunglasses:'🕶',glasses:'👓',cap:'🧢',headphones:'🎧',bow:'🎀'}[a.id] || '•';
+    return `<button class="skin-card ${selected?'selected':''}" onclick="chooseAccessory('${char}','${a.id}')">
+      <span style="font-size:18px;display:block;line-height:30px">${icon}</span>
+      <b>${a.name}</b><br>${selected?'✅ '+tr('selected'):owned?tr('select'):'💰 '+a.cost}
+    </button>`;
+  }).join('');
   ov.innerHTML = `<div class="ocard wardrobe-card">
     <h2>${tr('wardrobe')}</h2>
     <p class="sub">${tr('coins')}: ${totalCoins}</p>
@@ -1093,6 +1130,8 @@ function renderWardrobe(){
     <div class="wardrobe-row">${skinCards('caveman')}</div>
     <p class="sub">PETS</p>
     <div class="wardrobe-row">${skinCards('baby')}${skinCards('saber')}</div>
+    <p class="sub">ACESSÓRIOS</p>
+    <div class="wardrobe-row">${accessoryCards('dino')}${accessoryCards('caveman')}</div>
     <button class="btn sec" onclick="renderWorldMap()" style="font-size:6px;padding:7px 16px;">← ${tr('back')}</button>
   </div>`;
   setTimeout(renderWardrobePreviews, 20);
@@ -1107,6 +1146,19 @@ function chooseSkin(char,id){
     ownedSkins[char].add(id);
   }
   selectedSkin[char] = id;
+  saveProgress();
+  renderWardrobe();
+}
+
+function chooseAccessory(char,id){
+  const acc = ACCESSORIES[char].find(a=>a.id===id);
+  if(!acc) return;
+  if(!ownedAccessories[char].has(id)){
+    if(totalCoins < acc.cost){ alert(tr('notEnough')); return; }
+    totalCoins -= acc.cost;
+    ownedAccessories[char].add(id);
+  }
+  selectedAccessory[char] = id;
   saveProgress();
   renderWardrobe();
 }
@@ -2971,6 +3023,43 @@ function drawPortal(x,active){
 
 // ─── PLAYER SPRITES ───────────────────────────────────────────────────────────
 // drawDinoOn / drawCavemanOn: desenha no contexto c passado, com escala s
+function drawAccessory(c,char,x,y,ducking=false){
+  const acc = selectedAccessory[char] || 'none';
+  if(acc==='none') return;
+  const isDino = char === 'dino';
+  const ax = isDino ? (ducking ? x+43 : x+42) : x+24;
+  const ay = isDino ? (ducking ? y-30 : y-70) : y-60;
+  c.save();
+  c.lineCap='round'; c.lineJoin='round';
+  if(acc==='sunglasses'){
+    c.fillStyle='#111827'; c.strokeStyle=OL; c.lineWidth=1.5;
+    c.beginPath(); c.roundRect(ax-8,ay-3,7,5,2); c.fill(); c.stroke();
+    c.beginPath(); c.roundRect(ax+1,ay-3,7,5,2); c.fill(); c.stroke();
+    c.strokeStyle='#111827'; c.lineWidth=2; c.beginPath(); c.moveTo(ax-1,ay-1); c.lineTo(ax+1,ay-1); c.stroke();
+  } else if(acc==='glasses'){
+    c.strokeStyle='#0f172a'; c.lineWidth=1.8;
+    c.beginPath(); c.arc(ax-5,ay-1,4,0,Math.PI*2); c.stroke();
+    c.beginPath(); c.arc(ax+5,ay-1,4,0,Math.PI*2); c.stroke();
+    c.beginPath(); c.moveTo(ax-1,ay-1); c.lineTo(ax+1,ay-1); c.stroke();
+  } else if(acc==='cap'){
+    c.fillStyle='#ef4444'; c.strokeStyle=OL; c.lineWidth=1.8;
+    c.beginPath(); c.ellipse(ax,ay-13,12,6,0,Math.PI,Math.PI*2); c.fill(); c.stroke();
+    c.fillStyle='#dc2626'; c.beginPath(); c.ellipse(ax+8,ay-10,9,3,.15,0,Math.PI*2); c.fill(); c.stroke();
+  } else if(acc==='headphones'){
+    c.strokeStyle='#111827'; c.lineWidth=3;
+    c.beginPath(); c.arc(ax,ay-7,14,Math.PI*1.05,Math.PI*1.95); c.stroke();
+    c.fillStyle='#38bdf8'; c.strokeStyle=OL; c.lineWidth=1.5;
+    c.beginPath(); c.roundRect(ax-15,ay-6,7,11,3); c.fill(); c.stroke();
+    c.beginPath(); c.roundRect(ax+8,ay-6,7,11,3); c.fill(); c.stroke();
+  } else if(acc==='bow'){
+    c.fillStyle='#f472b6'; c.strokeStyle=OL; c.lineWidth=1.5;
+    c.beginPath(); c.moveTo(ax-6,ay-16); c.lineTo(ax-17,ay-23); c.lineTo(ax-13,ay-10); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(ax-4,ay-16); c.lineTo(ax+8,ay-23); c.lineTo(ax+4,ay-10); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.arc(ax-4,ay-16,3,0,Math.PI*2); c.fill(); c.stroke();
+  }
+  c.restore();
+}
+
 function drawDinoOn(c,x,y,frame,ducking,s){
   const ft=frameCount*.14;
   const moving=Math.abs(player.vx)>0.1;
@@ -3064,6 +3153,7 @@ function drawDinoOn(c,x,y,frame,ducking,s){
     // sobrancelha
     c.strokeStyle=OL; c.lineWidth=2.5; c.lineCap='round';
     c.beginPath(); c.moveTo(x+37,y-77); c.lineTo(x+48,y-75); c.stroke();
+    drawAccessory(c,'dino',x,y,false);
 
   } else {
     // ducking
@@ -3083,6 +3173,7 @@ function drawDinoOn(c,x,y,frame,ducking,s){
     c.beginPath(); c.arc(x+43,y-30,4.5,0,Math.PI*2); c.fill(); c.stroke();
     c.fillStyle=skin.eye; c.beginPath(); c.arc(x+44,y-30,2.5,0,Math.PI*2); c.fill();
     c.fillStyle='#fff'; c.beginPath(); c.arc(x+45,y-31,1,0,Math.PI*2); c.fill();
+    drawAccessory(c,'dino',x,y,true);
   }
   c.restore();
 }
@@ -3199,6 +3290,7 @@ function drawCavemanOn(c,x,y,frame,ducking,s){
     // beard (semicircle)
     c.fillStyle=skinDark; c.strokeStyle=OL; c.lineWidth=1.5;
     c.beginPath(); c.arc(x+24,y-50,10,.1,Math.PI-.1); c.fill(); c.stroke();
+    drawAccessory(c,'caveman',x,y,false);
   }
   c.restore();
 }
