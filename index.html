@@ -190,6 +190,8 @@ const I18N = {
     worldMap:'Mapa das fases', shop:'Loja', album:'Álbum', locked:'Bloqueado', playPhase:'Jogar fase',
     coins:'Moedas', petLevel:'Pet nível', checkpoint:'Checkpoint salvo!', bought:'Comprado', notEnough:'Moedas insuficientes',
     wardrobe:'Guarda-roupa', select:'Selecionar', selected:'Selecionado', price:'Preço',
+    petPower:'Amizade do pet', secretFound:'Segredo encontrado!', rareEggs:'Ovos raros',
+    specialEggRainbow:'Ovo arco-íris: amizade cheia', specialEggFossil:'Ovo fóssil: +4 moedas', specialEggGhost:'Ovo fantasma: invencível', specialEggDragon:'Ovo dragão: fogo extra',
     shopPet:'Pet Coletor', shopPetDesc:'Aumenta o alcance do pet', shopLife:'Vida Extra', shopLifeDesc:'+1 vida nesta partida', shopShield:'Escudo Inicial', shopShieldDesc:'Começa a fase com escudo',
     specialEggGold:'Ovo dourado: +250 pts', specialEggBlue:'Ovo azul: +10s', specialEggRed:'Ovo vermelho: escudo',
     storyNext:p=>`O portal abre caminho para a fase ${p}.`, storyBody:'O grupo segue para um novo lugar, levando os ovos em segurança.',
@@ -226,6 +228,8 @@ const I18N = {
     worldMap:'Phase Map', shop:'Shop', album:'Album', locked:'Locked', playPhase:'Play phase',
     coins:'Coins', petLevel:'Pet level', checkpoint:'Checkpoint saved!', bought:'Bought', notEnough:'Not enough coins',
     wardrobe:'Wardrobe', select:'Select', selected:'Selected', price:'Price',
+    petPower:'Pet friendship', secretFound:'Secret found!', rareEggs:'Rare eggs',
+    specialEggRainbow:'Rainbow egg: full friendship', specialEggFossil:'Fossil egg: +4 coins', specialEggGhost:'Ghost egg: invincible', specialEggDragon:'Dragon egg: extra fire',
     shopPet:'Collector Pet', shopPetDesc:'Increases pet pickup range', shopLife:'Extra Life', shopLifeDesc:'+1 life this run', shopShield:'Starter Shield', shopShieldDesc:'Start the phase shielded',
     specialEggGold:'Golden egg: +250 pts', specialEggBlue:'Blue egg: +10s', specialEggRed:'Red egg: shield',
     storyNext:p=>`The portal opens the way to phase ${p}.`, storyBody:'The group moves toward a new place, keeping the eggs safe.',
@@ -262,6 +266,8 @@ const I18N = {
     worldMap:'Mapa de fases', shop:'Tienda', album:'Álbum', locked:'Bloqueado', playPhase:'Jugar fase',
     coins:'Monedas', petLevel:'Nivel del pet', checkpoint:'Checkpoint guardado!', bought:'Comprado', notEnough:'Monedas insuficientes',
     wardrobe:'Guardarropa', select:'Seleccionar', selected:'Seleccionado', price:'Precio',
+    petPower:'Amistad del pet', secretFound:'Secreto encontrado!', rareEggs:'Huevos raros',
+    specialEggRainbow:'Huevo arcoíris: amistad llena', specialEggFossil:'Huevo fósil: +4 monedas', specialEggGhost:'Huevo fantasma: invencible', specialEggDragon:'Huevo dragón: fuego extra',
     shopPet:'Pet Colector', shopPetDesc:'Aumenta el alcance del pet', shopLife:'Vida Extra', shopLifeDesc:'+1 vida en esta partida', shopShield:'Escudo Inicial', shopShieldDesc:'Empieza la fase con escudo',
     specialEggGold:'Huevo dorado: +250 pts', specialEggBlue:'Huevo azul: +10s', specialEggRed:'Huevo rojo: escudo',
     storyNext:p=>`El portal abre camino a la fase ${p}.`, storyBody:'El grupo sigue hacia un nuevo lugar, llevando los huevos a salvo.',
@@ -304,9 +310,12 @@ let unlockedPhase = 1;
 let petXP = 0, petLevel = 1;
 let checkpointX = 0, checkpointReached = false;
 let discoveredCreatures = new Set();
+let discoveredEggs = new Set();
+let phaseSecrets = [];
+let petFriend = 0;
 let shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
-let ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic'])};
-let selectedSkin = {dino:'classic', caveman:'classic'};
+let ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:new Set(['classic']), saber:new Set(['classic'])};
+let selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
 
 const SKINS = {
   dino: [
@@ -319,6 +328,14 @@ const SKINS = {
     {id:'forest', name:'Caveman Floresta', cost:8, skin:'#fdba74', body:'#16a34a', bodyDark:'#166534', hair:'#14532d', boot:'#1c1917', club:'#854d0e'},
     {id:'ice', name:'Caveman Gelo', cost:10, skin:'#fcd9a5', body:'#60a5fa', bodyDark:'#1d4ed8', hair:'#334155', boot:'#0f172a', club:'#64748b'},
   ],
+  baby: [
+    {id:'classic', name:'Baby Verde', cost:0, primary:'#4ade80', light:'#86efac', dark:'#166534', foot:'#15803d', belly:'#bbf7d0', spike:'#fbbf24', eye:'#1e3a8a'},
+    {id:'mint', name:'Baby Menta', cost:6, primary:'#2dd4bf', light:'#99f6e4', dark:'#0f766e', foot:'#14b8a6', belly:'#ccfbf1', spike:'#fde047', eye:'#0f172a'},
+  ],
+  saber: [
+    {id:'classic', name:'Tigre Dourado', cost:0, primary:'#f59e0b', light:'#fde68a', dark:'#92400e', stripe:'rgba(120,50,0,0.45)', nose:'#e11d48'},
+    {id:'snow', name:'Tigre Neve', cost:6, primary:'#e0f2fe', light:'#f8fafc', dark:'#64748b', stripe:'rgba(30,64,175,0.38)', nose:'#38bdf8'},
+  ],
 };
 function skinPalette(char){
   const id = selectedSkin[char] || 'classic';
@@ -329,7 +346,9 @@ function saveProgress(){
     totalCoins, unlockedPhase, petXP, petLevel,
     shopUpgrades,
     selectedSkin,
-    ownedSkins:{dino:[...ownedSkins.dino], caveman:[...ownedSkins.caveman]},
+    petFriend,
+    discoveredEggs:[...discoveredEggs],
+    ownedSkins:{dino:[...ownedSkins.dino], caveman:[...ownedSkins.caveman], baby:[...ownedSkins.baby], saber:[...ownedSkins.saber]},
   };
   localStorage.setItem('dinogame_save', JSON.stringify(data));
 }
@@ -340,17 +359,21 @@ function loadProgress(){
     unlockedPhase = Math.max(1, Number(data.unlockedPhase || 1));
     petXP = Number(data.petXP || 0);
     petLevel = Math.max(1, Number(data.petLevel || 1));
+    petFriend = Number(data.petFriend || 0);
+    discoveredEggs = new Set(data.discoveredEggs || []);
     shopUpgrades = Object.assign({petRange:0, extraLife:false, starterShield:false}, data.shopUpgrades || {});
-    selectedSkin = Object.assign({dino:'classic', caveman:'classic'}, data.selectedSkin || {});
+    selectedSkin = Object.assign({dino:'classic', caveman:'classic', baby:'classic', saber:'classic'}, data.selectedSkin || {});
     ownedSkins = {
       dino:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.dino) || [])]),
       caveman:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.caveman) || [])]),
+      baby:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.baby) || [])]),
+      saber:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.saber) || [])]),
     };
   }catch(e){
-    totalCoins=0; unlockedPhase=1; petXP=0; petLevel=1;
+    totalCoins=0; unlockedPhase=1; petXP=0; petLevel=1; petFriend=0; discoveredEggs=new Set();
     shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
-    ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic'])};
-    selectedSkin = {dino:'classic', caveman:'classic'};
+    ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:new Set(['classic']), saber:new Set(['classic'])};
+    selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
   }
 }
 
@@ -368,6 +391,7 @@ function petCollectRadius(){
 }
 function addPetXP(value){
   petXP += value;
+  petFriend = Math.min(100, petFriend + value * 8);
   const next = petLevel * 4;
   if(petXP >= next && petLevel < 5){
     petXP -= next;
@@ -375,6 +399,17 @@ function addPetXP(value){
     spawnParticles(pet.x+14, pet.y-24, '#a7f3d0', 18);
   }
   saveProgress();
+}
+function triggerPetFriendPower(){
+  if(petFriend < 100) return false;
+  petFriend = 0;
+  activeEffects.shield = Math.max(activeEffects.shield, 300);
+  activeEffects.speed = Math.max(activeEffects.speed, 240);
+  spawnParticles(pet.x+14, pet.y-24, '#fef08a', 24);
+  petSpeech.text = tr('petPower');
+  petSpeech.timer = 150;
+  saveProgress();
+  return true;
 }
 function discoverCreature(type){
   if(type) discoveredCreatures.add(type);
@@ -734,7 +769,7 @@ function generatePhase(p){
   // eggs — metade no chão, metade em cima de plataformas
   phaseEggs = [];
   const eggCount = 2+p;
-  const eggKinds = ['normal','normal','normal','gold','blue','red'];
+  const eggKinds = ['normal','normal','gold','blue','red','rainbow','fossil','ghost','dragon'];
   for(let i=0;i<eggCount;i++){
     const onPlat = phasePlatforms.length>0 && i%2===1;
     const plat   = onPlat ? phasePlatforms[Math.floor(Math.random()*phasePlatforms.length)] : null;
@@ -800,6 +835,16 @@ function generatePhase(p){
 
   checkpointX = Math.floor(len * 0.52);
   checkpointReached = false;
+
+  phaseSecrets = [];
+  for(let i=0;i<2;i++){
+    const plat = phasePlatforms[Math.floor(Math.random()*phasePlatforms.length)];
+    phaseSecrets.push({
+      x: plat ? plat.x + Math.min(plat.w-24, 18+Math.random()*(plat.w-36)) : 700+Math.random()*(len-1200),
+      y: plat ? plat.y - 42 : GROUND - 95 - Math.random()*70,
+      found:false,
+    });
+  }
 
   // enemies
   phaseEnemies = [];
@@ -954,10 +999,12 @@ function renderWorldMap(){
   ov.classList.remove('win-mode');
   ov.style.display='flex';
   const places = trArray('placeNames');
+  const routes = {1:[2,3],2:[4],3:[4],4:[]};
+  const reachable = routes[phase] || [];
   const nodes = places.map((name,idx)=>{
     const p = idx+1;
     const locked = p > unlockedPhase;
-    const active = p === phase;
+    const active = p === phase || reachable.includes(p);
     return `<button class="map-node ${locked?'locked':'unlocked'} ${active?'active':''}" ${locked?'':'onclick="launchPhase('+p+')"'}>`+
       `<b>${tr('phaseHud')} ${p}</b><br>${locked?'🔒 '+tr('locked'):'📍 '+name}</button>`;
   }).join('');
@@ -1040,6 +1087,8 @@ function renderWardrobe(){
     <div class="shop-row">${skinCards('dino')}</div>
     <p class="sub">CAVEMAN</p>
     <div class="shop-row">${skinCards('caveman')}</div>
+    <p class="sub">PETS</p>
+    <div class="shop-row">${skinCards('baby')}${skinCards('saber')}</div>
     <button class="btn sec" onclick="renderWorldMap()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
   </div>`;
   setTimeout(renderWardrobePreviews, 20);
@@ -1059,7 +1108,7 @@ function chooseSkin(char,id){
 }
 
 function renderWardrobePreviews(){
-  ['dino','caveman'].forEach(char=>{
+  ['dino','caveman','baby','saber'].forEach(char=>{
     SKINS[char].forEach(s=>{
       const cvs = document.getElementById(`skin-${char}-${s.id}`);
       if(!cvs) return;
@@ -1070,7 +1119,9 @@ function renderWardrobePreviews(){
       const old = selectedSkin[char];
       selectedSkin[char] = s.id;
       if(char==='dino') drawDinoOn(c,22,62,0,false,0.72);
-      else drawCavemanOn(c,24,62,0,false,0.72);
+      else if(char==='caveman') drawCavemanOn(c,24,62,0,false,0.72);
+      else if(char==='baby') drawBabyDinoOn(c,24,62,0,1,0);
+      else drawSaberToothOn(c,24,62,0,1,0);
       selectedSkin[char] = old;
     });
   });
@@ -1082,10 +1133,18 @@ function renderAlbum(){
     const ok = discoveredCreatures.has(k);
     return `<button class="map-node ${ok?'unlocked':'locked'}"><b>${ok?names[k]:'???'}</b><br>${ok?'✅':'🔒'} ${ok?tr('album'):tr('locked')}</button>`;
   }).join('');
+  const eggNames = {gold:'Ovo Dourado',blue:'Ovo Azul',red:'Ovo Vermelho',rainbow:'Ovo Arco-íris',fossil:'Ovo Fóssil',ghost:'Ovo Fantasma',dragon:'Ovo Dragão'};
+  const eggStories = {gold:'Brilha quando sente coragem.',blue:'Carrega tempo congelado.',red:'Protege quem está em perigo.',rainbow:'Nasce quando o pet confia em você.',fossil:'Guarda memória antiga.',ghost:'Some e volta sorrindo.',dragon:'Solta faíscas antes de nascer.'};
+  const eggCards = Object.keys(eggNames).map(k=>{
+    const ok = discoveredEggs.has(k);
+    return `<button class="map-node ${ok?'unlocked':'locked'}"><b>${ok?eggNames[k]:'???'}</b><br>${ok?eggStories[k]:tr('locked')}</button>`;
+  }).join('');
   document.getElementById('overlay').innerHTML = `<div class="ocard">
     <h2>${tr('albumTitle')}</h2>
     <p class="sub">${tr('albumHint')}</p>
     <div class="map-grid">${cards}</div>
+    <p class="sub">${tr('rareEggs')}</p>
+    <div class="map-grid">${eggCards}</div>
     <button class="btn sec" onclick="renderWorldMap()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
   </div>`;
 }
@@ -1129,11 +1188,13 @@ function resumeFromCheckpoint(){
 }
 
 function nextPhase(){
-  phase++;
-  if(phase>MAX_PHASES){ showOverlay('win'); return; }
-  unlockedPhase = Math.max(unlockedPhase, phase);
+  const routes = {1:[2,3],2:[4],3:[4],4:[]};
+  const next = routes[phase] || [];
+  if(!next.length){ showOverlay('win'); return; }
+  next.forEach(p=>unlockedPhase = Math.max(unlockedPhase, p));
   saveProgress();
-  showStoryBetweenPhases();
+  phase = next[0];
+  renderWorldMap();
 }
 
 function showStoryBetweenPhases(){
@@ -1322,8 +1383,9 @@ function update(){
       });
     }
     if(player.attackTimer<=22 && player.attackTimer>=4 && selectedChar==='dino'){
-      const fireX = player.attackDir>0 ? player.x+player.w : player.x-96;
-      const fireY = player.y-68, fireW=96, fireH=36;
+      const fw = activeEffects.fire > 0 ? 138 : 96;
+      const fireX = player.attackDir>0 ? player.x+player.w : player.x-fw;
+      const fireY = player.y-68, fireW=fw, fireH=activeEffects.fire > 0 ? 46 : 36;
       phaseEnemies.forEach(enemy=>{
         if(!enemy.alive) return;
         const ex=enemy.x-scrollX;
@@ -1385,6 +1447,27 @@ function update(){
     const petNear = Math.hypot(ix - (pet.x+14), iy - (pet.y-18)) < petCollectRadius();
     if((playerNear || petNear) && inventory.length < 2){
       collectPowerup(item, ix, iy, petNear);
+    }
+  });
+
+  // segredos escondidos
+  phaseSecrets.forEach(sec=>{
+    if(sec.found) return;
+    const sx = sec.x - scrollX;
+    const sy = sec.y + Math.sin(frameCount*.08)*3;
+    const playerNear = Math.hypot(sx-(player.x+player.w/2), sy-(player.y-30)) < 46;
+    const petNear = Math.hypot(sx-(pet.x+14), sy-(pet.y-18)) < petCollectRadius();
+    if(playerNear || petNear){
+      sec.found = true;
+      totalCoins += 3;
+      score += 120;
+      petFriend = Math.min(100, petFriend + 20);
+      if(petFriend >= 100) triggerPetFriendPower();
+      petSpeech.text = tr('secretFound');
+      petSpeech.timer = 140;
+      spawnParticles(sx, sy, '#a78bfa', 18);
+      sfxEgg();
+      saveProgress();
     }
   });
 
@@ -1534,11 +1617,27 @@ function collectEgg(egg, ex, ey, byPet=false){
   } else if(egg.kind==='red'){
     activeEffects.shield = Math.max(activeEffects.shield, 300);
     petSpeech.text = tr('specialEggRed');
+  } else if(egg.kind==='rainbow'){
+    petFriend = 100;
+    triggerPetFriendPower();
+    petSpeech.text = tr('specialEggRainbow');
+  } else if(egg.kind==='fossil'){
+    bonus = 150;
+    totalCoins += 4;
+    petSpeech.text = tr('specialEggFossil');
+  } else if(egg.kind==='ghost'){
+    activeEffects.shield = Math.max(activeEffects.shield, 520);
+    petSpeech.text = tr('specialEggGhost');
+  } else if(egg.kind==='dragon'){
+    activeEffects.fire = Math.max(activeEffects.fire, 700);
+    petSpeech.text = tr('specialEggDragon');
   } else {
     petSpeech.text = petLine('egg');
   }
+  if(egg.kind && egg.kind !== 'normal') discoveredEggs.add(egg.kind);
   score += bonus;
   addPetXP(byPet ? 2 : 1);
+  if(byPet && petFriend >= 100) triggerPetFriendPower();
   updateUI();
   sfxEgg();
   spawnParticles(ex, ey, egg.kind==='red'?'#f87171':egg.kind==='blue'?'#60a5fa':egg.kind==='gold'?'#fde047':'#fde68a', 14);
@@ -1960,6 +2059,9 @@ function draw(){
   // power-up items
   drawPowerupItems();
 
+  // hidden secrets
+  drawSecrets();
+
   // checkpoint
   drawCheckpoint();
 
@@ -2046,6 +2148,10 @@ function drawHUD(){
 
   ctx.fillStyle='#a7f3d0';
   ctx.fillText(`PET ${petLevel}`,520,my);
+  ctx.fillStyle='rgba(255,255,255,.12)';
+  roundRect(ctx,580,my-7,72,10,4,true,false);
+  ctx.fillStyle=petFriend>=100?'#fde047':'#a7f3d0';
+  roundRect(ctx,580,my-7,Math.max(4,72*(petFriend/100)),10,4,true,false);
 
   // timer (centro)
   if(state==='playing' && phaseFramesLeft>0){
@@ -2356,9 +2462,9 @@ function drawPlatform(x, y, w, type){
 }
 
 function drawEgg(x,y,r,kind='normal'){
-  const body = {normal:'#fde68a',gold:'#facc15',blue:'#bfdbfe',red:'#fecaca'}[kind] || '#fde68a';
-  const border = {normal:'#b45309',gold:'#a16207',blue:'#2563eb',red:'#dc2626'}[kind] || '#b45309';
-  const band = {normal:'#f59e0b',gold:'#fff7ad',blue:'#60a5fa',red:'#f87171'}[kind] || '#f59e0b';
+  const body = {normal:'#fde68a',gold:'#facc15',blue:'#bfdbfe',red:'#fecaca',rainbow:'#f0abfc',fossil:'#d6d3d1',ghost:'#e0e7ff',dragon:'#fed7aa'}[kind] || '#fde68a';
+  const border = {normal:'#b45309',gold:'#a16207',blue:'#2563eb',red:'#dc2626',rainbow:'#7c3aed',fossil:'#57534e',ghost:'#6366f1',dragon:'#ea580c'}[kind] || '#b45309';
+  const band = {normal:'#f59e0b',gold:'#fff7ad',blue:'#60a5fa',red:'#f87171',rainbow:'#22c55e',fossil:'#78716c',ghost:'#a5b4fc',dragon:'#fb923c'}[kind] || '#f59e0b';
   // halo pulsante flat
   ctx.fillStyle=kind==='blue'?'rgba(96,165,250,0.22)':kind==='red'?'rgba(248,113,113,0.22)':'rgba(251,191,36,0.22)';
   ctx.beginPath(); ctx.arc(x,y,r*2,0,Math.PI*2); ctx.fill();
@@ -2370,6 +2476,16 @@ function drawEgg(x,y,r,kind='normal'){
   // faixa decorativa
   ctx.strokeStyle=band; ctx.lineWidth=2;
   ctx.beginPath(); ctx.ellipse(x,y,r*.8,r*.45,0,0,Math.PI*2); ctx.stroke();
+  if(kind==='rainbow'){
+    ['#ef4444','#facc15','#22c55e','#3b82f6'].forEach((col,i)=>{ctx.strokeStyle=col; ctx.beginPath(); ctx.arc(x,y,r*.35+i*2,Math.PI*.15,Math.PI*.85); ctx.stroke();});
+  } else if(kind==='fossil'){
+    ctx.strokeStyle='#57534e'; ctx.beginPath(); ctx.moveTo(x-5,y+4); ctx.lineTo(x+5,y-4); ctx.moveTo(x-4,y-5); ctx.lineTo(x+4,y+5); ctx.stroke();
+  } else if(kind==='ghost'){
+    ctx.fillStyle='#6366f1'; ctx.beginPath(); ctx.arc(x-4,y-3,2,0,Math.PI*2); ctx.arc(x+5,y-3,2,0,Math.PI*2); ctx.fill();
+  } else if(kind==='dragon'){
+    ctx.fillStyle='#ef4444'; ctx.strokeStyle=OL; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x-5,y-r*.8); ctx.lineTo(x,y-r*1.2); ctx.lineTo(x+5,y-r*.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
   // brilho
   ctx.fillStyle='rgba(255,255,255,0.6)';
   ctx.beginPath(); ctx.ellipse(x-r*.22,y-r*.3,r*.2,r*.12,-0.4,0,Math.PI*2); ctx.fill();
@@ -2767,6 +2883,28 @@ function drawPowerupItems(){
   });
 }
 
+function drawSecrets(){
+  phaseSecrets.forEach(sec=>{
+    if(sec.found) return;
+    const sx = sec.x - scrollX;
+    if(sx < -40 || sx > W+40) return;
+    const sy = sec.y + Math.sin(frameCount*.08)*3;
+    ctx.save();
+    ctx.globalAlpha = 0.38 + Math.sin(frameCount*.08)*0.18;
+    ctx.fillStyle='#a78bfa';
+    ctx.strokeStyle=OL; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    for(let i=0;i<5;i++){
+      const a=-Math.PI/2+i*Math.PI*2/5;
+      const r=i%2===0?12:5;
+      const px=sx+Math.cos(a)*r, py=sy+Math.sin(a)*r;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  });
+}
+
 function drawCheckpoint(){
   const x = checkpointX - scrollX;
   if(x < -50 || x > W+50) return;
@@ -3071,26 +3209,48 @@ function drawPetHUD(){
 }
 
 // ─── PET SPRITES ──────────────────────────────────────────────────────────────
+function drawBabyDinoOn(c,x,y,frame,facing,bob){
+  const old = ctx;
+  const p = skinPalette('baby');
+  c.fillStyle=p.primary; c.strokeStyle=OL; c.lineWidth=2;
+  c.beginPath(); c.ellipse(x+16,y-18,14,11,0,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=p.light; c.beginPath(); c.arc(x+30,y-34,11,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=p.spike; c.beginPath(); c.moveTo(x+20,y-42); c.lineTo(x+25,y-54); c.lineTo(x+30,y-42); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle='#fff'; c.beginPath(); c.arc(x+27,y-37,4,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=p.eye; c.beginPath(); c.arc(x+28,y-37,2,0,Math.PI*2); c.fill();
+}
+function drawSaberToothOn(c,x,y,frame,facing,bob){
+  const p = skinPalette('saber');
+  c.fillStyle=p.primary; c.strokeStyle=OL; c.lineWidth=2;
+  c.beginPath(); c.ellipse(x+18,y-18,18,11,0,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=p.light; c.beginPath(); c.arc(x+38,y-34,12,0,Math.PI*2); c.fill(); c.stroke();
+  c.strokeStyle=p.stripe; c.lineWidth=2;
+  for(let i=0;i<3;i++){c.beginPath(); c.moveTo(x+7+i*7,y-26); c.lineTo(x+4+i*7,y-12); c.stroke();}
+  c.fillStyle=p.nose; c.beginPath(); c.arc(x+38,y-31,3,0,Math.PI*2); c.fill();
+  c.fillStyle='#fff'; c.beginPath(); c.moveTo(x+32,y-27); c.lineTo(x+34,y-17); c.lineTo(x+37,y-27); c.closePath(); c.fill(); c.stroke();
+}
+
 function drawBabyDino(x, y, frame, facing, bob){
   const c = ctx;
   const lo = Math.sin(bob) * 3;
+  const skin = skinPalette('baby');
   c.save();
   if(facing === -1){ c.translate(x+34, 0); c.scale(-1,1); x=0; }
 
   // tail — double stroke bezier
-  c.strokeStyle='#15803d'; c.lineWidth=7; c.lineCap='round';
+  c.strokeStyle=skin.foot; c.lineWidth=7; c.lineCap='round';
   c.beginPath(); c.moveTo(x+5,y-14); c.bezierCurveTo(x-4,y-10,x-10,y-4,x-12,y-1); c.stroke();
-  c.strokeStyle='#4ade80'; c.lineWidth=3.5; c.stroke();
+  c.strokeStyle=skin.primary; c.lineWidth=3.5; c.stroke();
   c.strokeStyle=OL; c.lineWidth=1.2; c.stroke();
 
   // rear leg
-  c.fillStyle='#166534'; c.strokeStyle=OL; c.lineWidth=1.5;
+  c.fillStyle=skin.dark; c.strokeStyle=OL; c.lineWidth=1.5;
   c.beginPath(); c.roundRect(x+5,y-14+Math.abs(lo),7,14,4); c.fill(); c.stroke();
-  c.fillStyle='#15803d'; c.beginPath(); c.ellipse(x+8,y+Math.abs(lo),5,3,0,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=skin.foot; c.beginPath(); c.ellipse(x+8,y+Math.abs(lo),5,3,0,0,Math.PI*2); c.fill(); c.stroke();
 
   // front leg
-  c.fillStyle='#166534'; c.beginPath(); c.roundRect(x+17,y-14-lo,7,14,4); c.fill(); c.stroke();
-  c.fillStyle='#15803d'; c.beginPath(); c.ellipse(x+20,y-lo,5,3,0,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=skin.dark; c.beginPath(); c.roundRect(x+17,y-14-lo,7,14,4); c.fill(); c.stroke();
+  c.fillStyle=skin.foot; c.beginPath(); c.ellipse(x+20,y-lo,5,3,0,0,Math.PI*2); c.fill(); c.stroke();
 
   // claws (front leg)
   c.strokeStyle=OL; c.lineWidth=1.2; c.lineCap='round';
@@ -3099,40 +3259,40 @@ function drawBabyDino(x, y, frame, facing, bob){
   });
 
   // body — chubby baby proportions
-  c.fillStyle='#4ade80'; c.strokeStyle=OL; c.lineWidth=2;
+  c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2;
   c.beginPath(); c.ellipse(x+14,y-18,13,12,0,0,Math.PI*2); c.fill(); c.stroke();
   // belly highlight
-  c.fillStyle='#bbf7d0';
+  c.fillStyle=skin.belly;
   c.beginPath(); c.ellipse(x+15,y-16,7,6,0,0,Math.PI*2); c.fill();
 
   // dorsal spikes (3 small)
-  c.fillStyle='#fbbf24'; c.strokeStyle=OL; c.lineWidth=1.5;
+  c.fillStyle=skin.spike; c.strokeStyle=OL; c.lineWidth=1.5;
   [10,8,6].forEach((sh,i)=>{
     const sx=x+7+i*7, sy=y-28;
     c.beginPath(); c.moveTo(sx,sy); c.lineTo(sx+3,sy-sh+Math.sin(bob+i)*.6); c.lineTo(sx+6,sy); c.closePath(); c.fill(); c.stroke();
   });
 
   // tiny arm
-  c.strokeStyle='#166534'; c.lineWidth=3.5; c.lineCap='round';
+  c.strokeStyle=skin.dark; c.lineWidth=3.5; c.lineCap='round';
   c.beginPath(); c.moveTo(x+20,y-24); c.lineTo(x+25,y-21); c.stroke();
   c.strokeStyle=OL; c.lineWidth=1.2; c.stroke();
 
   // neck
-  c.fillStyle='#4ade80'; c.strokeStyle=OL; c.lineWidth=1.8;
+  c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=1.8;
   c.beginPath(); c.ellipse(x+22,y-30,6,9,.2,0,Math.PI*2); c.fill(); c.stroke();
 
   // head — big round baby head
-  c.fillStyle='#86efac'; c.strokeStyle=OL; c.lineWidth=2;
+  c.fillStyle=skin.light; c.strokeStyle=OL; c.lineWidth=2;
   c.beginPath(); c.ellipse(x+28,y-39,13,11,0,0,Math.PI*2); c.fill(); c.stroke();
 
   // upper snout
-  c.fillStyle='#4ade80'; c.strokeStyle=OL; c.lineWidth=1.8;
+  c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=1.8;
   c.beginPath();
   c.moveTo(x+19,y-36); c.bezierCurveTo(x+26,y-34,x+36,y-34,x+40,y-37);
   c.lineTo(x+40,y-41); c.bezierCurveTo(x+35,y-42,x+26,y-42,x+19,y-40);
   c.closePath(); c.fill(); c.stroke();
   // lower jaw
-  c.fillStyle='#22c55e'; c.strokeStyle=OL; c.lineWidth=1.2;
+  c.fillStyle=skin.foot; c.strokeStyle=OL; c.lineWidth=1.2;
   c.beginPath();
   c.moveTo(x+19,y-36); c.bezierCurveTo(x+26,y-38,x+36,y-38,x+40,y-37);
   c.lineTo(x+40,y-34); c.bezierCurveTo(x+36,y-33,x+26,y-33,x+19,y-34);
@@ -3143,12 +3303,12 @@ function drawBabyDino(x, y, frame, facing, bob){
     c.beginPath(); c.moveTo(x+dx,y+dy); c.lineTo(x+dx+2,y+dy-3); c.lineTo(x+dx+4,y+dy); c.closePath(); c.fill(); c.stroke();
   });
   // nostril
-  c.fillStyle='#15803d'; c.beginPath(); c.arc(x+37,y-39,1.5,0,Math.PI*2); c.fill();
+  c.fillStyle=skin.foot; c.beginPath(); c.arc(x+37,y-39,1.5,0,Math.PI*2); c.fill();
 
   // big cute eye
   c.fillStyle='#fff'; c.strokeStyle=OL; c.lineWidth=1.5;
   c.beginPath(); c.arc(x+24,y-42,6,0,Math.PI*2); c.fill(); c.stroke();
-  c.fillStyle='#1e3a8a'; c.beginPath(); c.arc(x+25,y-42,4,0,Math.PI*2); c.fill();
+  c.fillStyle=skin.eye; c.beginPath(); c.arc(x+25,y-42,4,0,Math.PI*2); c.fill();
   c.fillStyle='#fff'; c.beginPath(); c.arc(x+26,y-43,1.8,0,Math.PI*2); c.fill();
 
   c.restore();
@@ -3157,54 +3317,55 @@ function drawBabyDino(x, y, frame, facing, bob){
 function drawSaberTooth(x, y, frame, facing, bob){
   const c = ctx;
   const lo = Math.sin(bob) * 3;
+  const skin = skinPalette('saber');
   c.save();
   if(facing === -1){ c.translate(x+40, 0); c.scale(-1,1); x=0; }
 
   // tail — bezier with tuft
-  c.strokeStyle='#92400e'; c.lineWidth=7; c.lineCap='round';
+  c.strokeStyle=skin.dark; c.lineWidth=7; c.lineCap='round';
   c.beginPath(); c.moveTo(x+5,y-14); c.bezierCurveTo(x-2,y-22+Math.sin(bob)*4,x-10,y-18,x-13,y-12+Math.sin(bob+1)*5); c.stroke();
-  c.strokeStyle='#d97706'; c.lineWidth=3.5; c.stroke();
+  c.strokeStyle=skin.primary; c.lineWidth=3.5; c.stroke();
   c.strokeStyle=OL; c.lineWidth=1.2; c.stroke();
   // tail tuft
-  c.fillStyle='#fbbf24'; c.strokeStyle=OL; c.lineWidth=1.2;
+  c.fillStyle=skin.light; c.strokeStyle=OL; c.lineWidth=1.2;
   c.beginPath(); c.ellipse(x-13,y-12+Math.sin(bob+1)*5,5,4,-.4,0,Math.PI*2); c.fill(); c.stroke();
 
   // rear legs
-  c.fillStyle='#b45309'; c.strokeStyle=OL; c.lineWidth=1.5;
+  c.fillStyle=skin.dark; c.strokeStyle=OL; c.lineWidth=1.5;
   c.beginPath(); c.roundRect(x+3,y-13+Math.abs(lo),7,13,4); c.fill(); c.stroke();
-  c.fillStyle='#92400e'; c.beginPath(); c.ellipse(x+6,y+Math.abs(lo),5,3,.1,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=skin.dark; c.beginPath(); c.ellipse(x+6,y+Math.abs(lo),5,3,.1,0,Math.PI*2); c.fill(); c.stroke();
   c.beginPath(); c.roundRect(x+13,y-13+Math.abs(lo),7,13,4); c.fill(); c.stroke();
-  c.fillStyle='#92400e'; c.strokeStyle=OL; c.beginPath(); c.ellipse(x+16,y+Math.abs(lo),5,3,.1,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=skin.dark; c.strokeStyle=OL; c.beginPath(); c.ellipse(x+16,y+Math.abs(lo),5,3,.1,0,Math.PI*2); c.fill(); c.stroke();
 
   // front legs
-  c.fillStyle='#d97706'; c.strokeStyle=OL; c.lineWidth=1.5;
+  c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=1.5;
   c.beginPath(); c.roundRect(x+22,y-13-lo,7,13,4); c.fill(); c.stroke();
-  c.fillStyle='#b45309'; c.beginPath(); c.ellipse(x+25,y-lo,5,3,.1,0,Math.PI*2); c.fill(); c.stroke();
-  c.fillStyle='#d97706'; c.strokeStyle=OL; c.beginPath(); c.roundRect(x+31,y-13+lo,7,13,4); c.fill(); c.stroke();
-  c.fillStyle='#b45309'; c.beginPath(); c.ellipse(x+34,y+lo,5,3,.1,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=skin.dark; c.beginPath(); c.ellipse(x+25,y-lo,5,3,.1,0,Math.PI*2); c.fill(); c.stroke();
+  c.fillStyle=skin.primary; c.strokeStyle=OL; c.beginPath(); c.roundRect(x+31,y-13+lo,7,13,4); c.fill(); c.stroke();
+  c.fillStyle=skin.dark; c.beginPath(); c.ellipse(x+34,y+lo,5,3,.1,0,Math.PI*2); c.fill(); c.stroke();
 
   // body — stocky low oval
-  c.fillStyle='#f59e0b'; c.strokeStyle=OL; c.lineWidth=2;
+  c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2;
   c.beginPath(); c.ellipse(x+18,y-18,17,11,-.08,0,Math.PI*2); c.fill(); c.stroke();
   // belly highlight
-  c.fillStyle='#fde68a';
+  c.fillStyle=skin.light;
   c.beginPath(); c.ellipse(x+19,y-16,9,6,0,0,Math.PI*2); c.fill();
   // tiger stripes
-  c.strokeStyle='rgba(120,50,0,0.45)'; c.lineWidth=2.5; c.lineCap='round';
+  c.strokeStyle=skin.stripe; c.lineWidth=2.5; c.lineCap='round';
   for(let i=0;i<4;i++){
     c.beginPath(); c.moveTo(x+6+i*6,y-26); c.lineTo(x+4+i*6,y-12); c.stroke();
   }
 
   // neck
-  c.fillStyle='#f59e0b'; c.strokeStyle=OL; c.lineWidth=1.8;
+  c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=1.8;
   c.beginPath(); c.ellipse(x+32,y-27,7,10,.15,0,Math.PI*2); c.fill(); c.stroke();
 
   // head — round big cat head
-  c.fillStyle='#fde68a'; c.strokeStyle=OL; c.lineWidth=2;
+  c.fillStyle=skin.light; c.strokeStyle=OL; c.lineWidth=2;
   c.beginPath(); c.ellipse(x+37,y-36,13,11,0,0,Math.PI*2); c.fill(); c.stroke();
 
   // ears
-  c.fillStyle='#fbbf24'; c.strokeStyle=OL; c.lineWidth=1.5;
+  c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=1.5;
   c.beginPath(); c.moveTo(x+27,y-44); c.lineTo(x+30,y-53); c.lineTo(x+34,y-44); c.closePath(); c.fill(); c.stroke();
   c.beginPath(); c.moveTo(x+38,y-45); c.lineTo(x+41,y-54); c.lineTo(x+45,y-45); c.closePath(); c.fill(); c.stroke();
   // inner ear
@@ -3217,7 +3378,7 @@ function drawSaberTooth(x, y, frame, facing, bob){
   c.beginPath(); c.ellipse(x+37,y-33,7,5,0,0,Math.PI*2); c.fill(); c.stroke();
 
   // nose
-  c.fillStyle='#e11d48'; c.strokeStyle=OL; c.lineWidth=1;
+  c.fillStyle=skin.nose; c.strokeStyle=OL; c.lineWidth=1;
   c.beginPath(); c.ellipse(x+37,y-30,3.5,2.5,0,0,Math.PI*2); c.fill(); c.stroke();
 
   // eyes (front-facing big cat eyes)
@@ -3262,7 +3423,7 @@ function drawFireBreath(){
   // origin: dino snout
   const ox = dir>0 ? player.x+60 : player.x-12;
   const oy = player.y-60;
-  const maxLen = 96;
+  const maxLen = activeEffects.fire > 0 ? 138 : 96;
   const len = maxLen * Math.min(1, progress*2.4);
   const layers = [
     { col:'#fef08a', rad:13, offset:0    },
