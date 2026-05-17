@@ -173,6 +173,7 @@ const I18N = {
     muteTitle:'Música [M]', pauseTitle:'Pausar [P]', quitShortTitle:'Sair para o Menu',
     creditsText:'Martin Coradi de Souza · 2026 · Co-autoria: Claude Code',
     themeNames:['Floresta Jurássica','Deserto Vulcânico','Caverna Glacial','Floresta Bioluminescente'],
+    placeNames:['Vale de Arandu','Dunas de Kairós','Gruta de Nivalis','Bosque de Lúmina'],
     cutsceneDino:['Até logo,','família! 🦕'], cutsceneCaveman:['Tchau,','pessoal! 🪓'], cutsceneStart:'Uma nova aventura começa...', cutsceneSkip:'[ESPAÇO] Pular',
     petLines:{
       idle:['Vamos lá!','Que aventura!','Por aqui!','Siga em frente!'],
@@ -201,6 +202,7 @@ const I18N = {
     muteTitle:'Music [M]', pauseTitle:'Pause [P]', quitShortTitle:'Exit to Menu',
     creditsText:'Martin Coradi de Souza · 2026 · Co-authorship: Claude Code',
     themeNames:['Jurassic Forest','Volcanic Desert','Glacial Cave','Bioluminescent Forest'],
+    placeNames:['Arandu Valley','Kairos Dunes','Nivalis Grotto','Lumina Grove'],
     cutsceneDino:['Goodbye,','family! 🦕'], cutsceneCaveman:['Bye,','everyone! 🪓'], cutsceneStart:'A new adventure begins...', cutsceneSkip:'[SPACE] Skip',
     petLines:{
       idle:["Let's go!",'Adventure time!','This way!','Keep going!'],
@@ -229,6 +231,7 @@ const I18N = {
     muteTitle:'Música [M]', pauseTitle:'Pausar [P]', quitShortTitle:'Salir al Menú',
     creditsText:'Martin Coradi de Souza · 2026 · Coautoría: Claude Code',
     themeNames:['Bosque Jurásico','Desierto Volcánico','Cueva Glacial','Bosque Bioluminiscente'],
+    placeNames:['Valle de Arandu','Dunas de Kairos','Gruta de Nivalis','Bosque de Lúmina'],
     cutsceneDino:['Adiós,','familia! 🦕'], cutsceneCaveman:['¡Adiós,','todos! 🪓'], cutsceneStart:'Una nueva aventura comienza...', cutsceneSkip:'[ESPACIO] Saltar',
     petLines:{
       idle:['¡Vamos!','¡Qué aventura!','¡Por aquí!','¡Sigue adelante!'],
@@ -1794,6 +1797,32 @@ function drawHUD(){
 
   ctx.textBaseline='alphabetic';
   ctx.textAlign='left';
+  drawPlaceName();
+}
+
+function drawPlaceName(){
+  if(!currentTheme) return;
+  const themeIdx = Math.max(0, THEMES.indexOf(currentTheme));
+  const name = trArray('placeNames')[themeIdx] || trArray('themeNames')[themeIdx] || currentTheme.name;
+  const x = 16, y = H - 30;
+
+  ctx.save();
+  ctx.font='8px "Press Start 2P"';
+  ctx.textAlign='left';
+  ctx.textBaseline='middle';
+  const w = Math.min(270, Math.max(116, name.length * 8 + 30));
+
+  ctx.fillStyle='rgba(5,10,22,.62)';
+  roundRect(ctx,x,y-14,w,26,8,true,false);
+  ctx.strokeStyle='rgba(255,255,255,.18)';
+  ctx.lineWidth=1;
+  roundRect(ctx,x,y-14,w,26,8,false,true);
+
+  ctx.fillStyle='#fef3c7';
+  ctx.fillText('📍',x+10,y+1);
+  ctx.fillStyle='#e0f2fe';
+  ctx.fillText(name,x+32,y+1);
+  ctx.restore();
 }
 
 // ─── SCENE HELPERS ────────────────────────────────────────────────────────────
