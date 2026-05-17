@@ -1669,7 +1669,7 @@ function draw(){
     ctx.fillStyle='#fff'; ctx.font='bold 18px "Press Start 2P"';
     ctx.textAlign='center';
     const themeIdx = Math.max(0, THEMES.indexOf(currentTheme));
-    ctx.fillText(trArray('themeNames')[themeIdx] || currentTheme.name, W/2, H/2-10);
+    ctx.fillText(trArray('placeNames')[themeIdx] || currentTheme.name, W/2, H/2-10);
     ctx.font='10px "Press Start 2P"';
     ctx.fillStyle='#4ecdc4';
     ctx.fillText(`${tr('phaseHud')} ${phase}`, W/2, H/2+16);
