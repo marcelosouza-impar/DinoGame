@@ -1075,8 +1075,8 @@ function update(){
     item.bob += 0.07;
     const ix = item.x - scrollX;
     const iy = item.y + Math.sin(item.bob) * 5;
-    const playerNear = Math.abs(ix - (player.x + player.w/2)) < 58 && Math.abs(iy - (player.y-24)) < 70;
-    const petNear = Math.hypot(ix - (pet.x+14), iy - (pet.y-18)) < 66;
+    const playerNear = Math.abs(ix - (player.x + player.w/2)) < 120 && Math.abs(iy - (player.y-24)) < 110;
+    const petNear = Math.hypot(ix - (pet.x+14), iy - (pet.y-18)) < 90;
     if((playerNear || petNear) && inventory.length < 2){
       item.collected = true;
       inventory.push(item.type);
@@ -1120,13 +1120,6 @@ function update(){
     }
   });
 
-  // portal
-  const allEggs = phaseEggs.every(e=>e.collected);
-  const pxPor = portalX-scrollX;
-  if(allEggs && rectsOverlap(player.x+10,player.y-52,player.w-20,52, pxPor,GROUND-110,64,110)){
-    score+=500; updateUI(); showOverlay('phaseclear');
-  }
-
   // ── pet update ──
   pet.history.push({x: player.x + scrollX, y: player.y});
   if(pet.history.length > 52) pet.history.shift();
@@ -1164,8 +1157,8 @@ function update(){
     const ex = egg.x - scrollX;
     const ey = egg.y + Math.sin(egg.bob) * 5;
     const petDist = Math.hypot(ex - (pet.x+14), ey - (pet.y-18));
-    const playerDist = Math.hypot(ex - (player.x+player.w/2), ey - (player.y-28));
-    if(petDist < 64 || playerDist < 76){
+    const playerNear = Math.abs(ex - (player.x+player.w/2)) < 120 && Math.abs(ey - (player.y-28)) < 130;
+    if(petDist < 90 || playerNear){
       egg.collected = true;
       score += 100;
       updateUI();
@@ -1176,6 +1169,13 @@ function update(){
       petSpeech.timer = 120;
     }
   });
+
+  // portal — depois da coleta do pet, para ativar imediatamente se o pet pegar o último ovo
+  const allEggs = phaseEggs.every(e=>e.collected);
+  const pxPor = portalX-scrollX;
+  if(allEggs && rectsOverlap(player.x+10,player.y-52,player.w-20,52, pxPor,GROUND-110,64,110)){
+    score+=500; updateUI(); showOverlay('phaseclear');
+  }
 
   // pet speech triggers
   if(petSpeech.timer > 0) petSpeech.timer--;
