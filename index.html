@@ -1074,13 +1074,17 @@ function update(){
     if(item.collected) return;
     item.bob += 0.07;
     const ix = item.x - scrollX;
-    if(Math.abs(ix - (player.x + player.w/2)) < 24 && Math.abs(item.y - player.y) < 50){
-      if(inventory.length < 2){
-        item.collected = true;
-        inventory.push(item.type);
-        spawnParticles(ix, item.y, item.type==='speed'?'#fb923c':item.type==='shield'?'#60a5fa':'#ef4444', 10);
-        sfxEgg();
-      }
+    const iy = item.y + Math.sin(item.bob) * 5;
+    const playerNear = Math.abs(ix - (player.x + player.w/2)) < 58 && Math.abs(iy - (player.y-24)) < 70;
+    const petNear = Math.hypot(ix - (pet.x+14), iy - (pet.y-18)) < 66;
+    if((playerNear || petNear) && inventory.length < 2){
+      item.collected = true;
+      inventory.push(item.type);
+      pet.facing = ix > pet.x ? 1 : -1;
+      petSpeech.text = petLine('egg');
+      petSpeech.timer = 120;
+      spawnParticles(ix, iy, item.type==='speed'?'#fb923c':item.type==='shield'?'#60a5fa':'#ef4444', 10);
+      sfxEgg();
     }
   });
 
