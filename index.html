@@ -15,7 +15,11 @@
   }
   #gameContainer{
     position:relative;border-radius:14px;overflow:hidden;
+    transform:scale(.9);transform-origin:center center;
     box-shadow:0 0 0 2px #4ecdc4,0 0 50px rgba(78,205,196,.35),0 0 100px rgba(78,205,196,.1);
+  }
+  @media (max-width:760px),(max-height:520px){
+    #gameContainer{transform:scale(.82);}
   }
   canvas{display:block;}
 
