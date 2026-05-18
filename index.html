@@ -1275,7 +1275,7 @@ function renderWardrobe(){
       </div>
       <div style="flex:1;min-width:200px;">
         <div class="wardrobe-row">${skinCards('dino')}</div>
-        <p class="sub" style="margin:6px 0 4px;">Acessórios <span style="color:#94a3b8;font-size:5px;">(até 2)</span></p>
+        <p class="sub" style="margin:6px 0 4px;">Acessórios <span style="color:#94a3b8;font-size:5px;">(máx. 5)</span></p>
         <div class="wardrobe-row">${accessoryCards('dino')}</div>
       </div>
     </div>
@@ -1289,7 +1289,7 @@ function renderWardrobe(){
       </div>
       <div style="flex:1;min-width:200px;">
         <div class="wardrobe-row">${skinCards('caveman')}</div>
-        <p class="sub" style="margin:6px 0 4px;">Acessórios <span style="color:#94a3b8;font-size:5px;">(até 2)</span></p>
+        <p class="sub" style="margin:6px 0 4px;">Acessórios <span style="color:#94a3b8;font-size:5px;">(máx. 5)</span></p>
         <div class="wardrobe-row">${accessoryCards('caveman')}</div>
       </div>
     </div>
@@ -1324,15 +1324,15 @@ function chooseAccessory(char,id){
     totalCoins -= acc.cost;
     ownedAccessories[char].add(id);
   }
-  // toggle: remove if already selected, add if slot available (max 2)
+  // toggle: remove se já selecionado, adicionar se < 5
   const arr = selectedAccessory[char];
   const idx = arr.indexOf(id);
   if(idx !== -1){
-    arr.splice(idx, 1); // deselect
-  } else if(arr.length < 2){
-    arr.push(id);       // equip
+    arr.splice(idx, 1); // desequipar
+  } else if(arr.length < 5){
+    arr.push(id);       // equipar
   } else {
-    // replace oldest
+    // substituir o mais antigo
     arr.shift();
     arr.push(id);
   }
@@ -3295,8 +3295,14 @@ function drawAccessory(c,char,x,y,ducking=false){
   const ay0 = isDino ? (ducking ? y-30 : y-70) : y-60;
   c.save();
   c.lineCap='round'; c.lineJoin='round';
-  // offset for second accessory when stacked
-  const offsets = [{dx:0,dy:0},{dx:0,dy:-14}];
+  // offsets de posição para até 5 acessórios empilhados
+  const offsets = [
+    {dx:0, dy:0},
+    {dx:0, dy:-14},
+    {dx:0, dy:-28},
+    {dx:16, dy:-8},
+    {dx:16, dy:-22},
+  ];
   accs.forEach((acc,slot)=>{
     const off = offsets[slot] || {dx:0,dy:0};
     const ax = ax0 + off.dx, ay = ay0 + off.dy;
