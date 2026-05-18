@@ -2682,7 +2682,7 @@ function drawEgg(x,y,r,kind='normal'){
   ctx.save();
   ctx.globalAlpha = pulse * 0.5;
   const grd0 = ctx.createRadialGradient(x,y,r*0.6,x,y,r*2.4);
-  grd0.addColorStop(0, cfg.glow); grd0.addColorStop(1,'transparent');
+  grd0.addColorStop(0, cfg.glow); grd0.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle = grd0;
   ctx.beginPath(); ctx.ellipse(x,y,r*2.2,r*2.5,0,0,Math.PI*2); ctx.fill();
   ctx.globalAlpha = 1;
@@ -3941,9 +3941,14 @@ function drawPauseOverlay(){
 setHudButtonTitles();
 
 function loop(){
-  if(!paused){ update(); draw(); }
-  else { draw(); drawPauseOverlay(); }
-  updateMobileControls();
+  try{
+    if(!paused){ update(); draw(); }
+    else { draw(); drawPauseOverlay(); }
+    updateMobileControls();
+  } catch(e){
+    // Never let a draw/update error kill the game loop
+    console.error('DinoGame loop error:', e);
+  }
   requestAnimationFrame(loop);
 }
 initMobileDpad();
