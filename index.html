@@ -380,7 +380,7 @@ let shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
 let ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:new Set(['classic']), saber:new Set(['classic'])};
 let selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
 let ownedAccessories = {dino:new Set(['none']), caveman:new Set(['none'])};
-let selectedAccessory = {dino:'none', caveman:'none'};
+let selectedAccessory = {dino:[], caveman:[]};
 
 const SKINS = {
   dino: [
@@ -447,7 +447,12 @@ function loadProgress(){
     discoveredEggs = new Set(data.discoveredEggs || []);
     shopUpgrades = Object.assign({petRange:0, extraLife:false, starterShield:false}, data.shopUpgrades || {});
     selectedSkin = Object.assign({dino:'classic', caveman:'classic', baby:'classic', saber:'classic'}, data.selectedSkin || {});
-    selectedAccessory = Object.assign({dino:'none', caveman:'none'}, data.selectedAccessory || {});
+    // migrate old single-string format to array
+    const sa = data.selectedAccessory || {};
+    selectedAccessory = {
+      dino: Array.isArray(sa.dino) ? sa.dino : (sa.dino && sa.dino!=='none' ? [sa.dino] : []),
+      caveman: Array.isArray(sa.caveman) ? sa.caveman : (sa.caveman && sa.caveman!=='none' ? [sa.caveman] : []),
+    };
     ownedSkins = {
       dino:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.dino) || [])]),
       caveman:new Set(['classic', ...((data.ownedSkins && data.ownedSkins.caveman) || [])]),
@@ -464,7 +469,7 @@ function loadProgress(){
     ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:new Set(['classic']), saber:new Set(['classic'])};
     selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
     ownedAccessories = {dino:new Set(['none']), caveman:new Set(['none'])};
-    selectedAccessory = {dino:'none', caveman:'none'};
+    selectedAccessory = {dino:[], caveman:[]};
   }
 }
 
@@ -1249,24 +1254,49 @@ function renderWardrobe(){
   }).join('');
   const accessoryCards = char => ACCESSORIES[char].map(a=>{
     const owned = ownedAccessories[char].has(a.id);
-    const selected = selectedAccessory[char] === a.id;
+    const active = selectedAccessory[char].includes(a.id);
     const icon = {none:'—',sunglasses:'🕶',glasses:'👓',cap:'🧢',headphones:'🎧',bow:'🎀'}[a.id] || '•';
-    return `<button class="skin-card ${selected?'selected':''}" onclick="chooseAccessory('${char}','${a.id}')">
+    const label = active ? '✅ Equipado' : owned ? tr('select') : '💰 '+a.cost;
+    return `<button class="skin-card ${active?'selected':''}" onclick="chooseAccessory('${char}','${a.id}')">
       <span style="font-size:18px;display:block;line-height:30px">${icon}</span>
-      <b>${a.name}</b><br>${selected?'✅ '+tr('selected'):owned?tr('select'):'💰 '+a.cost}
+      <b>${a.name}</b><br>${label}
     </button>`;
   }).join('');
   ov.innerHTML = `<div class="ocard wardrobe-card">
-    <h2>${tr('wardrobe')}</h2>
-    <p class="sub">${tr('coins')}: ${totalCoins}</p>
-    <p class="sub">DINO</p>
-    <div class="wardrobe-row">${skinCards('dino')}</div>
-    <p class="sub">CAVEMAN</p>
-    <div class="wardrobe-row">${skinCards('caveman')}</div>
+    <h2>👕 ${tr('wardrobe')}</h2>
+    <p class="sub">💰 ${tr('coins')}: ${totalCoins}</p>
+    <div class="divider"></div>
+
+    <p class="sub" style="color:#4ecdc4">DINOSAURO</p>
+    <div style="display:flex;gap:14px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <canvas id="preview-full-dino" width="110" height="90" style="border-radius:10px;background:rgba(78,205,196,.08);border:1px solid rgba(78,205,196,.2);"></canvas>
+        <span style="font-size:5.5px;color:#4ecdc4;">Preview</span>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div class="wardrobe-row">${skinCards('dino')}</div>
+        <p class="sub" style="margin:6px 0 4px;">Acessórios <span style="color:#94a3b8;font-size:5px;">(até 2)</span></p>
+        <div class="wardrobe-row">${accessoryCards('dino')}</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <p class="sub" style="color:#fbbf24">CAVEMAN</p>
+    <div style="display:flex;gap:14px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <canvas id="preview-full-caveman" width="110" height="90" style="border-radius:10px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);"></canvas>
+        <span style="font-size:5.5px;color:#fbbf24;">Preview</span>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div class="wardrobe-row">${skinCards('caveman')}</div>
+        <p class="sub" style="margin:6px 0 4px;">Acessórios <span style="color:#94a3b8;font-size:5px;">(até 2)</span></p>
+        <div class="wardrobe-row">${accessoryCards('caveman')}</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+
     <p class="sub">PETS</p>
     <div class="wardrobe-row">${skinCards('baby')}${skinCards('saber')}</div>
-    <p class="sub">ACESSÓRIOS</p>
-    <div class="wardrobe-row">${accessoryCards('dino')}${accessoryCards('caveman')}</div>
     <button class="btn sec" onclick="renderWorldMap()" style="font-size:6px;padding:7px 16px;">← ${tr('back')}</button>
   </div>`;
   setTimeout(renderWardrobePreviews, 20);
@@ -1288,17 +1318,40 @@ function chooseSkin(char,id){
 function chooseAccessory(char,id){
   const acc = ACCESSORIES[char].find(a=>a.id===id);
   if(!acc) return;
+  // buy if not owned
   if(!ownedAccessories[char].has(id)){
     if(totalCoins < acc.cost){ alert(tr('notEnough')); return; }
     totalCoins -= acc.cost;
     ownedAccessories[char].add(id);
   }
-  selectedAccessory[char] = id;
+  // toggle: remove if already selected, add if slot available (max 2)
+  const arr = selectedAccessory[char];
+  const idx = arr.indexOf(id);
+  if(idx !== -1){
+    arr.splice(idx, 1); // deselect
+  } else if(arr.length < 2){
+    arr.push(id);       // equip
+  } else {
+    // replace oldest
+    arr.shift();
+    arr.push(id);
+  }
   saveProgress();
   renderWardrobe();
 }
 
 function renderWardrobePreviews(){
+  // Full character previews (skin + all accessories)
+  ['dino','caveman'].forEach(char=>{
+    const cvs = document.getElementById(`preview-full-${char}`);
+    if(cvs){
+      const c = cvs.getContext('2d');
+      c.clearRect(0,0,cvs.width,cvs.height);
+      if(char==='dino') drawDinoOn(c, 18, cvs.height-8, 0, false, 0.62);
+      else              drawCavemanOn(c, 18, cvs.height-8, 0, false, 0.62);
+    }
+  });
+  // Skin thumbnail previews
   ['dino','caveman','baby','saber'].forEach(char=>{
     SKINS[char].forEach(s=>{
       const cvs = document.getElementById(`skin-${char}-${s.id}`);
@@ -1307,13 +1360,16 @@ function renderWardrobePreviews(){
       c.clearRect(0,0,cvs.width,cvs.height);
       c.fillStyle='rgba(78,205,196,.10)';
       roundRect(c,4,4,cvs.width-8,cvs.height-8,8,true,false);
-      const old = selectedSkin[char];
+      const oldSkin = selectedSkin[char];
+      const oldAcc  = selectedAccessory[char];
       selectedSkin[char] = s.id;
-      if(char==='dino') drawDinoOn(c,16,48,0,false,0.55);
+      selectedAccessory[char] = []; // no accessories in skin thumbnail
+      if(char==='dino')    drawDinoOn(c,16,48,0,false,0.55);
       else if(char==='caveman') drawCavemanOn(c,18,48,0,false,0.55);
-      else if(char==='baby') drawBabyDinoOn(c,18,48,0,1,0);
-      else drawSaberToothOn(c,18,48,0,1,0);
-      selectedSkin[char] = old;
+      else if(char==='baby')   drawBabyDinoOn(c,18,48,0,1,0);
+      else                     drawSaberToothOn(c,18,48,0,1,0);
+      selectedSkin[char] = oldSkin;
+      selectedAccessory[char] = oldAcc;
     });
   });
 }
@@ -3228,40 +3284,49 @@ function drawPortal(x,active){
 
 // ─── PLAYER SPRITES ───────────────────────────────────────────────────────────
 // drawDinoOn / drawCavemanOn: desenha no contexto c passado, com escala s
+// drawAccessory: desenha TODOS os acessórios ativos do personagem
 function drawAccessory(c,char,x,y,ducking=false){
-  const acc = selectedAccessory[char] || 'none';
-  if(acc==='none') return;
+  const accs = Array.isArray(selectedAccessory[char])
+    ? selectedAccessory[char]
+    : (selectedAccessory[char] && selectedAccessory[char]!=='none' ? [selectedAccessory[char]] : []);
+  if(accs.length===0) return;
   const isDino = char === 'dino';
-  const ax = isDino ? (ducking ? x+43 : x+42) : x+24;
-  const ay = isDino ? (ducking ? y-30 : y-70) : y-60;
+  const ax0 = isDino ? (ducking ? x+43 : x+42) : x+24;
+  const ay0 = isDino ? (ducking ? y-30 : y-70) : y-60;
   c.save();
   c.lineCap='round'; c.lineJoin='round';
-  if(acc==='sunglasses'){
-    c.fillStyle='#111827'; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.roundRect(ax-8,ay-3,7,5,2); c.fill(); c.stroke();
-    c.beginPath(); c.roundRect(ax+1,ay-3,7,5,2); c.fill(); c.stroke();
-    c.strokeStyle='#111827'; c.lineWidth=2; c.beginPath(); c.moveTo(ax-1,ay-1); c.lineTo(ax+1,ay-1); c.stroke();
-  } else if(acc==='glasses'){
-    c.strokeStyle='#0f172a'; c.lineWidth=1.8;
-    c.beginPath(); c.arc(ax-5,ay-1,4,0,Math.PI*2); c.stroke();
-    c.beginPath(); c.arc(ax+5,ay-1,4,0,Math.PI*2); c.stroke();
-    c.beginPath(); c.moveTo(ax-1,ay-1); c.lineTo(ax+1,ay-1); c.stroke();
-  } else if(acc==='cap'){
-    c.fillStyle='#ef4444'; c.strokeStyle=OL; c.lineWidth=1.8;
-    c.beginPath(); c.ellipse(ax,ay-13,12,6,0,Math.PI,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle='#dc2626'; c.beginPath(); c.ellipse(ax+8,ay-10,9,3,.15,0,Math.PI*2); c.fill(); c.stroke();
-  } else if(acc==='headphones'){
-    c.strokeStyle='#111827'; c.lineWidth=3;
-    c.beginPath(); c.arc(ax,ay-7,14,Math.PI*1.05,Math.PI*1.95); c.stroke();
-    c.fillStyle='#38bdf8'; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.roundRect(ax-15,ay-6,7,11,3); c.fill(); c.stroke();
-    c.beginPath(); c.roundRect(ax+8,ay-6,7,11,3); c.fill(); c.stroke();
-  } else if(acc==='bow'){
-    c.fillStyle='#f472b6'; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.moveTo(ax-6,ay-16); c.lineTo(ax-17,ay-23); c.lineTo(ax-13,ay-10); c.closePath(); c.fill(); c.stroke();
-    c.beginPath(); c.moveTo(ax-4,ay-16); c.lineTo(ax+8,ay-23); c.lineTo(ax+4,ay-10); c.closePath(); c.fill(); c.stroke();
-    c.beginPath(); c.arc(ax-4,ay-16,3,0,Math.PI*2); c.fill(); c.stroke();
-  }
+  // offset for second accessory when stacked
+  const offsets = [{dx:0,dy:0},{dx:0,dy:-14}];
+  accs.forEach((acc,slot)=>{
+    const off = offsets[slot] || {dx:0,dy:0};
+    const ax = ax0 + off.dx, ay = ay0 + off.dy;
+    if(acc==='sunglasses'){
+      c.fillStyle='#111827'; c.strokeStyle=OL; c.lineWidth=1.5;
+      c.beginPath(); c.roundRect(ax-8,ay-3,7,5,2); c.fill(); c.stroke();
+      c.beginPath(); c.roundRect(ax+1,ay-3,7,5,2); c.fill(); c.stroke();
+      c.strokeStyle='#111827'; c.lineWidth=2; c.beginPath(); c.moveTo(ax-1,ay-1); c.lineTo(ax+1,ay-1); c.stroke();
+    } else if(acc==='glasses'){
+      c.strokeStyle='#0f172a'; c.lineWidth=1.8;
+      c.beginPath(); c.arc(ax-5,ay-1,4,0,Math.PI*2); c.stroke();
+      c.beginPath(); c.arc(ax+5,ay-1,4,0,Math.PI*2); c.stroke();
+      c.beginPath(); c.moveTo(ax-1,ay-1); c.lineTo(ax+1,ay-1); c.stroke();
+    } else if(acc==='cap'){
+      c.fillStyle='#ef4444'; c.strokeStyle=OL; c.lineWidth=1.8;
+      c.beginPath(); c.ellipse(ax,ay-13,12,6,0,Math.PI,Math.PI*2); c.fill(); c.stroke();
+      c.fillStyle='#dc2626'; c.beginPath(); c.ellipse(ax+8,ay-10,9,3,.15,0,Math.PI*2); c.fill(); c.stroke();
+    } else if(acc==='headphones'){
+      c.strokeStyle='#111827'; c.lineWidth=3;
+      c.beginPath(); c.arc(ax,ay-7,14,Math.PI*1.05,Math.PI*1.95); c.stroke();
+      c.fillStyle='#38bdf8'; c.strokeStyle=OL; c.lineWidth=1.5;
+      c.beginPath(); c.roundRect(ax-15,ay-6,7,11,3); c.fill(); c.stroke();
+      c.beginPath(); c.roundRect(ax+8,ay-6,7,11,3); c.fill(); c.stroke();
+    } else if(acc==='bow'){
+      c.fillStyle='#f472b6'; c.strokeStyle=OL; c.lineWidth=1.5;
+      c.beginPath(); c.moveTo(ax-6,ay-16); c.lineTo(ax-17,ay-23); c.lineTo(ax-13,ay-10); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(ax-4,ay-16); c.lineTo(ax+8,ay-23); c.lineTo(ax+4,ay-10); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.arc(ax-4,ay-16,3,0,Math.PI*2); c.fill(); c.stroke();
+    }
+  });
   c.restore();
 }
 
