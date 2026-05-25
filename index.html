@@ -226,6 +226,7 @@ const MAX_PHASES = 4;
 let scrollX = 0;
 let currentLen = 4000;
 let portalX = 0;
+let secretPortalX = 0;
 let phaseEggs = [], phaseObstacles = [], phaseEnemies = [], phasePlatforms = [];
 let particles = [], clouds = [], trees = [], stars = [];
 let frameCount = 0, flashTimer = 0, winTimer = 0;
@@ -376,7 +377,8 @@ let discoveredCreatures = new Set();
 let discoveredEggs = new Set();
 let phaseSecrets = [];
 let petFriend = 0;
-let shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
+let isSecretPhase = false, returnPhase = 1, secretUnlocked = false;
+let shopUpgrades = {petRange:0, extraLife:false, starterShield:false, jumpBoost:0, speedBoost:0, timeBoost:0, tough:0};
 let ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:new Set(['classic']), saber:new Set(['classic'])};
 let selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
 let ownedAccessories = {dino:new Set(['none']), caveman:new Set(['none'])};
@@ -430,6 +432,7 @@ function saveProgress(){
     selectedSkin,
     selectedAccessory,
     petFriend,
+    secretUnlocked,
     discoveredEggs:[...discoveredEggs],
     ownedSkins:{dino:[...ownedSkins.dino], caveman:[...ownedSkins.caveman], baby:[...ownedSkins.baby], saber:[...ownedSkins.saber]},
     ownedAccessories:{dino:[...ownedAccessories.dino], caveman:[...ownedAccessories.caveman]},
@@ -445,7 +448,8 @@ function loadProgress(){
     petLevel = Math.max(1, Number(data.petLevel || 1));
     petFriend = Number(data.petFriend || 0);
     discoveredEggs = new Set(data.discoveredEggs || []);
-    shopUpgrades = Object.assign({petRange:0, extraLife:false, starterShield:false}, data.shopUpgrades || {});
+    secretUnlocked = !!data.secretUnlocked;
+    shopUpgrades = Object.assign({petRange:0, extraLife:false, starterShield:false, jumpBoost:0, speedBoost:0, timeBoost:0, tough:0}, data.shopUpgrades || {});
     selectedSkin = Object.assign({dino:'classic', caveman:'classic', baby:'classic', saber:'classic'}, data.selectedSkin || {});
     // migrate old single-string format to array
     const sa = data.selectedAccessory || {};
@@ -465,7 +469,8 @@ function loadProgress(){
     };
   }catch(e){
     totalCoins=0; unlockedPhase=1; petXP=0; petLevel=1; petFriend=0; discoveredEggs=new Set();
-    shopUpgrades = {petRange:0, extraLife:false, starterShield:false};
+    secretUnlocked = false;
+    shopUpgrades = {petRange:0, extraLife:false, starterShield:false, jumpBoost:0, speedBoost:0, timeBoost:0, tough:0};
     ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:new Set(['classic']), saber:new Set(['classic'])};
     selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
     ownedAccessories = {dino:new Set(['none']), caveman:new Set(['none'])};
@@ -484,6 +489,12 @@ function petLine(group){
 }
 function petCollectRadius(){
   return 88 + shopUpgrades.petRange * 28 + (petLevel - 1) * 14;
+}
+function jumpForce(){
+  return JUMP_FORCE - shopUpgrades.jumpBoost * 1.2;
+}
+function moveSpeed(){
+  return MOVE_SPEED + shopUpgrades.speedBoost * 0.45;
 }
 function addPetXP(value){
   petXP += value;
@@ -797,11 +808,11 @@ function updateMobileControls(){
 
 function tryJump(){
   if(player.onGround){
-    player.vy = JUMP_FORCE; player.onGround = false; player.jumpCount = 1;
+    player.vy = jumpForce(); player.onGround = false; player.jumpCount = 1;
     spawnParticles(player.x+player.w/2, player.y, '#4ecdc4', 6);
     sfxJump();
   } else if(player.jumpCount===1){
-    player.vy = JUMP_FORCE * 0.82; player.jumpCount = 2;
+    player.vy = jumpForce() * 0.82; player.jumpCount = 2;
     spawnParticles(player.x+player.w/2, player.y-20, '#ffe66d', 8);
     sfxJump();
   }
@@ -870,10 +881,12 @@ const THEMES = [
 
 // ─── PHASE GENERATION ─────────────────────────────────────────────────────────
 function generatePhase(p){
-  currentTheme = THEMES[(p-1) % THEMES.length];
-  const len = 4000 + (p-1)*800;
+  const secret = p === 5;
+  currentTheme = secret ? THEMES[3] : THEMES[(p-1) % THEMES.length];
+  const len = secret ? 2600 : 4000 + (p-1)*800;
   currentLen = len;
   portalX = len - 220;
+  secretPortalX = secret ? 0 : Math.floor(len * 0.68);
 
   weatherParticles = [];
 
@@ -923,7 +936,7 @@ function generatePhase(p){
 
   // eggs — metade no chão, metade em cima de plataformas
   phaseEggs = [];
-  const eggCount = 2+p;
+  const eggCount = secret ? 6 : 2+p;
   const eggKinds = ['normal','normal','gold','blue','red','rainbow','fossil','ghost','dragon'];
   for(let i=0;i<eggCount;i++){
     const onPlat = phasePlatforms.length>0 && i%2===1;
@@ -938,7 +951,7 @@ function generatePhase(p){
 
   // obstáculos só aparecem a partir da fase 3
   phaseObstacles = [];
-  if(p >= 3){
+  if(p >= 3 && !secret){
     const obsTypes = ['rock','cactus','fire','log'];
     const obsCount = DIFF[difficulty].obsBase + (p-2)*2;
     for(let i=0;i<obsCount;i++){
@@ -954,7 +967,7 @@ function generatePhase(p){
 
   // coins
   phaseCoins = [];
-  const coinCount = 8 + phase * 2;
+  const coinCount = secret ? 24 : 8 + phase * 2;
   for(let i = 0; i < coinCount; i++){
     phaseCoins.push({
       x: 300 + Math.random() * (len - 700),
@@ -966,7 +979,7 @@ function generatePhase(p){
 
   // spike traps
   phaseTraps = [];
-  const trapCount = 3 + phase;
+  const trapCount = secret ? 0 : 3 + phase;
   for(let i = 0; i < trapCount; i++){
     const tx = 500 + Math.random() * (len - 1000);
     // avoid portal area
@@ -977,7 +990,7 @@ function generatePhase(p){
   // power-up items
   powerupItems = []; inventory = []; activeEffects = {speed:0, shield:0, fire:0};
   const puTypes = ['speed','shield','fire'];
-  const puCount = 1 + phase;
+  const puCount = secret ? 4 : 1 + phase;
   for(let i = 0; i < puCount; i++){
     powerupItems.push({
       x: 400 + i * Math.floor((len - 600) / puCount) + Math.random() * 80,
@@ -1004,7 +1017,7 @@ function generatePhase(p){
   // enemies
   phaseEnemies = [];
   const enemyTypes = ['ptero','trex','anky','raptor'];
-  const enemyCount = DIFF[difficulty].enemyBase + p;
+  const enemyCount = secret ? 0 : DIFF[difficulty].enemyBase + p;
   const speedMult = DIFF[difficulty].speedMult;
   for(let i=0;i<enemyCount;i++){
     const t = enemyTypes[Math.floor(Math.random()*enemyTypes.length)];
@@ -1181,20 +1194,60 @@ function renderWorldMap(){
       `<b>${tr('phaseHud')} ${p}</b><br>${locked?'🔒 '+tr('locked'):'📍 '+name}</button>`;
   }).join('');
   ov.innerHTML = `<div class="ocard">
-    <h2>${tr('worldMap')}</h2>
+    <h2>${isSecretPhase ? 'Fase Secreta' : tr('worldMap')}</h2>
     <p class="sub">${tr('coins')}: ${totalCoins} · ${tr('petLevel')}: ${petLevel}</p>
     <div class="map-grid">${nodes}</div>
     <div class="shop-row">
       <button class="btn sec" onclick="renderShop()" style="font-size:7px;padding:8px 14px;">💰 ${tr('shop')}</button>
       <button class="btn sec" onclick="renderWardrobe()" style="font-size:7px;padding:8px 14px;">👕 ${tr('wardrobe')}</button>
       <button class="btn sec" onclick="renderAlbum()" style="font-size:7px;padding:8px 14px;">📖 ${tr('album')}</button>
+      <button class="btn sec" onclick="renderBase()" style="font-size:7px;padding:8px 14px;">🏠 Base</button>
     </div>
     <button class="btn sec" onclick="showCharSelect()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
   </div>`;
 }
 
+function renderBase(){
+  const rare = discoveredEggs.size;
+  const babies = ['rainbow','fossil','ghost','dragon'].filter(k=>discoveredEggs.has(k)).length;
+  document.getElementById('overlay').innerHTML = `<div class="ocard">
+    <h2>🏠 Base Dino</h2>
+    <p class="sub">${tr('coins')}: ${totalCoins} · ${tr('petLevel')}: ${petLevel} · Ovos raros: ${rare}</p>
+    <div class="map-grid">
+      <button class="map-node unlocked" onclick="renderNest()"><b>🥚 Ninho dos ovos</b><br>${rare} ovos raros salvos</button>
+      <button class="map-node unlocked" onclick="renderAlbum()"><b>🦕 Bebês dinossauros</b><br>${babies} bebês descobertos</button>
+      <button class="map-node unlocked" onclick="renderShop()"><b>⬆ Melhorias</b><br>Pulo, velocidade, tempo e resistência</button>
+      <button class="map-node ${secretUnlocked?'unlocked':'locked'}" ${secretUnlocked?'onclick="startSecretPhase()"':''}><b>🌀 Fase secreta</b><br>${secretUnlocked?'Entrar no portal bônus':'Encontre um segredo na fase'}</button>
+    </div>
+    <button class="btn sec" onclick="renderWorldMap()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
+  </div>`;
+}
+
+function renderNest(){
+  const eggNames = {gold:'Dourado',blue:'Azul',red:'Vermelho',rainbow:'Arco-íris',fossil:'Fóssil',ghost:'Fantasma',dragon:'Dragão'};
+  const cards = Object.keys(eggNames).map(k=>{
+    const ok = discoveredEggs.has(k);
+    return `<button class="map-node ${ok?'unlocked':'locked'}"><b>${ok?'🥚 '+eggNames[k]:'???'}</b><br>${ok?'Salvo no ninho':tr('locked')}</button>`;
+  }).join('');
+  document.getElementById('overlay').innerHTML = `<div class="ocard">
+    <h2>🥚 Ninho dos ovos</h2>
+    <div class="map-grid">${cards}</div>
+    <button class="btn sec" onclick="renderBase()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
+  </div>`;
+}
+
+function startSecretPhase(){
+  returnPhase = phase > 0 && phase <= MAX_PHASES ? phase : 1;
+  isSecretPhase = true;
+  phase = 5;
+  document.getElementById('overlay').style.display='none';
+  beginPhase();
+  state='playing';
+}
+
 function launchPhase(p){
   phase = p;
+  isSecretPhase = p === 5;
   document.getElementById('overlay').style.display='none';
   const seen = localStorage.getItem('dinogame_intro_seen');
   if(!seen && p===1){
@@ -1212,6 +1265,9 @@ function renderShop(){
   const item = (id,title,desc,cost,bought)=>`<button class="shop-item ${bought?'bought':''}" onclick="buyShopItem('${id}')">
     <b>${title}</b><br>${desc}<br>${bought?'✅ '+tr('bought'):'💰 '+cost}
   </button>`;
+  const levelItem = (id,title,desc,cost,level,max)=>`<button class="shop-item ${level>=max?'bought':''}" onclick="buyShopItem('${id}')">
+    <b>${title}</b><br>${desc}<br>${level>=max?'✅ MAX':'Nv '+level+'/'+max+' · 💰 '+cost}
+  </button>`;
   ov.innerHTML = `<div class="ocard">
     <h2>${tr('shop')}</h2>
     <p class="sub">${tr('coins')}: ${totalCoins}</p>
@@ -1219,6 +1275,10 @@ function renderShop(){
       ${item('petRange',tr('shopPet'),tr('shopPetDesc'),6,shopUpgrades.petRange>=3)}
       ${item('extraLife',tr('shopLife'),tr('shopLifeDesc'),10,shopUpgrades.extraLife)}
       ${item('starterShield',tr('shopShield'),tr('shopShieldDesc'),8,shopUpgrades.starterShield)}
+      ${levelItem('jumpBoost','Pulo melhor','Salta mais alto',7,shopUpgrades.jumpBoost,3)}
+      ${levelItem('speedBoost','Velocidade','Corre mais rápido',7,shopUpgrades.speedBoost,3)}
+      ${levelItem('timeBoost','Tempo extra','Mais tempo por fase',6,shopUpgrades.timeBoost,3)}
+      ${levelItem('tough','Resistência','Chance de segurar dano',8,shopUpgrades.tough,3)}
     </div>
     <button class="btn sec" onclick="renderWardrobe()" style="font-size:7px;padding:8px 18px;">👕 ${tr('wardrobe')}</button>
     <button class="btn sec" onclick="renderWorldMap()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
@@ -1226,7 +1286,18 @@ function renderShop(){
 }
 
 function buyShopItem(id){
-  const costs = {petRange:6, extraLife:10, starterShield:8};
+  const costs = {petRange:6, extraLife:10, starterShield:8, jumpBoost:7, speedBoost:7, timeBoost:6, tough:8};
+  const maxLevels = {petRange:3, jumpBoost:3, speedBoost:3, timeBoost:3, tough:3};
+  if(maxLevels[id] !== undefined){
+    if(shopUpgrades[id] >= maxLevels[id]) return;
+    const cost = costs[id] || 0;
+    if(totalCoins < cost){ alert(tr('notEnough')); return; }
+    totalCoins -= cost;
+    shopUpgrades[id]++;
+    saveProgress();
+    renderShop();
+    return;
+  }
   if(id==='petRange' && shopUpgrades.petRange>=3) return;
   if(id!=='petRange' && shopUpgrades[id]) return;
   const cost = costs[id] || 0;
@@ -1407,7 +1478,7 @@ function beginPhase(){
   pet.frame=0; pet.facing=1; pet.history=[];
   generatePhase(phase);
   if(shopUpgrades.starterShield) activeEffects.shield = Math.max(activeEffects.shield, 240);
-  phaseFramesLeft = calcPhaseFrames(phase);
+  phaseFramesLeft = calcPhaseFrames(phase) + shopUpgrades.timeBoost * 600;
   updateUI();
   const ti=(phase-1)%BGMS.length;
   stopBGM(); startBGM(ti);
@@ -1518,6 +1589,13 @@ function showOverlay(type){
       <span class="score-big">${score} pts</span>
       <button class="btn" onclick="nextPhase()">▶ ${tr('nextPhase')}</button>`);
     state='phaseclear';
+  } else if(type==='secretclear'){
+    totalCoins += 8; score += 800; saveProgress();
+    ov.innerHTML=card(`<h2>🌀 Fase secreta completa!</h2><div class="divider"></div>
+      <p class="sub">Bônus: +8 moedas · +800 pts</p>
+      <span class="score-big">${score} pts</span>
+      <button class="btn" onclick="finishSecretPhase()">▶ ${tr('continue')}</button>`);
+    state='phaseclear';
   } else if(type==='win'){
     saveScore();
     ov.classList.add('win-mode');
@@ -1526,6 +1604,12 @@ function showOverlay(type){
     winTimer=0;
     return;
   }
+}
+
+function finishSecretPhase(){
+  isSecretPhase = false;
+  phase = returnPhase;
+  renderBase();
 }
 
 function updateUI(){} // HUD desenhado no canvas via drawHUD()
@@ -1573,7 +1657,8 @@ function update(){
   const mr = keys['ArrowRight']||keys['KeyD'];
   const ml = keys['ArrowLeft'] ||keys['KeyA'];
   const speedMult = activeEffects.speed > 0 ? 1.6 : 1.0;
-  player.vx = mr ? MOVE_SPEED * speedMult : ml ? -MOVE_SPEED * speedMult : 0;
+  const baseMove = moveSpeed();
+  player.vx = mr ? baseMove * speedMult : ml ? -baseMove * speedMult : 0;
   if(mr) player.facing=1; else if(ml) player.facing=-1;
   else player.facing = mouseX > player.x + player.w/2 ? 1 : -1;
 
@@ -1690,6 +1775,11 @@ function update(){
     if(player.y >= GROUND - 20 &&
        player.x + 8 < tx + trap.w &&
        player.x + player.w - 8 > tx){
+      if(selectedChar==='caveman' && shopUpgrades.tough > 0 && Math.random() < shopUpgrades.tough * 0.18){
+        player.invincible = 45;
+        spawnParticles(player.x+player.w/2, player.y-20, '#fbbf24', 10);
+        return;
+      }
       hurt();
     }
   });
@@ -1718,6 +1808,7 @@ function update(){
       sec.found = true;
       totalCoins += 3;
       score += 120;
+      secretUnlocked = true;
       petFriend = Math.min(100, petFriend + 20);
       if(petFriend >= 100) triggerPetFriendPower();
       petSpeech.text = tr('secretFound');
@@ -1727,6 +1818,19 @@ function update(){
       saveProgress();
     }
   });
+
+  // pet com habilidade própria
+  if(selectedChar==='dino'){
+    phaseCoins.forEach(coin=>{
+      if(coin.collected) return;
+      const cx = coin.x - scrollX;
+      if(Math.hypot(cx-(pet.x+14), coin.y-(pet.y-18)) < petCollectRadius() * 0.8){
+        coin.collected = true; totalCoins++; score += 25;
+        spawnParticles(cx, coin.y, '#fbbf24', 6);
+        saveProgress();
+      }
+    });
+  }
 
 
   // obstacles
@@ -1810,7 +1914,12 @@ function update(){
   const allEggs = phaseEggs.every(e=>e.collected);
   const pxPor = portalX-scrollX;
   if(allEggs && rectsOverlap(player.x+10,player.y-52,player.w-20,52, pxPor,GROUND-110,64,110)){
-    score+=500; updateUI(); showOverlay('phaseclear');
+    score+=500; updateUI(); showOverlay(isSecretPhase ? 'secretclear' : 'phaseclear');
+  }
+  const spxPor = secretPortalX-scrollX;
+  if(!isSecretPhase && secretUnlocked && rectsOverlap(player.x+10,player.y-52,player.w-20,52, spxPor,GROUND-96,54,96)){
+    startSecretPhase();
+    return;
   }
 
   // pet speech triggers
@@ -1915,6 +2024,13 @@ function collectPowerup(item, ix, iy, byPet=false){
 
 function hurt(){
   if(activeEffects.shield > 0) return;
+  if(selectedChar==='caveman' && shopUpgrades.tough > 0 && Math.random() < shopUpgrades.tough * 0.16){
+    player.invincible=80;
+    petSpeech.text='Pet protegeu!';
+    petSpeech.timer=120;
+    spawnParticles(player.x+player.w/2,player.y-22,'#60a5fa',14);
+    return;
+  }
   player.hp--;
   player.invincible=70; flashTimer=22;
   spawnParticles(player.x+player.w/2,player.y-22,'#ff6b6b',16);
@@ -2323,6 +2439,10 @@ function draw(){
   drawCheckpoint();
 
   // secret portal (before main portal)
+  if(!isSecretPhase && secretUnlocked){
+    const spx = secretPortalX - scrollX;
+    if(spx>-100 && spx<W+100) drawSecretPortal(spx);
+  }
 
   // portal
   const pxP=portalX-scrollX;
@@ -3280,6 +3400,24 @@ function drawPortal(x,active){
   ctx.textAlign='center';
   ctx.fillText(active?tr('enter'):tr('collectEggs'),cx2,py-10);
   ctx.textAlign='left';
+}
+
+function drawSecretPortal(x){
+  const t=frameCount*.08, pw=54, ph=96, py=GROUND-ph;
+  ctx.save();
+  ctx.fillStyle=`rgba(167,139,250,${.22+Math.sin(t)*.08})`;
+  ctx.beginPath(); ctx.ellipse(x+pw/2,py+ph/2,pw*.75,ph*.62,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=OL; ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(x+4,py+ph); ctx.lineTo(x+4,py+ph*.35);
+  ctx.bezierCurveTo(x+4,py,x+pw-4,py,x+pw-4,py+ph*.35);
+  ctx.lineTo(x+pw-4,py+ph); ctx.stroke();
+  ctx.strokeStyle='#a78bfa'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.arc(x+pw/2,py+ph*.5,18+Math.sin(t)*4,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#ede9fe'; ctx.font='7px "Press Start 2P"'; ctx.textAlign='center';
+  ctx.fillText('SECRETO',x+pw/2,py-10);
+  ctx.textAlign='left';
+  ctx.restore();
 }
 
 // ─── PLAYER SPRITES ───────────────────────────────────────────────────────────
