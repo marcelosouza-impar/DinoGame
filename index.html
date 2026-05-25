@@ -188,9 +188,10 @@
 // ─── RESPONSIVE SCALING ────────────────────────────────────────────────────────
 (function applyScale(){
   const CW=800,CH=450;
+  const SIZE=.72;
   function resize(){
     const vw=window.innerWidth, vh=window.innerHeight;
-    const s=Math.min(vw/CW, vh/CH);
+    const s=Math.min(vw/CW, vh/CH) * SIZE;
     const el=document.getElementById('gameContainer');
     el.style.width=CW+'px'; el.style.height=CH+'px';
     el.style.transform='scale('+s+')';
