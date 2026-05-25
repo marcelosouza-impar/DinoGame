@@ -118,6 +118,11 @@
   .map-node.unlocked:hover{border-color:#4ecdc4;box-shadow:0 8px 26px rgba(78,205,196,.22);}
   .map-node.locked{opacity:.38;cursor:not-allowed;}
   .map-node.active{border-color:#ffe66d;box-shadow:0 0 0 2px rgba(255,230,109,.32);}
+  .album-card{max-width:500px;padding:18px 24px;gap:7px;}
+  .album-card h2{font-size:13px !important;}
+  .album-card .sub{font-size:5.5px;line-height:1.45;}
+  .album-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;}
+  .album-node{min-height:42px;border-radius:8px;font-size:5px;line-height:1.45;padding:6px 5px;}
   .shop-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;width:100%;}
   .shop-item{width:128px;min-height:78px;border:1.5px solid rgba(255,255,255,.14);border-radius:12px;
     background:rgba(255,255,255,.06);color:#dce8f1;font-family:inherit;font-size:6px;line-height:1.8;padding:8px;cursor:pointer;}
@@ -201,7 +206,7 @@
     // show mobile D-pad when touch available
     const mob=document.getElementById('mobileControls');
     if(mob){
-      const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+      const isTouch=('ontouchstart' in window)||((window.navigator&&window.navigator.maxTouchPoints)||0)>0;
       mob.classList.toggle('active',isTouch);
     }
   }
@@ -1450,21 +1455,21 @@ function renderAlbum(){
   const names = {ptero:'Ptero',trex:'T-Rex',anky:'Anky',raptor:'Raptor'};
   const cards = ['ptero','trex','anky','raptor'].map(k=>{
     const ok = discoveredCreatures.has(k);
-    return `<button class="map-node ${ok?'unlocked':'locked'}"><b>${ok?names[k]:'???'}</b><br>${ok?'✅':'🔒'} ${ok?tr('album'):tr('locked')}</button>`;
+    return `<button class="map-node album-node ${ok?'unlocked':'locked'}"><b>${ok?names[k]:'???'}</b><br>${ok?'✅':'🔒'} ${ok?tr('album'):tr('locked')}</button>`;
   }).join('');
   const eggNames = {gold:'Ovo Dourado',blue:'Ovo Azul',red:'Ovo Vermelho',rainbow:'Ovo Arco-íris',fossil:'Ovo Fóssil',ghost:'Ovo Fantasma',dragon:'Ovo Dragão'};
   const eggStories = {gold:'Brilha quando sente coragem.',blue:'Carrega tempo congelado.',red:'Protege quem está em perigo.',rainbow:'Nasce quando o pet confia em você.',fossil:'Guarda memória antiga.',ghost:'Some e volta sorrindo.',dragon:'Solta faíscas antes de nascer.'};
   const eggCards = Object.keys(eggNames).map(k=>{
     const ok = discoveredEggs.has(k);
-    return `<button class="map-node ${ok?'unlocked':'locked'}"><b>${ok?eggNames[k]:'???'}</b><br>${ok?eggStories[k]:tr('locked')}</button>`;
+    return `<button class="map-node album-node ${ok?'unlocked':'locked'}"><b>${ok?eggNames[k]:'???'}</b><br>${ok?eggStories[k]:tr('locked')}</button>`;
   }).join('');
-  document.getElementById('overlay').innerHTML = `<div class="ocard">
+  document.getElementById('overlay').innerHTML = `<div class="ocard album-card">
     <h2>${tr('albumTitle')}</h2>
     <p class="sub">${tr('albumHint')}</p>
-    <div class="map-grid">${cards}</div>
+    <div class="album-grid">${cards}</div>
     <p class="sub">${tr('rareEggs')}</p>
-    <div class="map-grid">${eggCards}</div>
-    <button class="btn sec" onclick="renderWorldMap()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
+    <div class="album-grid">${eggCards}</div>
+    <button class="btn sec" onclick="renderWorldMap()" style="font-size:6px;padding:7px 16px;">← ${tr('back')}</button>
   </div>`;
 }
 
