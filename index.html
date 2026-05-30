@@ -3482,17 +3482,9 @@ function drawAccessory(c,char,x,y,ducking=false){
   const ay0 = isDino ? (ducking ? y-30 : y-70) : y-60;
   c.save();
   c.lineCap='round'; c.lineJoin='round';
-  // offsets de posição para até 5 acessórios empilhados
-  const offsets = [
-    {dx:0, dy:0},
-    {dx:0, dy:-14},
-    {dx:0, dy:-28},
-    {dx:16, dy:-8},
-    {dx:16, dy:-22},
-  ];
-  accs.forEach((acc,slot)=>{
-    const off = offsets[slot] || {dx:0,dy:0};
-    const ax = ax0 + off.dx, ay = ay0 + off.dy;
+  // cada acessório tem posição fixa na cabeça (não empilha)
+  accs.forEach((acc)=>{
+    const ax = ax0, ay = ay0;
     if(acc==='sunglasses'){
       c.fillStyle='#111827'; c.strokeStyle=OL; c.lineWidth=1.5;
       c.beginPath(); c.roundRect(ax-8,ay-3,7,5,2); c.fill(); c.stroke();
@@ -3504,20 +3496,23 @@ function drawAccessory(c,char,x,y,ducking=false){
       c.beginPath(); c.arc(ax+5,ay-1,4,0,Math.PI*2); c.stroke();
       c.beginPath(); c.moveTo(ax-1,ay-1); c.lineTo(ax+1,ay-1); c.stroke();
     } else if(acc==='cap'){
+      // boné fica no topo da cabeça
       c.fillStyle='#ef4444'; c.strokeStyle=OL; c.lineWidth=1.8;
-      c.beginPath(); c.ellipse(ax,ay-13,12,6,0,Math.PI,Math.PI*2); c.fill(); c.stroke();
-      c.fillStyle='#dc2626'; c.beginPath(); c.ellipse(ax+8,ay-10,9,3,.15,0,Math.PI*2); c.fill(); c.stroke();
+      c.beginPath(); c.ellipse(ax,ay-15,13,7,0,Math.PI,Math.PI*2); c.fill(); c.stroke();
+      c.fillStyle='#dc2626'; c.beginPath(); c.ellipse(ax+9,ay-12,10,3.5,.15,0,Math.PI*2); c.fill(); c.stroke();
     } else if(acc==='headphones'){
+      // fone envolve a cabeça
       c.strokeStyle='#111827'; c.lineWidth=3;
-      c.beginPath(); c.arc(ax,ay-7,14,Math.PI*1.05,Math.PI*1.95); c.stroke();
+      c.beginPath(); c.arc(ax,ay-9,15,Math.PI*1.05,Math.PI*1.95); c.stroke();
       c.fillStyle='#38bdf8'; c.strokeStyle=OL; c.lineWidth=1.5;
-      c.beginPath(); c.roundRect(ax-15,ay-6,7,11,3); c.fill(); c.stroke();
-      c.beginPath(); c.roundRect(ax+8,ay-6,7,11,3); c.fill(); c.stroke();
+      c.beginPath(); c.roundRect(ax-16,ay-8,7,12,3); c.fill(); c.stroke();
+      c.beginPath(); c.roundRect(ax+9,ay-8,7,12,3); c.fill(); c.stroke();
     } else if(acc==='bow'){
+      // laço no topo da cabeça (lado)
       c.fillStyle='#f472b6'; c.strokeStyle=OL; c.lineWidth=1.5;
-      c.beginPath(); c.moveTo(ax-6,ay-16); c.lineTo(ax-17,ay-23); c.lineTo(ax-13,ay-10); c.closePath(); c.fill(); c.stroke();
-      c.beginPath(); c.moveTo(ax-4,ay-16); c.lineTo(ax+8,ay-23); c.lineTo(ax+4,ay-10); c.closePath(); c.fill(); c.stroke();
-      c.beginPath(); c.arc(ax-4,ay-16,3,0,Math.PI*2); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(ax+6,ay-16); c.lineTo(ax-4,ay-23); c.lineTo(ax-1,ay-11); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(ax+8,ay-16); c.lineTo(ax+19,ay-23); c.lineTo(ax+16,ay-11); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.arc(ax+7,ay-16,3,0,Math.PI*2); c.fill(); c.stroke();
     }
   });
   c.restore();
