@@ -173,7 +173,15 @@
     <button class="mbtn" id="mbAtk"   style="right:76px;bottom:52px;width:58px;height:54px">A</button>
     <button class="mbtn" id="mbJump"  style="right:10px;bottom:52px;width:58px;height:54px">B</button>
   </div>
-  <div id="overlay">
+  <!-- Loading screen -->
+  <div id="loadingScreen" style="position:absolute;inset:0;z-index:99;background:#090d14;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#4ecdc4;font-family:'Press Start 2P',monospace;">
+    <div style="font-size:22px;margin-bottom:18px;">🦕 DinoGame</div>
+    <div style="width:200px;height:8px;background:rgba(78,205,196,.15);border-radius:8px;overflow:hidden;">
+      <div id="loadBar" style="width:0%;height:100%;background:linear-gradient(90deg,#4ecdc4,#ffe66d);border-radius:8px;transition:width .3s;"></div>
+    </div>
+    <div style="font-size:6px;color:#4a6070;margin-top:10px;">Carregando...</div>
+  </div>
+  <div id="overlay" style="display:none;">
     <div class="ocard" id="menuCard">
       <h1>🌎 DinoGame</h1>
       <div class="divider"></div>
@@ -389,6 +397,7 @@ let ownedSkins = {dino:new Set(['classic']), caveman:new Set(['classic']), baby:
 let selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'classic'};
 let ownedAccessories = {dino:new Set(['none']), caveman:new Set(['none'])};
 let selectedAccessory = {dino:[], caveman:[]};
+let playerName = localStorage.getItem('dinogame_playerName') || '';
 
 const SKINS = {
   dino: [
@@ -1072,29 +1081,61 @@ function renderMainMenu(){
   const ov = document.getElementById('overlay');
   ov.classList.remove('win-mode');
   ov.style.display = 'flex';
+  const nameDisplay = playerName ? `<p class="sub">👤 ${playerName}</p>` : `<button class="btn sec" onclick="askPlayerName()" style="font-size:6px;padding:6px 14px;">✏️ Seu nome</button>`;
   ov.innerHTML = `<div class="ocard" id="menuCard">
     <h1>🦕 DinoGame</h1>
     <div class="divider"></div>
+    ${nameDisplay}
     <p class="sub">${tr('tagline')}</p>
-    <div class="khint">
-      ${tr('controls1')}<br>
-      ${tr('controls2')}<br>
-      ${tr('controls3')}
-    </div>
     <button class="btn" onclick="showCharSelect()">▶ ${tr('play')}</button>
-    <div style="display:flex;gap:10px;">
-      <button class="btn sec" onclick="showLanguageSelect()" style="font-size:7px;padding:8px 18px;">🌎 ${tr('language')}</button>
-      <button class="btn sec" onclick="showLeaderboard()" style="font-size:7px;padding:8px 18px;">🏆 Recordes</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      <button class="btn sec" onclick="showHowToPlay()" style="font-size:6px;padding:7px 14px;">🎮 Como Jogar</button>
+      <button class="btn sec" onclick="showLeaderboard()" style="font-size:6px;padding:7px 14px;">🏆 Recordes</button>
+      <button class="btn sec" onclick="showLanguageSelect()" style="font-size:6px;padding:7px 14px;">🌎 ${tr('language')}</button>
     </div>
     <p class="credits">${tr('creditsText')}</p>
   </div>`;
   state = 'menu';
 }
 
+function askPlayerName(){
+  const name = prompt('Qual é o seu nome, jogador? 🦕');
+  if(name && name.trim()){
+    playerName = name.trim().substring(0,15);
+    localStorage.setItem('dinogame_playerName', playerName);
+  }
+  renderMainMenu();
+}
+
+function showHowToPlay(){
+  const ov = document.getElementById('overlay');
+  ov.innerHTML = `<div class="ocard">
+    <h2>🎮 Como Jogar</h2>
+    <div class="divider"></div>
+    <div class="khint" style="text-align:left;width:100%;">
+      <b>⌨️ Teclado:</b><br>
+      ← → &nbsp; Andar<br>
+      ↑ / W / Espaço &nbsp; Pular (2x = pulo duplo!)<br>
+      ↓ / S &nbsp; Abaixar<br>
+      Z / X / F &nbsp; Atacar<br>
+      Q / E &nbsp; Usar power-ups<br>
+      M &nbsp; Música ligada/desligada<br>
+      P &nbsp; Pausar<br><br>
+      <b>📱 Celular:</b><br>
+      Use os botões ◀ ▶ ▼ A B na tela!<br><br>
+      <b>🎯 Objetivo:</b><br>
+      Colete ovos 🥚, derrote inimigos,<br>
+      alcance o portal no fim da fase!<br>
+      Cuide da vida ❤️ e junte moedas 💰
+    </div>
+    <button class="btn sec" onclick="renderMainMenu()" style="font-size:6px;padding:7px 14px;">← Voltar</button>
+  </div>`;
+}
+
 function showLeaderboard(){
   const ov = document.getElementById('overlay');
   let lb = JSON.parse(localStorage.getItem('dinogame_leaderboard') || '[]');
-  let html = lb.length ? lb.map((entry, i) => `<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px;font-size:10px;color:#c8dde8;"><span>${i+1}. ${entry.score} pts</span><span style="color:#4a6070;font-size:7px;">Fase ${entry.phase} - ${entry.date}</span></div>`).join('') : '<p class="sub">Nenhum recorde ainda.</p>';
+  let html = lb.length ? lb.map((entry, i) => `<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px;font-size:9px;color:#c8dde8;"><span>${i+1}. ${entry.name||'???'} — ${entry.score} pts</span><span style="color:#4a6070;font-size:6px;">Fase ${entry.phase} · ${entry.date}</span></div>`).join('') : '<p class="sub">Nenhum recorde ainda.</p>';
   ov.innerHTML = `<div class="ocard">
     <h2>🏆 Recordes</h2>
     <div class="divider"></div>
@@ -1559,7 +1600,7 @@ function card(inner){
 
 function saveScore(){
   let lb = JSON.parse(localStorage.getItem('dinogame_leaderboard') || '[]');
-  lb.push({score: score, phase: phase, char: selectedChar, date: new Date().toLocaleDateString()});
+  lb.push({name: playerName||'???', score: score, phase: phase, char: selectedChar, date: new Date().toLocaleDateString()});
   lb.sort((a,b) => b.score - a.score);
   lb = lb.slice(0, 5);
   localStorage.setItem('dinogame_leaderboard', JSON.stringify(lb));
@@ -2516,6 +2557,8 @@ function drawHUD(){
   ctx.fillStyle='#4ecdc4';
   ctx.textAlign='left';
   ctx.fillText(`${tr('phaseHud')} ${phase}`,20,my);
+  // player name
+  if(playerName){ ctx.fillStyle='#94a3b8'; ctx.font='6px "Press Start 2P"'; ctx.fillText(playerName,20,my+16); ctx.font='8px "Press Start 2P"'; }
 
   // ovos
   const eggsCol=phaseEggs.filter(e=>e.collected).length;
@@ -4166,6 +4209,32 @@ function loop(){
   }
   requestAnimationFrame(loop);
 }
+// ─── LOADING SCREEN ──────────────────────────────────────────────────────────
+(function initLoading(){
+  const bar = document.getElementById('loadBar');
+  const ls = document.getElementById('loadingScreen');
+  const ov = document.getElementById('overlay');
+  let pct = 0;
+  const tick = setInterval(()=>{
+    pct = Math.min(pct + 8 + Math.random()*12, 90);
+    if(bar) bar.style.width = pct+'%';
+  }, 120);
+  document.fonts.ready.then(()=>{
+    clearInterval(tick);
+    if(bar) bar.style.width = '100%';
+    setTimeout(()=>{
+      if(ls) ls.style.display = 'none';
+      if(ov) ov.style.display = 'flex';
+    }, 400);
+  });
+  // fallback se fonts.ready não disparar
+  setTimeout(()=>{
+    clearInterval(tick);
+    if(ls) ls.style.display = 'none';
+    if(ov) ov.style.display = 'flex';
+  }, 4000);
+})();
+
 initMobileDpad();
 requestAnimationFrame(loop);
 </script>
