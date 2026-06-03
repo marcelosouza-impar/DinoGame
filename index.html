@@ -2508,6 +2508,15 @@ function draw(){
       else                      drawCavemanOn(ctx,player.x,player.y,player.frame,player.ducking,1);
     }
   }
+  // nome do jogador acima do boneco
+  if(playerName){
+    ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillText(playerName, player.x+24, player.y-88+1);
+    ctx.fillStyle='#ffe66d';
+    ctx.fillText(playerName, player.x+24, player.y-88);
+    ctx.textAlign='left';
+  }
 
   // fire breath (dino power)
   drawFireBreath();
