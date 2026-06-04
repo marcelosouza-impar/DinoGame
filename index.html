@@ -129,13 +129,13 @@
   .shop-item:hover{border-color:#fbbf24;}
   .shop-item.bought{opacity:.48;cursor:default;}
   .story-art{width:100%;height:90px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(78,205,196,.14);}
-  .wardrobe-card{max-width:460px;padding:12px 14px;gap:5px;}
-  .wardrobe-card h2{font-size:10px !important;}
-  .wardrobe-card .sub{font-size:5px;line-height:1.2;}
-  .wardrobe-row{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;width:100%;}
-  .skin-card{width:70px;border:1.2px solid rgba(255,255,255,.14);border-radius:7px;background:rgba(255,255,255,.06);
-    color:#dce8f1;font-family:inherit;font-size:4.5px;line-height:1.25;padding:4px;cursor:pointer;text-align:center;}
-  .skin-card canvas{width:40px;height:30px;margin:0 auto 2px;border-radius:5px;background:rgba(5,10,22,.45);}
+  .wardrobe-card{max-width:380px;padding:9px 10px;gap:4px;}
+  .wardrobe-card h2{font-size:8px !important;}
+  .wardrobe-card .sub{font-size:4.2px;line-height:1.1;}
+  .wardrobe-row{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;width:100%;}
+  .skin-card{width:58px;border:1px solid rgba(255,255,255,.14);border-radius:6px;background:rgba(255,255,255,.06);
+    color:#dce8f1;font-family:inherit;font-size:3.8px;line-height:1.15;padding:3px;cursor:pointer;text-align:center;}
+  .skin-card canvas{width:32px;height:24px;margin:0 auto 1px;border-radius:4px;background:rgba(5,10,22,.45);}
   .skin-card:hover{border-color:#4ecdc4;}
   .skin-card.selected{border-color:#ffe66d;box-shadow:0 0 0 2px rgba(255,230,109,.32);}
 
@@ -398,6 +398,8 @@ let selectedSkin = {dino:'classic', caveman:'classic', baby:'classic', saber:'cl
 let ownedAccessories = {dino:new Set(['none']), caveman:new Set(['none'])};
 let selectedAccessory = {dino:[], caveman:[]};
 let playerName = localStorage.getItem('dinogame_playerName') || '';
+let onlineChallenge = null;
+let onlineRunFrames = 0;
 
 const SKINS = {
   dino: [
@@ -548,7 +550,8 @@ function calcPhaseFrames(p){
   const len = 4000 + (p-1)*800;
   const eggCount = 2+p;
   const baseSec = Math.ceil(len/200 + eggCount*5);
-  return Math.round(baseSec * DIFF[difficulty].timeMult) * 60;
+  const challengeMult = onlineChallenge ? onlineChallenge.timeMult : 1;
+  return Math.round(baseSec * DIFF[difficulty].timeMult * challengeMult) * 60;
 }
 
 // ─── PET ──────────────────────────────────────────────────────────────────────
@@ -898,7 +901,8 @@ const THEMES = [
 function generatePhase(p){
   const secret = p === 5;
   currentTheme = secret ? THEMES[3] : THEMES[(p-1) % THEMES.length];
-  const len = secret ? 2600 : 4000 + (p-1)*800;
+  let len = secret ? 2600 : 4000 + (p-1)*800;
+  if(onlineChallenge && onlineChallenge.short) len = Math.floor(len * .72);
   currentLen = len;
   portalX = len - 220;
   secretPortalX = secret ? 0 : Math.floor(len * 0.68);
@@ -951,7 +955,7 @@ function generatePhase(p){
 
   // eggs — metade no chão, metade em cima de plataformas
   phaseEggs = [];
-  const eggCount = secret ? 6 : 2+p;
+  const eggCount = (secret ? 6 : 2+p) + (onlineChallenge ? (onlineChallenge.bonusEggs || 0) : 0);
   const eggKinds = ['normal','normal','gold','blue','red','rainbow','fossil','ghost','dragon'];
   for(let i=0;i<eggCount;i++){
     const onPlat = phasePlatforms.length>0 && i%2===1;
@@ -1032,7 +1036,7 @@ function generatePhase(p){
   // enemies
   phaseEnemies = [];
   const enemyTypes = ['ptero','trex','anky','raptor'];
-  const enemyCount = secret ? 0 : DIFF[difficulty].enemyBase + p;
+  const enemyCount = secret ? 0 : DIFF[difficulty].enemyBase + p + (onlineChallenge ? (onlineChallenge.enemyBonus || 0) : 0);
   const speedMult = DIFF[difficulty].speedMult;
   for(let i=0;i<enemyCount;i++){
     const t = enemyTypes[Math.floor(Math.random()*enemyTypes.length)];
@@ -1090,6 +1094,7 @@ function renderMainMenu(){
     <button class="btn" onclick="showCharSelect()">▶ ${tr('play')}</button>
     <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
       <button class="btn sec" onclick="showHowToPlay()" style="font-size:6px;padding:7px 14px;">🎮 Como Jogar</button>
+      <button class="btn sec" onclick="renderOnlineLocal()" style="font-size:6px;padding:7px 14px;">🌐 Online Local</button>
       <button class="btn sec" onclick="showLeaderboard()" style="font-size:6px;padding:7px 14px;">🏆 Recordes</button>
       <button class="btn sec" onclick="showLanguageSelect()" style="font-size:6px;padding:7px 14px;">🌎 ${tr('language')}</button>
     </div>
@@ -1132,10 +1137,88 @@ function showHowToPlay(){
   </div>`;
 }
 
+function dateSeed(){
+  const d = new Date();
+  return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
+}
+function weekSeed(){
+  const d = new Date();
+  const start = new Date(d.getFullYear(),0,1);
+  return Math.floor((d - start) / 604800000) + 1;
+}
+function challengeCode(cfg){
+  const raw = `${cfg.kind}-${cfg.phase}-${cfg.difficulty}-${Math.round(cfg.timeMult*100)}-${cfg.enemyBonus||0}-${cfg.bonusEggs||0}`;
+  let n = 0;
+  for(let i=0;i<raw.length;i++) n = (n*31 + raw.charCodeAt(i)) % 99991;
+  return 'DINO-' + String(n).padStart(5,'0');
+}
+function dailyChallenge(){
+  const seed = dateSeed();
+  return {kind:'daily', title:'Desafio do dia', phase:(seed%4)+1, difficulty:seed%3===0?'dificil':seed%3===1?'normal':'facil', timeMult:.88, scoreMult:1.2, enemyBonus:1, bonusEggs:1};
+}
+function weeklyChallenge(){
+  const seed = weekSeed();
+  return {kind:'weekly', title:'Evento semanal', phase:(seed%4)+1, difficulty:seed%2?'normal':'dificil', timeMult:.95, scoreMult:1.35, enemyBonus:2, bonusEggs:2};
+}
+function lightningChallenge(){
+  return {kind:'lightning', title:'Desafio relâmpago', phase:1+Math.floor(Math.random()*4), difficulty:'normal', timeMult:.55, scoreMult:1.6, enemyBonus:0, bonusEggs:0, short:true};
+}
+function ghostChallenge(){
+  return {kind:'ghost', title:'Corrida fantasma', phase:1, difficulty:'normal', timeMult:1, scoreMult:1.1, enemyBonus:0, bonusEggs:0, ghost:true};
+}
+function renderOnlineLocal(){
+  stopBGM();
+  state='menu';
+  const daily = dailyChallenge();
+  const weekly = weeklyChallenge();
+  const lightning = lightningChallenge();
+  const ghostBest = Number(localStorage.getItem('dinogame_ghost_best') || 0);
+  const ghostText = ghostBest ? `Melhor: ${Math.ceil(ghostBest/60)}s` : 'Sem fantasma ainda';
+  const ov = document.getElementById('overlay');
+  ov.classList.remove('win-mode');
+  ov.style.display='flex';
+  ov.innerHTML = `<div class="ocard">
+    <h2>🌐 Dino Online Local</h2>
+    <p class="sub">Desafios para compartilhar sem conta, sem login e sem salvar online.</p>
+    <div class="map-grid">
+      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(daily)})'><b>📅 ${daily.title}</b><br>Fase ${daily.phase} · ${daily.difficulty} · Código ${challengeCode(daily)}</button>
+      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(weekly)})'><b>🎪 ${weekly.title}</b><br>Fase ${weekly.phase} · +ovos · Código ${challengeCode(weekly)}</button>
+      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(lightning)})'><b>⚡ ${lightning.title}</b><br>Fase curta · mais pontos</button>
+      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(ghostChallenge())})'><b>👻 Corrida fantasma</b><br>${ghostText}</button>
+      <button class="map-node unlocked" onclick="showLeaderboard()"><b>🏆 Placar local</b><br>Recordes neste navegador</button>
+      <button class="map-node unlocked" onclick="renderChallengeCode()"><b>🔗 Código de desafio</b><br>Gere um código para amigos repetirem</button>
+    </div>
+    <button class="btn sec" onclick="renderMainMenu()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
+  </div>`;
+}
+
+function renderChallengeCode(){
+  const cfg = dailyChallenge();
+  const code = challengeCode(cfg);
+  document.getElementById('overlay').innerHTML = `<div class="ocard">
+    <h2>🔗 Código de desafio</h2>
+    <p class="score-big">${code}</p>
+    <p class="sub">Mesmo sem internet, outro jogador pode escolher o desafio do dia e comparar o código.</p>
+    <button class="btn" onclick='startOnlineChallenge(${JSON.stringify(cfg)})'>▶ Jogar código</button>
+    <button class="btn sec" onclick="renderOnlineLocal()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
+  </div>`;
+}
+
+function startOnlineChallenge(cfg){
+  onlineChallenge = Object.assign({timeMult:1, scoreMult:1, enemyBonus:0, bonusEggs:0}, cfg || {});
+  onlineRunFrames = 0;
+  difficulty = onlineChallenge.difficulty || 'normal';
+  phase = onlineChallenge.phase || 1;
+  score = 0; lives = 3;
+  document.getElementById('overlay').style.display='none';
+  beginPhase();
+  state='playing';
+}
+
 function showLeaderboard(){
   const ov = document.getElementById('overlay');
   let lb = JSON.parse(localStorage.getItem('dinogame_leaderboard') || '[]');
-  let html = lb.length ? lb.map((entry, i) => `<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px;font-size:9px;color:#c8dde8;"><span>${i+1}. ${entry.name||'???'} — ${entry.score} pts</span><span style="color:#4a6070;font-size:6px;">Fase ${entry.phase} · ${entry.date}</span></div>`).join('') : '<p class="sub">Nenhum recorde ainda.</p>';
+  let html = lb.length ? lb.map((entry, i) => `<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px;font-size:9px;color:#c8dde8;"><span>${i+1}. ${entry.name||'???'} — ${entry.score} pts</span><span style="color:#4a6070;font-size:6px;">${entry.mode || 'Normal'} · Fase ${entry.phase} · ${entry.date}</span></div>`).join('') : '<p class="sub">Nenhum recorde ainda.</p>';
   ov.innerHTML = `<div class="ocard">
     <h2>🏆 Recordes</h2>
     <div class="divider"></div>
@@ -1220,6 +1303,8 @@ function backToMenu(){
 
 function startGame(){
   phase=1; score=0; lives=3; discoveredCreatures=new Set();
+  onlineChallenge = null;
+  onlineRunFrames = 0;
   loadProgress();
   renderWorldMap();
 }
@@ -1293,6 +1378,8 @@ function startSecretPhase(){
 }
 
 function launchPhase(p){
+  onlineChallenge = null;
+  onlineRunFrames = 0;
   phase = p;
   isSecretPhase = p === 5;
   document.getElementById('overlay').style.display='none';
@@ -1366,7 +1453,7 @@ function renderWardrobe(){
     const selected = selectedSkin[char] === s.id;
     const action = owned ? `${tr('select')}` : `${tr('price')}: ${s.cost}`;
     return `<button class="skin-card ${selected?'selected':''}" onclick="chooseSkin('${char}','${s.id}')">
-      <canvas id="skin-${char}-${s.id}" width="58" height="42"></canvas>
+      <canvas id="skin-${char}-${s.id}" width="48" height="36"></canvas>
       <b>${s.name}</b><br>${selected?'✅ '+tr('selected'):owned?action:'💰 '+action}
     </button>`;
   }).join('');
@@ -1376,7 +1463,7 @@ function renderWardrobe(){
     const icon = {none:'—',sunglasses:'🕶',glasses:'👓',cap:'🧢',headphones:'🎧',bow:'🎀'}[a.id] || '•';
     const label = active ? '✅ Equipado' : owned ? tr('select') : '💰 '+a.cost;
     return `<button class="skin-card ${active?'selected':''}" onclick="chooseAccessory('${char}','${a.id}')">
-      <span style="font-size:14px;display:block;line-height:20px">${icon}</span>
+      <span style="font-size:12px;display:block;line-height:16px">${icon}</span>
       <b>${a.name}</b><br>${label}
     </button>`;
   }).join('');
@@ -1386,28 +1473,28 @@ function renderWardrobe(){
     <div class="divider"></div>
 
     <p class="sub" style="color:#4ecdc4">DINOSAURO</p>
-    <div style="display:flex;gap:8px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-        <canvas id="preview-full-dino" width="76" height="62" style="border-radius:8px;background:rgba(78,205,196,.08);border:1px solid rgba(78,205,196,.2);"></canvas>
-        <span style="font-size:4.5px;color:#4ecdc4;">Preview</span>
+    <div style="display:flex;gap:5px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <canvas id="preview-full-dino" width="58" height="48" style="border-radius:6px;background:rgba(78,205,196,.08);border:1px solid rgba(78,205,196,.2);"></canvas>
+        <span style="font-size:4px;color:#4ecdc4;">Preview</span>
       </div>
-      <div style="flex:1;min-width:160px;">
+      <div style="flex:1;min-width:130px;">
         <div class="wardrobe-row">${skinCards('dino')}</div>
-        <p class="sub" style="margin:4px 0 2px;">Acessórios <span style="color:#94a3b8;font-size:4.5px;">(máx. 5)</span></p>
+        <p class="sub" style="margin:2px 0 1px;">Acessórios <span style="color:#94a3b8;font-size:4px;">(máx. 5)</span></p>
         <div class="wardrobe-row">${accessoryCards('dino')}</div>
       </div>
     </div>
     <div class="divider"></div>
 
     <p class="sub" style="color:#fbbf24">CAVEMAN</p>
-    <div style="display:flex;gap:8px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-        <canvas id="preview-full-caveman" width="76" height="62" style="border-radius:8px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);"></canvas>
-        <span style="font-size:4.5px;color:#fbbf24;">Preview</span>
+    <div style="display:flex;gap:5px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <canvas id="preview-full-caveman" width="58" height="48" style="border-radius:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);"></canvas>
+        <span style="font-size:4px;color:#fbbf24;">Preview</span>
       </div>
-      <div style="flex:1;min-width:160px;">
+      <div style="flex:1;min-width:130px;">
         <div class="wardrobe-row">${skinCards('caveman')}</div>
-        <p class="sub" style="margin:4px 0 2px;">Acessórios <span style="color:#94a3b8;font-size:4.5px;">(máx. 5)</span></p>
+        <p class="sub" style="margin:2px 0 1px;">Acessórios <span style="color:#94a3b8;font-size:4px;">(máx. 5)</span></p>
         <div class="wardrobe-row">${accessoryCards('caveman')}</div>
       </div>
     </div>
@@ -1415,7 +1502,7 @@ function renderWardrobe(){
 
     <p class="sub">PETS</p>
     <div class="wardrobe-row">${skinCards('baby')}${skinCards('saber')}</div>
-    <button class="btn sec" onclick="renderWorldMap()" style="font-size:5.5px;padding:6px 14px;">← ${tr('back')}</button>
+    <button class="btn sec" onclick="renderWorldMap()" style="font-size:5px;padding:5px 10px;">← ${tr('back')}</button>
   </div>`;
   setTimeout(renderWardrobePreviews, 20);
 }
@@ -1465,8 +1552,8 @@ function renderWardrobePreviews(){
     if(cvs){
       const c = cvs.getContext('2d');
       c.clearRect(0,0,cvs.width,cvs.height);
-      if(char==='dino') drawDinoOn(c, 12, cvs.height-5, 0, false, 0.42);
-      else              drawCavemanOn(c, 12, cvs.height-5, 0, false, 0.42);
+      if(char==='dino') drawDinoOn(c, 9, cvs.height-4, 0, false, 0.34);
+      else              drawCavemanOn(c, 9, cvs.height-4, 0, false, 0.34);
     }
   });
   // Skin thumbnail previews
@@ -1482,10 +1569,10 @@ function renderWardrobePreviews(){
       const oldAcc  = selectedAccessory[char];
       selectedSkin[char] = s.id;
       selectedAccessory[char] = []; // no accessories in skin thumbnail
-      if(char==='dino')    drawDinoOn(c,12,37,0,false,0.42);
-      else if(char==='caveman') drawCavemanOn(c,13,37,0,false,0.42);
-      else if(char==='baby')   drawBabyDinoOn(c,14,37,0,1,0);
-      else                     drawSaberToothOn(c,14,37,0,1,0);
+      if(char==='dino')    drawDinoOn(c,9,31,0,false,0.34);
+      else if(char==='caveman') drawCavemanOn(c,9,31,0,false,0.34);
+      else if(char==='baby')   drawBabyDinoOn(c,10,31,0,1,0);
+      else                     drawSaberToothOn(c,10,31,0,1,0);
       selectedSkin[char] = oldSkin;
       selectedAccessory[char] = oldAcc;
     });
@@ -1600,10 +1687,25 @@ function card(inner){
 
 function saveScore(){
   let lb = JSON.parse(localStorage.getItem('dinogame_leaderboard') || '[]');
-  lb.push({name: playerName||'???', score: score, phase: phase, char: selectedChar, date: new Date().toLocaleDateString()});
+  lb.push({name: playerName||'???', score: score, phase: phase, char: selectedChar, mode: onlineChallenge ? onlineChallenge.title : 'Normal', date: new Date().toLocaleDateString()});
   lb.sort((a,b) => b.score - a.score);
   lb = lb.slice(0, 5);
   localStorage.setItem('dinogame_leaderboard', JSON.stringify(lb));
+}
+
+function finishOnlineChallenge(){
+  if(!onlineChallenge) return '';
+  const seconds = Math.ceil(onlineRunFrames / 60);
+  let msg = `<p class="sub" style="color:#a5f3fc">${onlineChallenge.title} · ${seconds}s · Código ${challengeCode(onlineChallenge)}</p>`;
+  if(onlineChallenge.ghost){
+    const old = Number(localStorage.getItem('dinogame_ghost_best') || 0);
+    if(!old || onlineRunFrames < old){
+      localStorage.setItem('dinogame_ghost_best', String(onlineRunFrames));
+      msg += `<p class="sub" style="color:#ffe66d">Novo melhor fantasma local!</p>`;
+    }
+  }
+  saveScore();
+  return msg;
 }
 
 function showOverlay(type){
@@ -1627,14 +1729,18 @@ function showOverlay(type){
     state='dead';
   } else if(type==='phaseclear'){
     const secsLeft = Math.ceil(phaseFramesLeft/60);
-    const timeBonus = secsLeft * 10;
+    const timeBonus = Math.round(secsLeft * 10 * (onlineChallenge ? (onlineChallenge.scoreMult || 1) : 1));
     score += timeBonus; updateUI();
     const diffLabel = {facil:tr('easy'),normal:tr('normal'),dificil:tr('hard')}[difficulty];
+    const wasOnline = !!onlineChallenge;
+    const onlineMsg = finishOnlineChallenge();
+    if(wasOnline) onlineChallenge = null;
     ov.innerHTML=card(`<h2>${tr('phaseComplete', phase)}</h2><div class="divider"></div>
       <p class="sub">${tr('timeBonus', secsLeft, timeBonus)}</p>
+      ${onlineMsg}
       <p class="sub" style="color:#94a3b8">${diffLabel}</p>
       <span class="score-big">${score} pts</span>
-      <button class="btn" onclick="nextPhase()">▶ ${tr('nextPhase')}</button>`);
+      <button class="btn" onclick="${wasOnline?'renderOnlineLocal()':'nextPhase()'}">▶ ${wasOnline?'Online Local':tr('nextPhase')}</button>`);
     state='phaseclear';
   } else if(type==='secretclear'){
     totalCoins += 8; score += 800; saveProgress();
@@ -1669,6 +1775,7 @@ function update(){
   if(state==='win'){ winTimer++; return; }
   if(state!=='playing') return;
   frameCount++;
+  if(onlineChallenge) onlineRunFrames++;
 
   // phase timer countdown
   if(phaseFramesLeft > 0){
