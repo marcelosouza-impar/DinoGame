@@ -1456,7 +1456,6 @@ function renderBase(){
       <button class="map-node unlocked" onclick="renderNest()"><b>🥚 Ninho dos ovos</b><br>${rare} ovos raros salvos</button>
       <button class="map-node unlocked" onclick="renderAlbum()"><b>🦕 Bebês dinossauros</b><br>${babies} bebês descobertos</button>
       <button class="map-node unlocked" onclick="renderShop()"><b>⬆ Melhorias</b><br>Pulo, velocidade, tempo e resistência</button>
-      <button class="map-node ${secretUnlocked?'unlocked':'locked'}" ${secretUnlocked?'onclick="startSecretPhase()"':''}><b>🌀 Fase secreta</b><br>${secretUnlocked?'Entrar no portal bônus':'Encontre um segredo na fase'}</button>
     </div>
     <button class="btn sec" onclick="renderWorldMap()" style="font-size:7px;padding:8px 18px;">← ${tr('back')}</button>
   </div>`;
@@ -2226,12 +2225,6 @@ function update(){
     }
     showOverlay(isSecretPhase ? 'secretclear' : 'phaseclear');
   }
-  const spxPor = secretPortalX-scrollX;
-  if(!isSecretPhase && secretUnlocked && rectsOverlap(player.x+10,player.y-52,player.w-20,52, spxPor,GROUND-96,54,96)){
-    startSecretPhase();
-    return;
-  }
-
   // pet speech triggers
   if(petSpeech.timer > 0) petSpeech.timer--;
   if(petSpeech.timer === 0 && Math.random() < 0.014){
@@ -2815,10 +2808,6 @@ function draw(){
   drawCheckpoint();
 
   // secret portal (before main portal)
-  if(!isSecretPhase && secretUnlocked){
-    const spx = secretPortalX - scrollX;
-    if(spx>-100 && spx<W+100) drawSecretPortal(spx);
-  }
 
   // portal
   const pxP=portalX-scrollX;
