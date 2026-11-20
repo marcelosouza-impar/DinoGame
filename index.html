@@ -163,6 +163,25 @@
   .skin-card:hover{transform:translateY(-2px);}
   .skin-card.selected{background:var(--sun);border-width:var(--stroke-strong);}
 
+
+  /* ── DINO SVG (design/dino/dino-animations.css) ── */
+  .dino-svg .rig,.dino-svg .rig g,.dino-svg .shadow{transform-box:fill-box}
+  .dino-svg .rig{transform-origin:50% 100%}
+  .dino-svg .tail{transform-origin:100% 40%}
+  .dino-svg .headP{transform-origin:30% 90%}
+  .dino-svg .legN,.dino-svg .legF{transform-origin:50% 10%}
+  .dino-svg .torso{transform-origin:50% 100%}
+  .dino-svg .lid{transform-origin:50% 0%;transform:scaleY(0)}
+  .dino-svg .shadow{transform-origin:50% 50%}
+  @keyframes dinoBreathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.015,1.035)}}
+  @keyframes dinoSway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(5deg)}}
+  @keyframes dinoBlink{0%,92%,100%{transform:scaleY(0)}95%{transform:scaleY(1)}}
+  @keyframes dinoNod{0%,100%{transform:rotate(0)}50%{transform:rotate(-2deg) translateY(-1px)}}
+  .dino-svg.m-idle .torso{animation:dinoBreathe 2.4s ease-in-out infinite}
+  .dino-svg.m-idle .tail{animation:dinoSway 2.4s ease-in-out infinite}
+  .dino-svg.m-idle .lid{animation:dinoBlink 3.6s infinite}
+  .dino-svg.m-idle .headP{animation:dinoNod 2.4s ease-in-out infinite}
+
   /* ── CENA 800x450 (menu e mapa) ── */
   .scene{position:relative;width:800px;height:450px;color:var(--ink);font-family:var(--font-ui);}
   .scene-bg{position:absolute;inset:0;overflow:visible;pointer-events:none;}
@@ -529,7 +548,7 @@ let onlineRunFrames = 0;
 
 const SKINS = {
   dino: [
-    {id:'classic', name:'Dino Verde', cost:0, primary:'#4ade80', light:'#86efac', dark:'#166534', foot:'#15803d', belly:'#bbf7d0', spike:'#fbbf24', eye:'#1e3a8a'},
+    {id:'classic', name:'Dino Verde', cost:0, primary:'#7ED957', light:'#86efac', dark:'#166534', foot:'#15803d', belly:'#DDF8C2', spike:'#FFD23F', eye:'#2B2A4C'},
     {id:'blue', name:'Dino Azul', cost:8, primary:'#38bdf8', light:'#7dd3fc', dark:'#075985', foot:'#0284c7', belly:'#dbeafe', spike:'#facc15', eye:'#1e40af'},
     {id:'rose', name:'Dino Coral', cost:10, primary:'#fb7185', light:'#fda4af', dark:'#9f1239', foot:'#e11d48', belly:'#ffe4e6', spike:'#fde047', eye:'#7c2d12'},
   ],
@@ -897,6 +916,7 @@ const player = {
 // ─── INPUT ────────────────────────────────────────────────────────────────────
 const keys = {};
 window.addEventListener('keydown', e => {
+  lastInputAt = performance.now();
   if(keys[e.code]) return;
   keys[e.code] = true;
   if(e.code==='Space' && state==='cutscene'){ skipCutscene(); return; }
@@ -986,6 +1006,7 @@ function wireMobileBtn(id, downFn, upFn){
   const el = document.getElementById(id);
   if(!el) return;
   el.addEventListener('pointerdown', e=>{
+    lastInputAt = performance.now();
     e.preventDefault(); el.setPointerCapture(e.pointerId);
     el.classList.add('pressed');
     if(downFn) downFn();
@@ -1320,7 +1341,7 @@ function renderMainMenu(){
       <ellipse cx="660" cy="490" rx="330" ry="140" fill="#7ED957"/>
       <ellipse cx="400" cy="520" rx="460" ry="120" fill="#4DB85C"/>
     </svg>
-    <canvas id="menuDinoAnim" width="200" height="140" style="position:absolute;left:40px;top:270px;"></canvas>
+    <div style="position:absolute;left:44px;top:236px;width:140px;height:165px">${dinoSvgHTML()}</div>
     <div class="topbar">
       <button class="chip" onclick="askPlayerName()"><span class="chip-dot" style="background:var(--grass)">${svgIcon(ICONS.user,16)}</span>${playerName||'Seu nome'}</button>
       <div style="display:flex;gap:10px;align-items:center">
@@ -1501,7 +1522,7 @@ function showCharSelect(){
     <div class="divider"></div>
     <div class="char-row">
       <div class="char-card selected" id="cc-dino" onclick="selectChar('dino')">
-        <canvas id="prev-dino" width="90" height="90"></canvas>
+        <div style="width:90px;height:90px">${dinoSvgHTML('m-idle','0 -10 220 185')}</div>
         <span class="char-name">DINOSSAURO</span>
         <span class="char-desc">${tr('agile')}<br><b>Z/X</b> = ${tr('fire')}</span>
       </div>
@@ -3075,7 +3096,7 @@ function draw(){
   // player
   if(player.invincible===0 || Math.floor(player.invincible/6)%2===0){
     if(player.invincible===0||Math.floor(player.invincible/6)%2===0){
-      if(selectedChar==='dino') drawDinoOn(ctx,player.x,player.y,player.frame,player.ducking,1);
+      if(selectedChar==='dino') drawDinoOn(ctx,player.x,player.y,player.frame,player.ducking,1,{vx:player.vx,vy:player.vy,onGround:player.onGround,idleMs:state==='playing'?performance.now()-lastInputAt:0});
       else                      drawCavemanOn(ctx,player.x,player.y,player.frame,player.ducking,1);
     }
   }
@@ -4210,139 +4231,206 @@ function drawAccessory(c,char,x,y,ducking=false){
   c.restore();
 }
 
-function drawDinoOn(c,x,y,frame,ducking,s){
-  const ft=frameCount*.14;
-  const moving=Math.abs(player.vx)>0.1;
-  const lo=ducking?0:(moving?Math.sin(ft)*5:0);
-  const skin = skinPalette('dino');
-  c.save(); c.translate(x,y); c.scale(s,s); c.translate(-x,-y);
+// ─── DINO (Bubble Day) ─────────────────────────────────────────────────────────
+// Peças de design/dino/dino.svg (espaço 220x260, chão em y=162). Poses de design/dino/poses.json.
+const DINO_K = 0.42;
+const DINO_INK = '#2B2A4C';
+const DINO_D = {
+  tail:'M68 98 C50 114 26 120 7 107 C2 103 4 98 9 98 C24 100 40 90 56 76 Z',
+  tailStripe:'M14 99 C24 100 34 97 42 93',
+  spk:'M62 82 L60 64 L76 72 Z M80 68 L80 48 L96 60 Z M100 62 L104 42 L117 58 Z',
+  legF:'M114 132 C112 146 112 154 114 160 L136 160 C138 156 136 148 132 132 Z',
+  torso:'M52 108 C50 80 76 62 108 64 C138 66 156 86 154 114 C152 142 130 158 102 158 C72 158 54 136 52 108 Z',
+  belly:'M96 90 C124 88 142 106 140 128 C138 146 118 152 102 148 C88 144 82 98 96 90 Z',
+  bellyLines:'M104 106 C112 106 122 108 130 112 M102 122 C112 122 122 124 132 128 M104 138 C112 138 120 139 126 141',
+  thigh:'M64 124 C62 102 98 98 101 124 C102 138 97 146 93 150 L70 150 C66 144 64 136 64 124 Z',
+  foot:'M58 150 C58 144 64 142 72 142 L94 142 C102 142 106 148 104 156 C102 161 98 162 94 162 L62 162 C59 162 58 158 58 150 Z',
+  toes:'M86 162 L86 156 M96 162 L96 156',
+  arm:'M138 104 C150 104 158 110 156 118 C155 122 150 123 147 120 C145 116 141 114 136 114',
+  spkP:'M120 40 L114 22 L130 28 Z M134 24 L134 4 L150 16 Z',
+  headP:'M114 62 C110 30 136 10 166 12 C196 14 214 32 212 56 C210 78 192 88 168 88 C148 88 132 84 124 78 C118 74 115 68 114 62 Z',
+  browP:'M146 20 C152 16 162 16 170 20',
+  smile:'M166 70 C178 80 194 78 206 66',
+  tooth:'M178 76 L180 82 L185 77',
+  spkF:'M136 22 L134 2 L150 12 Z M156 12 L160 -8 L172 8 Z M178 16 L188 -2 L192 18 Z',
+  headF:'M120 48 C120 20 140 8 164 8 C188 8 208 20 208 48 C208 74 190 88 164 88 C138 88 120 74 120 48 Z',
+  browsF:'M136 24 C140 20 148 20 152 23 M176 23 C180 20 188 20 192 24',
+  mouthF:'M154 66 C158 74 170 74 174 66 Z'
+};
+let DINO_P = null;
+const JUMP_KEYS = [
+  {t:0,sx:1,sy:1,legs:0,tail:0,head:0},{t:.14,sx:1.14,sy:.84,legs:0,tail:0,head:0},
+  {t:.28,sx:.88,sy:1.16,legs:-14,tail:-10,head:-6},{t:.5,sx:1,sy:1,legs:-28,tail:-16,head:-2},
+  {t:.72,sx:.94,sy:1.08,legs:12,tail:0,head:0},{t:.86,sx:1.16,sy:.82,legs:0,tail:8,head:6},
+  {t:1,sx:1,sy:1,legs:0,tail:0,head:0}
+];
+const HOP_KEYS = [
+  {t:0,ty:0,sx:1,sy:1},{t:.6,ty:0,sx:1,sy:1},{t:.68,ty:0,sx:1.06,sy:.94},
+  {t:.78,ty:-12,sx:.97,sy:1.04},{t:.9,ty:0,sx:1.04,sy:.96},{t:1,ty:0,sx:1,sy:1}
+];
+function poseAt(keys,t){
+  let i=0; while(i<keys.length-2 && t>keys[i+1].t) i++;
+  const a=keys[i], b=keys[i+1];
+  let f=Math.min(1,Math.max(0,(t-a.t)/((b.t-a.t)||1)));
+  f=f*f*(3-2*f);
+  const o={}; for(const k in a) o[k]=a[k]+(b[k]-a[k])*f; return o;
+}
+function shadeHex(hex,f){
+  const n=parseInt(hex.slice(1),16);
+  const ch=v=>Math.max(0,Math.min(255,Math.round(v*f))).toString(16).padStart(2,'0');
+  return '#'+ch(n>>16)+ch((n>>8)&255)+ch(n&255);
+}
+let lastInputAt = performance.now();
+const dinoAnim = {wasGround:true, landAt:-1e9, waitAt:0};
 
-  // ground shadow
-  c.fillStyle='rgba(0,0,0,0.18)';
-  c.beginPath(); c.ellipse(x+26,y+2,28,7,0,0,Math.PI*2); c.fill();
+function drawDinoOn(c,x,y,frame,ducking,s,anim){
+  if(!DINO_P){ DINO_P={}; for(const k in DINO_D) DINO_P[k]=new Path2D(DINO_D[k]); }
+  const P=DINO_P, INK=DINO_INK;
+  const sk=skinPalette('dino');
+  const body=sk.primary, shade=shadeHex(sk.primary,.82), belly=sk.belly, bellyLine=shadeHex(sk.belly,.86), spike=sk.spike;
+  const now=performance.now(), T=now/1000, TAU=Math.PI*2;
+  const moving = anim ? Math.abs(anim.vx)>0.1 : false;
 
-  if(!ducking){
-    // tail — thick bezier with gradient
-    const tg = c.createLinearGradient(x+12,y-28,x-22,y-1);
-    tg.addColorStop(0,skin.dark); tg.addColorStop(1,skin.primary);
-    c.strokeStyle=tg; c.lineWidth=13; c.lineCap='round';
-    c.beginPath(); c.moveTo(x+12,y-28);
-    c.bezierCurveTo(x-2,y-18, x-18,y-6, x-22,y-1); c.stroke();
-    c.strokeStyle=skin.light; c.lineWidth=5; c.globalAlpha=0.35; c.stroke();
-    c.globalAlpha=1;
+  // repouso: respira, rabo balança, pisca
+  const br=(1-Math.cos((T%2.4)/2.4*TAU))/2;
+  let rsx=1+.015*br, rsy=1+.035*br, rty=0, tail=-3+8*br, headDeg=-2*br;
+  let legN=0, legF=0, legNdx=0, legFdx=0, spkSy=1;
+  let hTx=0, hTy=0, hSx=1, hSy=1, wait=false, pop=1, pupDx=0, pupDy=0;
+  const blink=(T%3.6)>3.48;
 
-    // back leg
-    const lg1 = c.createLinearGradient(x+14,0,x+26,0);
-    lg1.addColorStop(0,skin.dark); lg1.addColorStop(1,skin.foot);
-    c.fillStyle=lg1; c.strokeStyle=OL; c.lineWidth=2;
-    c.beginPath(); c.roundRect(x+14,y-26+Math.abs(lo*.8),12,26,5); c.fill(); c.stroke();
-    c.fillStyle=skin.foot; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.ellipse(x+20,y+1,14,5,0,0,Math.PI*2); c.fill(); c.stroke();
-    [[-5,0],[0,1],[5,-1]].forEach(([dx])=>{
-      c.strokeStyle=skin.dark; c.lineWidth=2; c.lineCap='round';
-      c.beginPath(); c.moveTo(x+20+dx,y+5); c.lineTo(x+19+dx,y+10); c.stroke();
-    });
-
-    // body — radial gradient for 3D look
-    const bg = c.createRadialGradient(x+20,y-42,4, x+26,y-36,26);
-    bg.addColorStop(0,skin.light); bg.addColorStop(0.5,skin.primary); bg.addColorStop(1,skin.dark);
-    c.fillStyle=bg; c.strokeStyle=OL; c.lineWidth=2.5;
-    c.beginPath(); c.ellipse(x+26,y-36,21,24,-.05,0,Math.PI*2); c.fill(); c.stroke();
-    // belly highlight
-    c.fillStyle=skin.belly;
-    c.beginPath(); c.ellipse(x+29,y-30,9,14,-.1,0,Math.PI*2); c.fill();
-    // rim light (left edge)
-    c.strokeStyle=skin.light; c.lineWidth=3; c.globalAlpha=0.28;
-    c.beginPath(); c.ellipse(x+26,y-36,21,24,-.05,Math.PI*.55,Math.PI*.95); c.stroke();
-    c.globalAlpha=1;
-
-    // front leg
-    const lg2 = c.createLinearGradient(x+28,0,x+40,0);
-    lg2.addColorStop(0,skin.primary); lg2.addColorStop(1,skin.dark);
-    c.fillStyle=lg2; c.strokeStyle=OL; c.lineWidth=2;
-    c.beginPath(); c.roundRect(x+28,y-24+Math.abs(lo),12,24,5); c.fill(); c.stroke();
-    c.fillStyle=skin.foot; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.ellipse(x+34,y+1,14,5,0,0,Math.PI*2); c.fill(); c.stroke();
-    [[-5,0],[0,1],[5,-1]].forEach(([dx])=>{
-      c.strokeStyle=skin.dark; c.lineWidth=2; c.lineCap='round';
-      c.beginPath(); c.moveTo(x+34+dx,y+5); c.lineTo(x+33+dx,y+10); c.stroke();
-    });
-
-    // dorsal spikes (4, alternating heights)
-    c.fillStyle=skin.spike; c.strokeStyle=OL; c.lineWidth=1.8;
-    [14,18,13,9].forEach((sh,i)=>{
-      const sx=x+9+i*9, sy=y-57;
-      c.beginPath(); c.moveTo(sx,sy);
-      c.lineTo(sx+4,sy-sh+Math.sin(ft+i)*.8);
-      c.lineTo(sx+9,sy); c.closePath(); c.fill(); c.stroke();
-    });
-
-    // arm
-    c.strokeStyle=skin.dark; c.lineWidth=5; c.lineCap='round';
-    c.beginPath(); c.moveTo(x+38,y-44); c.lineTo(x+46,y-40); c.stroke();
-    c.strokeStyle=OL; c.lineWidth=1.5; c.stroke();
-
-    // neck
-    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2;
-    c.beginPath(); c.ellipse(x+38,y-53,8,13,.25,0,Math.PI*2); c.fill(); c.stroke();
-
-    // head + snout — UMA forma única integrada (sem emenda)
-    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2.5;
-    c.beginPath();
-    c.moveTo(x+32, y-57);                                        // base-esquerda (encontra o pescoço)
-    c.bezierCurveTo(x+28,y-62, x+28,y-80, x+43,y-81);           // nuca arredondada
-    c.bezierCurveTo(x+54,y-82, x+65,y-74, x+66,y-64);           // topo do crânio → snout
-    c.bezierCurveTo(x+67,y-57, x+65,y-52, x+62,y-51);           // ponta do focinho
-    c.bezierCurveTo(x+53,y-49, x+39,y-51, x+32,y-57);           // queixo de volta
-    c.closePath(); c.fill(); c.stroke();
-
-    // highlight do topo da cabeça
-    c.fillStyle=skin.light;
-    c.beginPath(); c.ellipse(x+43,y-69,10,8,-.15,0,Math.PI*2); c.fill();
-
-    // linha da boca
-    c.strokeStyle=skin.foot; c.lineWidth=2; c.lineCap='round';
-    c.beginPath(); c.moveTo(x+35,y-58); c.quadraticCurveTo(x+50,y-54,x+64,y-60); c.stroke();
-
-    // 1 dentinho branco no canto da boca
-    c.fillStyle='#f0fdf4'; c.strokeStyle='rgba(20,20,40,0.25)'; c.lineWidth=0.8;
-    c.beginPath(); c.moveTo(x+38,y-58); c.lineTo(x+36,y-53); c.lineTo(x+42,y-57); c.closePath(); c.fill(); c.stroke();
-
-    // narina
-    c.fillStyle=skin.dark;
-    c.beginPath(); c.ellipse(x+62,y-59,2.5,1.5,-.4,0,Math.PI*2); c.fill();
-
-    // olho
-    c.fillStyle='#fff'; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.arc(x+42,y-70,6,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle=skin.eye; c.beginPath(); c.arc(x+43,y-70,3.5,0,Math.PI*2); c.fill();
-    c.fillStyle='#fff'; c.beginPath(); c.arc(x+44,y-71,1.5,0,Math.PI*2); c.fill();
-    // sobrancelha
-    c.strokeStyle=OL; c.lineWidth=2.5; c.lineCap='round';
-    c.beginPath(); c.moveTo(x+37,y-77); c.lineTo(x+48,y-75); c.stroke();
-    drawAccessory(c,'dino',x,y,false);
-
-  } else {
-    // ducking
-    c.strokeStyle=skin.dark; c.lineWidth=9; c.lineCap='round';
-    c.beginPath(); c.moveTo(x+8,y-18); c.quadraticCurveTo(x-10,y-8,x-14,y-1); c.stroke();
-    c.strokeStyle=OL; c.lineWidth=2; c.stroke();
-    block(c,x+8,y-14,12,14,6,skin.dark);
-    block(c,x+24,y-14,12,14,6,skin.dark);
-    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=2.5;
-    c.beginPath(); c.ellipse(x+24,y-20,22,14,-.1,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle=skin.belly; c.beginPath(); c.ellipse(x+26,y-18,10,8,0,0,Math.PI*2); c.fill();
-    c.fillStyle=skin.light; c.strokeStyle=OL; c.lineWidth=2;
-    c.beginPath(); c.arc(x+44,y-26,10,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle=skin.primary; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.moveTo(x+51,y-26); c.lineTo(x+57,y-23); c.lineTo(x+57,y-29); c.closePath(); c.fill(); c.stroke();
-    c.fillStyle='#fff'; c.strokeStyle=OL; c.lineWidth=1.2;
-    c.beginPath(); c.arc(x+43,y-30,4.5,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle=skin.eye; c.beginPath(); c.arc(x+44,y-30,2.5,0,Math.PI*2); c.fill();
-    c.fillStyle='#fff'; c.beginPath(); c.arc(x+45,y-31,1,0,Math.PI*2); c.fill();
-    drawAccessory(c,'dino',x,y,true);
+  if(anim){
+    if(anim.onGround && !dinoAnim.wasGround) dinoAnim.landAt=now;
+    dinoAnim.wasGround=anim.onGround;
   }
+  if(ducking){
+    rsx=1.12; rsy=.74; tail=10; spkSy=.6;
+    hTx=8; hTy=22; headDeg=10; hSx=.89; hSy=1.3;
+    const sh=Math.sin(T/.5*TAU)*3; legNdx=sh; legFdx=-sh;
+  } else if(anim && !anim.onGround){
+    const t = anim.vy<0 ? .28+.22*Math.min(1,Math.max(0,1-(-anim.vy)/-JUMP_FORCE))
+                        : .5+.22*Math.min(1,anim.vy/8);
+    const k=poseAt(JUMP_KEYS,t);
+    rsx=k.sx; rsy=k.sy; legN=legF=k.legs; tail=k.tail; headDeg=k.head;
+  } else if(anim && now-dinoAnim.landAt<80){
+    const k=poseAt(JUMP_KEYS,.86+.14*(now-dinoAnim.landAt)/80);
+    rsx=k.sx; rsy=k.sy; legN=legF=k.legs; tail=k.tail; headDeg=k.head;
+  } else if(anim && anim.idleMs>4000 && !moving){
+    wait=true;
+    if(!dinoAnim.waitAt) dinoAnim.waitAt=now;
+    const h=poseAt(HOP_KEYS,(T%1.6)/1.6);
+    rty=h.ty; rsx=h.sx; rsy=h.sy;
+    tail=2+12*Math.sin(T/.35*TAU);
+    legN=-10*Math.max(0,Math.sin(T/.5*TAU));
+    const d=(T%2.2)/2.2;
+    if(d>=.35&&d<.6){pupDx=-3;pupDy=1;} else if(d>=.65&&d<.85){pupDx=3;pupDy=1;}
+    const w=(now-dinoAnim.waitAt)/400;
+    pop = w<.6 ? .6+.48*(w/.6) : w<1 ? 1.08-.08*((w-.6)/.4) : 1;
+  } else if(moving){
+    const sw=Math.sin(frameCount*.25)*16; legN=sw; legF=-sw;
+  }
+  if(anim && !wait) dinoAnim.waitAt=0;
+
+  const part=(ox,oy,deg,sx,sy,dx,dy,fn)=>{
+    c.save(); c.translate(ox+dx,oy+dy); c.rotate(deg*Math.PI/180); c.scale(sx,sy); c.translate(-ox,-oy); fn(); c.restore();
+  };
+  const fs=(path,fill,lw=5)=>{ c.fillStyle=fill; c.fill(path); c.lineWidth=lw; c.strokeStyle=INK; c.stroke(path); };
+  const ell=(cx,cy,rx,ry,fill,lw)=>{ c.beginPath(); c.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); c.fillStyle=fill; c.fill(); if(lw){c.lineWidth=lw;c.strokeStyle=INK;c.stroke();} };
+
+  c.save();
+  c.translate(x,y); c.scale(s,s);
+  c.translate(24-103*DINO_K,-162*DINO_K); c.scale(DINO_K,DINO_K);
+  c.lineJoin='round'; c.lineCap='round';
+
+  // sombra
+  c.globalAlpha=.16; ell(104,166,58*rsx,7,INK); c.globalAlpha=1;
+
+  part(104,162,0,rsx,rsy,0,rty,()=>{
+    // rabo
+    part(68,94,tail,1,1,0,0,()=>{
+      fs(P.tail,body);
+      c.lineWidth=4; c.strokeStyle=shade; c.stroke(P.tailStripe);
+    });
+    // espinhos
+    part(88,82,0,1,spkSy,0,0,()=>fs(P.spk,spike));
+    // perna de trás
+    part(125,135,legF,1,1,legFdx,0,()=>fs(P.legF,shade));
+    // tronco + barriga
+    fs(P.torso,body);
+    c.fillStyle=belly; c.fill(P.belly);
+    c.lineWidth=3; c.strokeStyle=bellyLine; c.stroke(P.bellyLines);
+    c.fillStyle=shade;
+    [[72,88,5],[86,80,3.5],[66,104,3]].forEach(([cx,cy,r])=>{c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.fill();});
+    // perna da frente
+    part(81,106,legN,1,1,legNdx,0,()=>{
+      fs(P.thigh,body); fs(P.foot,body);
+      c.lineWidth=3; c.strokeStyle=INK; c.stroke(P.toes);
+    });
+    // braço
+    fs(P.arm,body);
+    // cabeça
+    if(!wait){
+      part(143,80,headDeg,hSx,hSy,hTx,hTy,()=>{
+        fs(P.spkP,spike);
+        fs(P.headP,body);
+        ell(160,40,14,16,'#FFFFFF',4);
+        c.fillStyle=sk.eye||INK; c.beginPath(); c.arc(165,42,8,0,Math.PI*2); c.fill();
+        c.fillStyle='#FFFFFF'; c.beginPath(); c.arc(168,38,3,0,Math.PI*2); c.fill();
+        if(blink) ell(160,40,15,17,body,4);
+        c.lineWidth=4; c.strokeStyle=INK; c.stroke(P.browP);
+        ell(200,44,2.5,3.5,INK);
+        c.globalAlpha=.85; ell(182,66,8,5,'#FF9FA0'); c.globalAlpha=1;
+        c.lineWidth=4; c.strokeStyle=INK; c.stroke(P.smile);
+        c.fillStyle='#FFFFFF'; c.fill(P.tooth); c.lineWidth=2.5; c.stroke(P.tooth);
+        c.save(); c.translate(160,40); c.scale(1/DINO_K,1/DINO_K); drawAccessory(c,'dino',-42,70,false); c.restore();
+      });
+    } else {
+      part(143,80,0,pop,pop,0,0,()=>{
+        fs(P.spkF,spike);
+        fs(P.headF,body);
+        ell(164,70,22,14,belly);
+        ell(146,42,12,14,'#FFFFFF',4); ell(182,42,12,14,'#FFFFFF',4);
+        c.fillStyle=sk.eye||INK;
+        [[146,45],[182,45]].forEach(([cx,cy])=>{c.beginPath();c.arc(cx+pupDx,cy+pupDy,7,0,Math.PI*2);c.fill();});
+        c.fillStyle='#FFFFFF';
+        [[148.5,41.5],[184.5,41.5]].forEach(([cx,cy])=>{c.beginPath();c.arc(cx+pupDx,cy+pupDy,2.6,0,Math.PI*2);c.fill();});
+        if(blink){ ell(146,42,13,15,body,4); ell(182,42,13,15,body,4); }
+        c.lineWidth=4; c.strokeStyle=INK; c.stroke(P.browsF);
+        c.globalAlpha=.85; ell(132,62,7,4.5,'#FF9FA0'); ell(196,62,7,4.5,'#FF9FA0'); c.globalAlpha=1;
+        fs(P.mouthF,'#E35D6A',4);
+        c.save(); c.translate(164,42); c.scale(1/DINO_K,1/DINO_K); drawAccessory(c,'dino',-42,70,false); c.restore();
+      });
+    }
+  });
   c.restore();
+}
+
+// SVG do Dino para telas HTML, com as cores da skin escolhida
+function dinoSvgHTML(mode='m-idle', viewBox='0 -80 220 260'){
+  const sk=skinPalette('dino');
+  const vars=`--dino-body:${sk.primary};--dino-shade:${shadeHex(sk.primary,.82)};--dino-belly:${sk.belly};--dino-belly-line:${shadeHex(sk.belly,.86)};--dino-spike:${sk.spike};--dino-eye:${sk.eye||DINO_INK}`;
+  const st='stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"';
+  const D=DINO_D;
+  return `<svg class="dino-svg ${mode}" viewBox="${viewBox}" width="100%" height="100%" aria-hidden="true" style="overflow:visible;${vars}">
+<ellipse class="shadow" cx="104" cy="170" rx="58" ry="7" fill="#2B2A4C" opacity=".16"/>
+<g class="rig">
+ <g class="tail"><path d="${D.tail}" fill="var(--dino-body)" ${st}/><path d="${D.tailStripe}" fill="none" stroke="var(--dino-shade)" stroke-width="4" stroke-linecap="round"/></g>
+ <g class="spk"><path d="${D.spk}" fill="var(--dino-spike)" ${st}/></g>
+ <g class="legF"><path d="${D.legF}" fill="var(--dino-shade)" ${st}/></g>
+ <g class="torso"><path d="${D.torso}" fill="var(--dino-body)" ${st}/><path d="${D.belly}" fill="var(--dino-belly)"/><path d="${D.bellyLines}" fill="none" stroke="var(--dino-belly-line)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="72" cy="88" r="5" fill="var(--dino-shade)"/><circle cx="86" cy="80" r="3.5" fill="var(--dino-shade)"/><circle cx="66" cy="104" r="3" fill="var(--dino-shade)"/></g>
+ <g class="legN"><path d="${D.thigh}" fill="var(--dino-body)" ${st}/><path d="${D.foot}" fill="var(--dino-body)" ${st}/><path d="${D.toes}" stroke="#2B2A4C" stroke-width="3" stroke-linecap="round"/></g>
+ <g class="arm"><path d="${D.arm}" fill="var(--dino-body)" ${st}/></g>
+ <g class="headP">
+  <path d="${D.spkP}" fill="var(--dino-spike)" ${st}/><path d="${D.headP}" fill="var(--dino-body)" ${st}/>
+  <ellipse cx="160" cy="40" rx="14" ry="16" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="4"/>
+  <g class="pupP"><circle cx="165" cy="42" r="8" fill="var(--dino-eye)"/><circle cx="168" cy="38" r="3" fill="#FFFFFF"/></g>
+  <ellipse class="lid" cx="160" cy="40" rx="15" ry="17" fill="var(--dino-body)" stroke="#2B2A4C" stroke-width="4"/>
+  <path d="${D.browP}" fill="none" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="200" cy="44" rx="2.5" ry="3.5" fill="#2B2A4C"/><ellipse cx="182" cy="66" rx="8" ry="5" fill="#FF9FA0" opacity=".85"/>
+  <path d="${D.smile}" fill="none" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"/><path d="${D.tooth}" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="2.5" stroke-linejoin="round"/>
+ </g>
+</g>
+</svg>`;
 }
 
 function drawCavemanOn(c,x,y,frame,ducking,s){
