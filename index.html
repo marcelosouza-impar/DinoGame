@@ -1735,6 +1735,87 @@ function renderWorldMap(){
   </div>`;
 }
 
+const CROPS=[
+  {id:'morango', name:'Morango', cost:2, secs:30,  sell:4,  color:'#FF6B6B'},
+  {id:'milho',   name:'Milho',   cost:4, secs:60,  sell:9,  color:'#FFD23F'},
+  {id:'abobora', name:'Abóbora', cost:8, secs:120, sell:20, color:'#FF9F6B'},
+];
+let farmTimer=null;
+function loadFarm(){
+  try{ const f=JSON.parse(localStorage.getItem('dinogame_farm')||'null'); if(f&&f.plots) return f; }catch(e){}
+  return {plots:Array.from({length:6},()=>({crop:null,at:0})), barn:{}};
+}
+function saveFarm(f){ localStorage.setItem('dinogame_farm',JSON.stringify(f)); }
+function cropSvg(crop,prog){
+  const c=CROPS.find(x=>x.id===crop);
+  if(prog<1){
+    const h=10+prog*22;
+    return `<svg width="60" height="54" viewBox="0 0 60 54" aria-hidden="true"><path d="M30 50V${50-h}" stroke="#2B2A4C" stroke-width="3"/><path d="M30 ${50-h*0.6}c-10-6-14-2-16 2 6 2 12 2 16-2zM30 ${50-h*0.85}c10-6 14-2 16 2-6 2-12 2-16-2z" fill="#7ED957" stroke="#2B2A4C" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+  }
+  return `<svg width="60" height="54" viewBox="0 0 60 54" aria-hidden="true"><path d="M30 20c-4-8-12-8-14-4 4 2 9 3 14 4zM30 20c4-8 12-8 14-4-4 2-9 3-14 4z" fill="#7ED957" stroke="#2B2A4C" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="30" cy="34" rx="${crop==='milho'?9:crop==='abobora'?17:12}" ry="${crop==='milho'?16:13}" fill="${c.color}" stroke="#2B2A4C" stroke-width="3"/><circle cx="25" cy="29" r="3" fill="#FFFFFF" opacity=".6"/></svg>`;
+}
+function plantCrop(i,id){
+  const f=loadFarm(), c=CROPS.find(x=>x.id===id);
+  if(f.plots[i].crop) return;
+  if(totalCoins<c.cost){ alert(tr('notEnough')); return; }
+  totalCoins-=c.cost; saveProgress();
+  f.plots[i]={crop:id,at:Date.now()}; saveFarm(f); renderFarm();
+}
+function harvestCrop(i){
+  const f=loadFarm(), p=f.plots[i]; if(!p.crop) return;
+  const c=CROPS.find(x=>x.id===p.crop);
+  if(Date.now()-p.at < c.secs*1000) return;
+  f.barn[p.crop]=(f.barn[p.crop]||0)+1; f.plots[i]={crop:null,at:0}; saveFarm(f); renderFarm();
+}
+function sellBarn(){
+  const f=loadFarm(); let total=0;
+  CROPS.forEach(c=>{ total+=(f.barn[c.id]||0)*c.sell; f.barn[c.id]=0; });
+  if(!total) return;
+  totalCoins+=total; saveProgress(); saveFarm(f); renderFarm();
+}
+function feedPet(){
+  const f=loadFarm(); let n=0;
+  CROPS.forEach(c=>{ n+=f.barn[c.id]||0; f.barn[c.id]=0; });
+  if(!n) return;
+  saveFarm(f); addPetXP(n); renderFarm();
+}
+function renderFarm(){
+  const ov=document.getElementById('overlay');
+  const f=loadFarm(), now=Date.now();
+  const plots=f.plots.map((p,i)=>{
+    if(!p.crop) return `<div class="shop-item" style="background:#E9C9A6;cursor:default;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;width:auto;min-height:118px">
+      <b>Canteiro vazio</b>
+      ${CROPS.map(c=>`<button class="btn sec" style="height:28px;font-size:12px;padding:0 10px" onclick="plantCrop(${i},'${c.id}')">${c.name} · ${c.cost}</button>`).join('')}
+    </div>`;
+    const c=CROPS.find(x=>x.id===p.crop), prog=Math.min(1,(now-p.at)/(c.secs*1000)), left=Math.max(0,Math.ceil(c.secs-(now-p.at)/1000));
+    return `<div class="shop-item" style="background:${prog>=1?'var(--sun)':'#E9C9A6'};cursor:default;display:flex;flex-direction:column;align-items:center;gap:2px;width:auto;min-height:118px">
+      <b>${c.name}</b>${cropSvg(p.crop,prog)}
+      ${prog>=1 ? `<button class="btn sec" style="height:28px;font-size:13px;padding:0 14px;background:var(--grass)" onclick="harvestCrop(${i})">Colher!</button>`
+        : `<div style="width:80%;height:10px;background:#FFFFFF;border:2px solid var(--ink);border-radius:999px;overflow:hidden"><div style="width:${prog*100}%;height:100%;background:var(--grass)"></div></div><span style="font-size:12px;font-weight:800">${left}s</span>`}
+    </div>`;
+  }).join('');
+  const barnN=CROPS.reduce((a,c)=>a+(f.barn[c.id]||0),0);
+  const barnVal=CROPS.reduce((a,c)=>a+(f.barn[c.id]||0)*c.sell,0);
+  ov.innerHTML=`<div class="ocard wide">
+    <h2>Fazendinha do Dino</h2>
+    <p class="sub">Plante sementes, espere crescer e colha. Você tem ${coinTag(totalCoins)}</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%">${plots}</div>
+    <div class="row-card">
+      <div style="flex:1"><div style="font-size:15px;font-weight:900">Celeiro</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft)">${CROPS.map(c=>`${c.name}: ${f.barn[c.id]||0}`).join(' · ')}</div></div>
+      <button class="btn sec" style="height:36px;font-size:14px;padding:0 12px;background:var(--sun)" ${barnN?'':'disabled'} onclick="sellBarn()">Vender · ${barnVal}</button>
+      <button class="btn sec" style="height:36px;font-size:14px;padding:0 12px;background:var(--grass)" ${barnN?'':'disabled'} onclick="feedPet()">Dar ao pet</button>
+    </div>
+    <p class="sub">Pet nível ${petLevel} · amizade ${Math.round(petFriend)}/100</p>
+    <button class="btn sec" onclick="clearInterval(farmTimer);farmTimer=null;renderBase()">← Voltar</button>
+  </div>`;
+  ov.style.display='flex';
+  if(!farmTimer) farmTimer=setInterval(()=>{
+    if(!document.querySelector('#overlay h2') || document.querySelector('#overlay h2').textContent!=='Fazendinha do Dino'){ clearInterval(farmTimer); farmTimer=null; return; }
+    renderFarm();
+  },1000);
+}
+
 function renderBase(){
   const rare = discoveredEggs.size;
   const babies = ['rainbow','fossil','ghost','dragon'].filter(k=>discoveredEggs.has(k)).length;
@@ -1745,6 +1826,7 @@ function renderBase(){
       <button class="map-node unlocked" onclick="renderNest()"><b>Ninho dos ovos</b><br>${rare} ovos raros salvos</button>
       <button class="map-node unlocked" onclick="renderAlbum()"><b>Bebês dinossauros</b><br>${babies} bebês descobertos</button>
       <button class="map-node unlocked" onclick="renderShop()"><b>Melhorias</b><br>Pulo, velocidade, tempo e resistência</button>
+      <button class="map-node unlocked" style="background:#E8F9DF" onclick="renderFarm()"><b>Fazendinha</b><br>Plante, colha e cuide do pet</button>
     </div>
     <button class="btn sec" onclick="renderWorldMap()">← ${tr('back')}</button>
   </div>`;
