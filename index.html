@@ -583,9 +583,9 @@ const SKINS = {
     {id:'rose', name:'Dino Coral', cost:10, primary:'#fb7185', light:'#fda4af', dark:'#9f1239', foot:'#e11d48', belly:'#ffe4e6', spike:'#fde047', eye:'#7c2d12'},
   ],
   caveman: [
-    {id:'classic', name:'Caveman Bronze', cost:0, skin:'#fbbf24', body:'#d97706', bodyDark:'#92400e', hair:'#292524', boot:'#1c1917', club:'#78350f'},
-    {id:'forest', name:'Caveman Floresta', cost:8, skin:'#fdba74', body:'#16a34a', bodyDark:'#166534', hair:'#14532d', boot:'#1c1917', club:'#854d0e'},
-    {id:'ice', name:'Caveman Gelo', cost:10, skin:'#fcd9a5', body:'#60a5fa', bodyDark:'#1d4ed8', hair:'#334155', boot:'#0f172a', club:'#64748b'},
+    {id:'classic', name:'Caveman Bronze', cost:0, skin:'#FFC49E', body:'#FF9F6B', bodyDark:'#D9733F', hair:'#7A4A2E', boot:'#4A4968', club:'#C98B5B'},
+    {id:'forest', name:'Caveman Floresta', cost:8, skin:'#F2B48A', body:'#7ED957', bodyDark:'#4DB85C', hair:'#5A3A22', boot:'#4A4968', club:'#B37548'},
+    {id:'ice', name:'Caveman Gelo', cost:10, skin:'#FFD9B8', body:'#5BC0FF', bodyDark:'#2F8FD0', hair:'#4A4968', boot:'#2B2A4C', club:'#B9B6D0'},
   ],
   baby: [
     {id:'classic', name:'Baby Verde', cost:0, primary:'#4ade80', light:'#86efac', dark:'#166534', foot:'#15803d', belly:'#bbf7d0', spike:'#fbbf24', eye:'#1e3a8a'},
@@ -1622,13 +1622,8 @@ function renderCharPreview(char, cvs){
   if(!cvs) return;
   const c = cvs.getContext('2d');
   c.clearRect(0,0,cvs.width,cvs.height);
-  // ground line
-  c.fillStyle = '#2a3a2a';
-  c.fillRect(0, cvs.height-14, cvs.width, 14);
-  c.fillStyle = '#3d6e3d';
-  c.fillRect(0, cvs.height-14, cvs.width, 4);
   if(char==='dino') drawDinoOn(c, 20, cvs.height-14, 0, false, 1.05);
-  else              drawCavemanOn(c, 15, cvs.height-14, 0, false, 1.05);
+  else              drawCavemanOn(c, 14, cvs.height-8, 0, false, 0.92);
 }
 
 function selectChar(ch){
@@ -4416,119 +4411,129 @@ function dinoSvgHTML(mode='m-idle', viewBox='0 -80 220 260'){
 }
 
 function drawCavemanOn(c,x,y,frame,ducking,s){
-  const ft=frameCount*.14;
-  const bh=ducking?30:56;
-  const moving = Math.abs(player.vx) > 0.1;
-  const lo=ducking?0:(moving?Math.sin(ft)*5:0);
   const look = skinPalette('caveman');
-  // flip horizontalmente se virado para a esquerda
-  const facingDir = (s===1) ? player.facing : 1;
+  const INK = OL, T = performance.now()/1000;
+  const isPlayer = s===1;
+  const moving = isPlayer && Math.abs(player.vx) > 0.1;
+  const inAir = isPlayer && !player.onGround && !ducking;
+  const br = (1-Math.cos((T%2.4)/2.4*Math.PI*2))/2;
+  const bob = ducking||inAir ? 0 : -1.2*br;
+  const walk = moving && !inAir ? Math.sin(frameCount*.25) : 0;
+  const blink = (T%3.2)>3.08;
+  const facingDir = isPlayer ? player.facing : 1;
   c.save();
-  if(facingDir===-1){
-    c.translate(x + player.w, y); c.scale(-s, s); c.translate(-x, -y);
-  } else {
-    c.translate(x,y); c.scale(s,s); c.translate(-x,-y);
+  if(facingDir===-1){ c.translate(x + player.w, y); c.scale(-s, s); c.translate(-x, -y); }
+  else { c.translate(x,y); c.scale(s,s); c.translate(-x,-y); }
+  c.lineJoin='round'; c.lineCap='round';
+  const fs=(fill,lw=3)=>{ c.fillStyle=fill; c.fill(); c.strokeStyle=INK; c.lineWidth=lw; c.stroke(); };
+  const skin=look.skin, tunic=look.body, spots=look.bodyDark, hair=look.hair;
+
+  // sombra
+  c.globalAlpha=.16; c.fillStyle=INK; c.beginPath(); c.ellipse(x+24,y+2,22,5,0,0,Math.PI*2); c.fill(); c.globalAlpha=1;
+
+  if(ducking){
+    // agachado: pernas dobradas, corpo baixo e cabeça à frente
+    [[x+8],[x+28]].forEach(([lx])=>{ c.beginPath(); c.roundRect(lx,y-12,13,12,6); fs(skin); });
+    [[x+5],[x+26]].forEach(([fx])=>{ c.beginPath(); c.ellipse(fx+9,y-2,10,4.5,0,0,Math.PI*2); fs(look.boot,2.5); });
+    c.beginPath(); c.ellipse(x+22,y-18,20,12,0,0,Math.PI*2); fs(tunic);
+    c.fillStyle=spots; [[x+14,y-20,3.5],[x+27,y-15,3],[x+22,y-24,2.5]].forEach(([sx,sy,r])=>{c.beginPath();c.arc(sx,sy,r,0,Math.PI*2);c.fill();});
+    c.beginPath(); c.arc(x+36,y-30,14,0,Math.PI*2); fs(skin);
+    c.beginPath(); c.moveTo(x+22,y-34); c.quadraticCurveTo(x+24,y-48,x+36,y-46); c.quadraticCurveTo(x+49,y-46,x+50,y-34); c.quadraticCurveTo(x+43,y-39,x+36,y-38); c.quadraticCurveTo(x+29,y-39,x+22,y-34); c.closePath(); fs(hair,2.5);
+    [31,41].forEach(ex=>{ c.beginPath(); c.ellipse(x+ex,y-31,3.8,4.4,0,0,Math.PI*2); fs('#FFFFFF',2); c.fillStyle=INK; c.beginPath(); c.arc(x+ex+1,y-30.5,2.2,0,Math.PI*2); c.fill(); });
+    c.beginPath(); c.moveTo(x+26,y-24); c.quadraticCurveTo(x+36,y-12,x+46,y-24); c.quadraticCurveTo(x+36,y-20,x+26,y-24); c.closePath(); fs(hair,2.5);
+    c.restore(); return;
   }
 
-  const skinDark=look.bodyDark, skin=look.body, skinLight=look.skin;
-
-  // club (in hand) — swing animado quando atacando
-  if(!ducking){
-    // progresso do swing: 0=início, 1=fim
-    const swingP = player.attacking ? 1-(player.attackTimer/22) : 0;
-    // ângulo: repouso=0.4rad (diagonal pra baixo), swing: -1.1rad (acima) → 1.0rad (abaixo)
-    const baseAngle = 0.4;
-    const swingAngle = player.attacking
-      ? (-1.1 + swingP * 2.3) * player.attackDir
-      : baseAngle * (player.attackDir>0?1:1);
-    const armX = x + (player.attackDir>0 ? 40 : 8);
-    const armY = y-40;
-    const clavLen = 28;
-    const tipX = armX + Math.cos(swingAngle)*clavLen * player.attackDir;
-    const tipY = armY + Math.sin(swingAngle)*clavLen;
-
-    // trail de swing (linhas amarelas nos frames ativos)
-    if(player.attacking && player.attackTimer<=18 && player.attackTimer>=6){
-      for(let t2=0;t2<4;t2++){
-        const tp = 1-((player.attackTimer+t2*2)/22);
-        const ta = (-1.1+tp*2.3)*player.attackDir;
-        const tx2=armX+Math.cos(ta)*clavLen*player.attackDir, ty2=armY+Math.sin(ta)*clavLen;
-        c.globalAlpha=(t2+1)/7;
-        c.strokeStyle='#fbbf24'; c.lineWidth=6; c.lineCap='round';
-        c.beginPath(); c.moveTo(armX,armY); c.lineTo(tx2,ty2); c.stroke();
-      }
-      c.globalAlpha=1;
+  // clava (atrás do corpo quando parada, com golpe animado)
+  const swingP = player.attacking ? 1-(player.attackTimer/22) : 0;
+  const swingAngle = player.attacking ? (-1.1 + swingP * 2.3) * player.attackDir : 0.4;
+  const armX = x + (player.attackDir>0 ? 40 : 8), armY = y-40+bob;
+  const clavLen = 28;
+  const tipX = armX + Math.cos(swingAngle)*clavLen * player.attackDir;
+  const tipY = armY + Math.sin(swingAngle)*clavLen;
+  if(isPlayer && player.attacking && player.attackTimer<=18 && player.attackTimer>=6){
+    for(let t2=0;t2<4;t2++){
+      const tp = 1-((player.attackTimer+t2*2)/22);
+      const ta = (-1.1+tp*2.3)*player.attackDir;
+      c.globalAlpha=(t2+1)/8; c.strokeStyle='#FFD23F'; c.lineWidth=8;
+      c.beginPath(); c.moveTo(armX,armY); c.lineTo(armX+Math.cos(ta)*clavLen*player.attackDir, armY+Math.sin(ta)*clavLen); c.stroke();
     }
+    c.globalAlpha=1;
+  }
+  c.strokeStyle=INK; c.lineWidth=9; c.beginPath(); c.moveTo(armX,armY); c.lineTo(tipX,tipY); c.stroke();
+  c.strokeStyle=look.club; c.lineWidth=4.5; c.stroke();
+  c.beginPath(); c.ellipse(tipX,tipY,11,8.5,swingAngle,0,Math.PI*2); fs(look.club);
+  c.fillStyle='rgba(255,255,255,.28)'; c.beginPath(); c.ellipse(tipX-3,tipY-3,4,2.5,swingAngle,0,Math.PI*2); c.fill();
+  c.fillStyle=INK; c.globalAlpha=.35;
+  [[3,2],[-3,3]].forEach(([dx,dy])=>{c.beginPath();c.arc(tipX+dx,tipY+dy,1.6,0,Math.PI*2);c.fill();});
+  c.globalAlpha=1;
 
-    // cabo
-    c.strokeStyle=look.club; c.lineWidth=7; c.lineCap='round';
-    c.beginPath(); c.moveTo(armX,armY); c.lineTo(tipX,tipY); c.stroke();
-    // cabeça da clava
-    c.fillStyle=look.club; c.strokeStyle=OL; c.lineWidth=2;
-    c.beginPath(); c.ellipse(tipX,tipY,9,7,swingAngle,0,Math.PI*2); c.fill(); c.stroke();
-    // espinhos da clava
-    for(let i=0;i<5;i++){
-      const sa=swingAngle+i*(Math.PI*2/5);
-      c.strokeStyle='#9ca3af'; c.lineWidth=2;
-      c.beginPath();
-      c.moveTo(tipX+Math.cos(sa)*7,tipY+Math.sin(sa)*6);
-      c.lineTo(tipX+Math.cos(sa)*13,tipY+Math.sin(sa)*11);
-      c.stroke();
+  // pernas e pés
+  const legs = inAir ? [[x+12,4,6],[x+27,6,3]] : [[x+12,walk*5,Math.abs(walk)*2],[x+27,-walk*5,Math.abs(walk)*2]];
+  legs.forEach(([lx,dx,lift])=>{
+    c.beginPath(); c.roundRect(lx+dx*.3,y-20-lift,11,18,5.5); fs(skin);
+    c.beginPath(); c.ellipse(lx+6+dx*.6,y-3-lift,9.5,5,0,0,Math.PI*2); fs(look.boot,2.5);
+  });
+
+  // braço de trás
+  c.beginPath(); c.roundRect(x+3,y-42+bob,9,17,4.5); fs(skin);
+
+  // túnica de pele com barra em zigue-zague
+  c.beginPath();
+  c.moveTo(x+11,y-46+bob);
+  c.quadraticCurveTo(x+24,y-52+bob,x+37,y-46+bob);
+  c.quadraticCurveTo(x+44,y-34+bob,x+42,y-20);
+  c.lineTo(x+37,y-15); c.lineTo(x+32,y-20); c.lineTo(x+27,y-14); c.lineTo(x+22,y-20); c.lineTo(x+17,y-14); c.lineTo(x+12,y-20); c.lineTo(x+7,y-15);
+  c.quadraticCurveTo(x+4,y-34+bob,x+11,y-46+bob);
+  c.closePath(); fs(tunic);
+  c.fillStyle=spots;
+  [[x+15,y-38,3.5],[x+29,y-41,3],[x+33,y-29,3.8],[x+19,y-26,2.8],[x+25,y-33,2.2]].forEach(([sx,sy,r])=>{c.beginPath();c.ellipse(sx,sy+bob*.5,r,r*.8,.3,0,Math.PI*2);c.fill();});
+  // alça no ombro
+  c.strokeStyle=INK; c.lineWidth=2; c.beginPath(); c.moveTo(x+15,y-47+bob); c.quadraticCurveTo(x+24,y-38+bob,x+33,y-47+bob); c.stroke();
+
+  // braço da frente (segura a clava)
+  c.beginPath(); c.ellipse(armX,armY,6,6,0,0,Math.PI*2); fs(skin);
+
+  // cabeça
+  const hx=x+24, hy=y-60+bob;
+  c.beginPath(); c.arc(hx,hy,17,0,Math.PI*2); fs(skin);
+  // cabelo bagunçado (só no topo)
+  c.beginPath();
+  c.moveTo(hx-17,hy-5);
+  c.quadraticCurveTo(hx-22,hy-16,hx-12,hy-19);
+  c.quadraticCurveTo(hx-9,hy-27,hx-1,hy-22);
+  c.quadraticCurveTo(hx+5,hy-28,hx+10,hy-20);
+  c.quadraticCurveTo(hx+20,hy-19,hx+17,hy-6);
+  c.quadraticCurveTo(hx+10,hy-13,hx+3,hy-11);
+  c.quadraticCurveTo(hx-6,hy-14,hx-17,hy-5);
+  c.closePath(); fs(hair,2.5);
+  // barba no queixo
+  c.beginPath();
+  c.moveTo(hx-14,hy+6);
+  c.quadraticCurveTo(hx-14,hy+19,hx,hy+22);
+  c.quadraticCurveTo(hx+14,hy+19,hx+14,hy+6);
+  c.quadraticCurveTo(hx+7,hy+13,hx,hy+13);
+  c.quadraticCurveTo(hx-7,hy+13,hx-14,hy+6);
+  c.closePath(); fs(hair,2.5);
+  // olhos
+  [-6,6].forEach(dx=>{
+    c.beginPath(); c.ellipse(hx+dx,hy-1,4.6,5.4,0,0,Math.PI*2); fs('#FFFFFF',2.2);
+    if(blink){ c.beginPath(); c.ellipse(hx+dx,hy-1,5,5.8,0,0,Math.PI*2); fs(skin,2.2); }
+    else {
+      c.fillStyle=INK; c.beginPath(); c.arc(hx+dx+1,hy-.5,2.7,0,Math.PI*2); c.fill();
+      c.fillStyle='#FFFFFF'; c.beginPath(); c.arc(hx+dx+2,hy-2,1,0,Math.PI*2); c.fill();
     }
-  }
-
-  // legs
-  if(!ducking){
-    block(c,x+12,y-22+Math.abs(lo),13,22,7,skinDark);
-    block(c,x+28,y-22+Math.abs(lo),13,22,7,skinDark);
-    block(c,x+9,y-5,16,7,4,look.boot);
-    block(c,x+26,y-5,16,7,4,look.boot);
-  } else {
-    block(c,x+8,y-14,14,14,6,skinDark);
-    block(c,x+26,y-14,14,14,6,skinDark);
-  }
-
-  // waistband
-  c.fillStyle=skinDark; c.strokeStyle=OL; c.lineWidth=1.5;
-  c.beginPath(); c.ellipse(x+24,y-13,17,8,0,0,Math.PI*2); c.fill(); c.stroke();
-
-  // body
-  c.fillStyle=skin; c.strokeStyle=OL; c.lineWidth=2.5;
-  c.beginPath(); c.ellipse(x+24,y-(ducking?20:36),19,ducking?13:22,0,0,Math.PI*2); c.fill(); c.stroke();
-
-  if(!ducking){
-    // arm
-    block(c,x+36,y-40,10,5,4,skin);
-    // head
-    c.fillStyle=skinLight; c.strokeStyle=OL; c.lineWidth=2.5;
-    c.beginPath(); c.arc(x+24,y-60,15,0,Math.PI*2); c.fill(); c.stroke();
-    // hair base
-    c.fillStyle=look.hair; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.ellipse(x+24,y-72,14,6,0,Math.PI,Math.PI*2); c.fill(); c.stroke();
-    // hair triangles
-    for(let i=0;i<3;i++){
-      c.beginPath(); c.moveTo(x+13+i*8,y-72); c.lineTo(x+17+i*8,y-84+Math.sin(ft+i)*.4); c.lineTo(x+21+i*8,y-72);
-      c.closePath(); c.fill(); c.stroke();
-    }
-    // eyebrows
-    c.strokeStyle=look.hair; c.lineWidth=3; c.lineCap='round';
-    c.beginPath(); c.moveTo(x+14,y-65); c.lineTo(x+21,y-68); c.stroke();
-    c.beginPath(); c.moveTo(x+27,y-68); c.lineTo(x+34,y-65); c.stroke();
-    // eyes
-    c.fillStyle='#fff'; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.arc(x+17,y-61,4.5,0,Math.PI*2); c.fill(); c.stroke();
-    c.beginPath(); c.arc(x+31,y-61,4.5,0,Math.PI*2); c.fill(); c.stroke();
-    c.fillStyle='#1c1917'; c.beginPath(); c.arc(x+18,y-61,2.8,0,Math.PI*2); c.fill();
-    c.fillStyle='#1c1917'; c.beginPath(); c.arc(x+32,y-61,2.8,0,Math.PI*2); c.fill();
-    c.fillStyle='#fff'; c.beginPath(); c.arc(x+16,y-62,1.2,0,Math.PI*2); c.fill();
-    c.fillStyle='#fff'; c.beginPath(); c.arc(x+30,y-62,1.2,0,Math.PI*2); c.fill();
-    // nose (circle, simpler)
-    circle(c,x+24,y-57,4,skinDark);
-    // beard (semicircle)
-    c.fillStyle=skinDark; c.strokeStyle=OL; c.lineWidth=1.5;
-    c.beginPath(); c.arc(x+24,y-50,10,.1,Math.PI-.1); c.fill(); c.stroke();
-    drawAccessory(c,'caveman',x,y,false);
-  }
+  });
+  // sobrancelhas
+  c.strokeStyle=hair; c.lineWidth=3;
+  c.beginPath(); c.moveTo(hx-10,hy-8); c.lineTo(hx-3,hy-8.5); c.moveTo(hx+3,hy-8.5); c.lineTo(hx+10,hy-8); c.stroke();
+  // nariz, bochechas e sorriso
+  c.beginPath(); c.ellipse(hx+1,hy+5,3.6,2.8,0,0,Math.PI*2); fs(shadeHex(skin,.86),2);
+  c.globalAlpha=.6; c.fillStyle='#FF9FA0';
+  c.beginPath(); c.ellipse(hx-11,hy+5,3.4,2.2,0,0,Math.PI*2); c.ellipse(hx+12,hy+5,3.4,2.2,0,0,Math.PI*2); c.fill();
+  c.globalAlpha=1;
+  c.strokeStyle=INK; c.lineWidth=2.2; c.beginPath(); c.moveTo(hx-4,hy+9.5); c.quadraticCurveTo(hx,hy+12.5,hx+4,hy+9.5); c.stroke();
+  drawAccessory(c,'caveman',x,y+bob,false);
   c.restore();
 }
 
