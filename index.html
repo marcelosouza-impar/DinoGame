@@ -5952,7 +5952,7 @@ function placeName(p){
   }
   return 'na calçada';
 }
-const CAREER_DEFAULT={earned:0,taxiRides:0,trainStops:0,fires:0,house:false,colors:{taxi:'#FFD23F',train:'#FF6B6B',fire:'#FF6B6B'},owned:[]};
+const CAREER_DEFAULT={earned:0,taxiRides:0,trainStops:0,fires:0,meals:0,house:false,colors:{taxi:'#FFD23F',train:'#FF6B6B',fire:'#FF6B6B'},owned:[]};
 function loadCareer(){ try{ const c=Object.assign(JSON.parse(JSON.stringify(CAREER_DEFAULT)), JSON.parse(localStorage.getItem('dinogame_career')||'{}')); c.colors=Object.assign({},CAREER_DEFAULT.colors,c.colors||{}); c.owned=c.owned||[]; return c; }catch(e){ return JSON.parse(JSON.stringify(CAREER_DEFAULT)); } }
 function saveCareer(c){ localStorage.setItem('dinogame_career',JSON.stringify(c)); }
 const GARAGE_COLORS={
@@ -6039,6 +6039,93 @@ function pickSpot(fx,fy,minDist){
   const list=far.length?far:all;
   return list[Math.floor(Math.random()*list.length)];
 }
+const CAREER_JOBS=[
+  {name:'Taxista', bg:'var(--sun)', fn:"startJob('taxi')", icon:'M5 11l2-5h10l2 5M4 11h16v6H4zM7 17v2M17 17v2M9 4h6v2H9z', desc:'Aceite corridas e leve passageiros ao destino.'},
+  {name:'Maquinista', bg:'var(--coral)', fn:"startJob('train')", icon:'M7 3h10a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM4 11h16M8 21l2-3M16 21l-2-3', desc:'Trem pela floresta: pegue e deixe pessoas nas estações.'},
+  {name:'Bombeiro', bg:'var(--orange)', fn:"startJob('fire')", icon:'M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 3 3 3 0-3-1-5 0-8z', desc:'Corra com o caminhão e apague o fogo dos prédios.'},
+  {name:'Cozinheiro', bg:'var(--grass)', fn:"startRestaurant()", icon:'M6 13h12v7H6zM5 13a4 4 0 0 1 2-7 4 4 0 0 1 5-2 4 4 0 0 1 5 2 4 4 0 0 1 2 7', desc:'Prepare pratos com a colheita da fazendinha.'},
+];
+const RECIPES=[
+  {name:'Salada de morango', need:{morango:2}, pay:12},
+  {name:'Pipoca', need:{milho:2}, pay:20},
+  {name:'Sopa de abóbora', need:{abobora:1,milho:1}, pay:35},
+  {name:'Torta de morango', need:{morango:3,milho:1}, pay:32},
+  {name:'Espetinho colorido', need:{morango:1,milho:1,abobora:1}, pay:40},
+];
+const MARKET={morango:3,milho:6,abobora:12};
+let rest=null;
+function startRestaurant(){
+  rest={left:90, earned:0, served:0, lost:0, orders:[], bench:{}, nextOrder:1, timer:null, msg:''};
+  rest.timer=setInterval(()=>{
+    if(!rest || !document.getElementById('restRoot')){ clearInterval(rest&&rest.timer); return; }
+    rest.left-=0.25;
+    rest.orders.forEach(o=>o.left-=0.25);
+    const late=rest.orders.filter(o=>o.left<=0); if(late.length){ rest.lost+=late.length; rest.msg='Um cliente cansou de esperar...'; }
+    rest.orders=rest.orders.filter(o=>o.left>0);
+    rest.nextOrder-=0.25;
+    if(rest.nextOrder<=0 && rest.orders.length<3){ const r=RECIPES[Math.floor(Math.random()*RECIPES.length)]; rest.orders.push({...r,left:25,max:25,id:Math.random()}); rest.nextOrder=5+Math.random()*5; }
+    if(rest.left<=0){ clearInterval(rest.timer); renderRestaurantEnd(); return; }
+    renderRestaurant();
+  },250);
+  renderRestaurant();
+}
+function restAdd(k){
+  const f=loadFarm();
+  if((f.barn[k]||0)>0){ f.barn[k]--; saveFarm(f); }
+  else if(totalCoins>=MARKET[k]){ totalCoins-=MARKET[k]; saveProgress(); }
+  else { rest.msg='Sem moedas para comprar '+CROPS.find(c=>c.id===k).name; renderRestaurant(); return; }
+  rest.bench[k]=(rest.bench[k]||0)+1; rest.msg=''; renderRestaurant();
+}
+function restClear(){ rest.bench={}; renderRestaurant(); }
+function restMatches(o){ const keys=new Set([...Object.keys(o.need),...Object.keys(rest.bench)]); for(const k of keys) if((o.need[k]||0)!==(rest.bench[k]||0)) return false; return true; }
+function restServe(id){
+  const o=rest.orders.find(x=>x.id===id); if(!o||!restMatches(o)) return;
+  const tip = o.left>o.max*0.5 ? 5 : 0;
+  totalCoins+=o.pay+tip; rest.earned+=o.pay+tip; rest.served++; saveProgress();
+  const c=loadCareer(); c.earned+=o.pay+tip; c.meals=(c.meals||0)+1; saveCareer(c);
+  rest.orders=rest.orders.filter(x=>x!==o); rest.bench={}; rest.msg=`${o.name} servido! +${o.pay+tip}${tip?' (com gorjeta)':''}`;
+  renderRestaurant();
+}
+function restLeave(){ if(rest) clearInterval(rest.timer); rest=null; renderCareer(); }
+function renderRestaurant(){
+  const ov=document.getElementById('overlay'); const f=loadFarm();
+  const chip=(k,n)=>{ const c=CROPS.find(x=>x.id===k); return `<span class="tag" style="padding-left:4px"><span style="width:16px;height:16px;border-radius:50%;background:${c.color};border:2px solid var(--ink);display:inline-block"></span>${c.name} ×${n}</span>`; };
+  const orders=rest.orders.length ? rest.orders.map(o=>`<div class="row-card" style="background:${restMatches(o)?'#E8F9DF':'var(--white)'}">
+      <div style="flex:1"><div style="font-size:15px;font-weight:900">${o.name} · ${coinTag(o.pay)}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">${Object.entries(o.need).map(([k,n])=>chip(k,n)).join('')}</div>
+        <div style="height:8px;background:#E4E2EE;border:2px solid var(--ink);border-radius:999px;overflow:hidden;margin-top:6px"><div style="width:${o.left/o.max*100}%;height:100%;background:${o.left<8?'var(--coral)':'var(--grass)'}"></div></div></div>
+      <button class="btn sec" style="height:38px;font-size:15px;padding:0 14px;${restMatches(o)?'background:var(--sun)':''}" ${restMatches(o)?'':'disabled'} onclick="restServe(${o.id})">Servir</button>
+    </div>`).join('') : '<p class="sub">Esperando clientes...</p>';
+  const bench=Object.entries(rest.bench).filter(([,n])=>n>0);
+  ov.innerHTML=`<div class="ocard wide" id="restRoot">
+    <h2>Restaurante do Dino</h2>
+    <p class="sub">Tempo ${Math.ceil(rest.left)}s · ${rest.served} pratos · ganhou ${coinTag(rest.earned)}</p>
+    <div style="display:flex;flex-direction:column;gap:6px;width:100%">${orders}</div>
+    <div class="row-card" style="background:#FFF3C4">
+      <div style="flex:1"><div style="font-size:14px;font-weight:900">Bancada</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">${bench.length?bench.map(([k,n])=>chip(k,n)).join(''):'<span class="sub">vazia</span>'}</div></div>
+      <button class="btn sec" style="height:34px;font-size:13px;padding:0 12px" onclick="restClear()">Limpar</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      ${CROPS.map(c=>`<button class="btn sec" style="height:44px;font-size:15px;padding:0 14px" onclick="restAdd('${c.id}')"><span style="width:18px;height:18px;border-radius:50%;background:${c.color};border:2px solid var(--ink);display:inline-block;margin-right:6px"></span>${c.name} · ${(f.barn[c.id]||0)>0?'celeiro '+f.barn[c.id]:'compra '+MARKET[c.id]}</button>`).join('')}
+    </div>
+    <p class="sub" style="min-height:20px;font-weight:900;color:var(--ink)">${rest.msg}</p>
+    <button class="btn sec" onclick="restLeave()">← Sair do restaurante</button>
+  </div>`;
+  ov.style.display='flex';
+}
+function renderRestaurantEnd(){
+  const r=rest; rest=null;
+  const ov=document.getElementById('overlay');
+  ov.innerHTML=`<div class="ocard">
+    <h2>Fim do turno!</h2>
+    <p class="sub">${r.served} pratos servidos · ${r.lost} clientes foram embora</p>
+    <span class="score-big">${coinTag(r.earned)}</span>
+    <button class="btn" onclick="startRestaurant()">Mais um turno</button>
+    <button class="btn sec" onclick="renderCareer()">← Carreira</button>
+  </div>`;
+}
+
 function renderCareer(){
   const ov=document.getElementById('overlay');
   const c=loadCareer();
@@ -6047,24 +6134,13 @@ function renderCareer(){
   ov.innerHTML=`<div class="ocard wide">
     <h2>Carreira de trabalho</h2>
     <p class="sub">Escolha seu trabalho na cidade e ganhe moedas.</p>
-    <p class="sub">${coinTag(c.earned)} ganhas na carreira · ${c.taxiRides} corridas · ${c.trainStops} paradas de trem · ${c.fires} incêndios apagados</p>
+    <p class="sub">${coinTag(c.earned)} ganhas na carreira · ${c.taxiRides} corridas · ${c.trainStops} paradas · ${c.fires} incêndios · ${c.meals||0} pratos</p>
     <div class="divider"></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%">
-      <button class="map-node" style="background:var(--sun);text-align:center;padding:16px" onclick="startJob('taxi')">
-        <span style="display:inline-flex;width:56px;height:56px;border-radius:18px;background:var(--white);border:3px solid var(--ink);align-items:center;justify-content:center">${svgIcon(taxiIcon,32)}</span>
-        <b style="font-size:20px;margin-top:6px">Taxista</b>
-        Pegue passageiros na calçada e leve até o destino. Corrida rápida dá bônus.
-      </button>
-      <button class="map-node" style="background:var(--coral);text-align:center;padding:16px" onclick="startJob('train')">
-        <span style="display:inline-flex;width:56px;height:56px;border-radius:18px;background:var(--white);border:3px solid var(--ink);align-items:center;justify-content:center">${svgIcon(trainIcon,32)}</span>
-        <b style="font-size:20px;margin-top:6px">Maquinista</b>
-        Dirija o trem pela floresta e pare certinho em cada estação.
-      </button>
-      <button class="map-node" style="background:var(--orange);text-align:center;padding:16px" onclick="startJob('fire')">
-        <span style="display:inline-flex;width:56px;height:56px;border-radius:18px;background:var(--white);border:3px solid var(--ink);align-items:center;justify-content:center">${svgIcon('M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 3 3 3 0-3-1-5 0-8z',32)}</span>
-        <b style="font-size:20px;margin-top:6px">Bombeiro</b>
-        Quando tocar o alarme, corra com o caminhão e apague o fogo do prédio.
-      </button>
+      ${CAREER_JOBS.map(j=>`<button class="map-node" style="background:${j.bg};text-align:center;padding:10px 10px 12px" onclick="${j.fn}">
+        <span style="display:inline-flex;width:46px;height:46px;border-radius:14px;background:var(--white);border:3px solid var(--ink);align-items:center;justify-content:center">${svgIcon(j.icon,28)}</span>
+        <b style="font-size:17px;margin-top:4px">${j.name}</b>${j.desc}
+      </button>`).join('')}
     </div>
     <div class="divider"></div>
     <p class="sub" style="font-weight:900;color:var(--ink)">Casa e garagem · você tem ${coinTag(totalCoins)}</p>
