@@ -238,31 +238,34 @@
   #mobileControls.active{display:block;}
   .mbtn{
     position:absolute;pointer-events:auto;
-    background:rgba(10,20,40,0.55);border:2px solid rgba(78,205,196,0.5);
-    border-radius:16px;display:flex;align-items:center;justify-content:center;
-    color:rgba(200,240,255,0.85);font-size:20px;
+    background:rgba(255,255,255,.85);border:var(--stroke) solid var(--ink);box-shadow:var(--shadow-1);
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    color:var(--ink);font:700 15px var(--font-display);padding:0;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
-    touch-action:none;
-    transition:background .08s,border-color .08s;
+    touch-action:none;transition:transform .08s,box-shadow .08s;
   }
-  .mbtn:active,.mbtn.pressed{background:rgba(78,205,196,0.25);border-color:#4ecdc4;}
+  .mbtn:active,.mbtn.pressed{transform:translateY(3px);box-shadow:0 1px 0 var(--ink);}
+  #mbAtk{background:var(--orange);}
+  #mbJump{background:var(--sun);border-width:var(--stroke-strong);box-shadow:0 6px 0 var(--ink);font-size:18px;}
+  #pauseBtn{background:var(--sun);}
+  .hbtn svg{display:block;}
 </style>
 </head>
 <body>
 <div id="gameContainer">
   <div id="hudBtns">
-    <button class="hbtn" id="muteBtn" onclick="toggleMute()" title="Música [M]">♪</button>
-    <button class="hbtn" id="pauseBtn" onclick="togglePause()" title="Pausar [P]">⏸</button>
-    <button class="hbtn quit" onclick="quitGame()" title="Sair para o Menu">✕</button>
+    <button class="hbtn" id="muteBtn" onclick="toggleMute()" title="Música [M]" aria-label="Música"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
+    <button class="hbtn" id="pauseBtn" onclick="togglePause()" title="Pausar [P]" aria-label="Pausar"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="#2B2A4C"><rect x="5" y="4" width="5" height="16" rx="2"/><rect x="14" y="4" width="5" height="16" rx="2"/></svg></button>
+    <button class="hbtn quit" onclick="quitGame()" title="Sair para o Menu" aria-label="Sair"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
   <canvas id="c" width="800" height="450"></canvas>
   <!-- Mobile D-Pad (HTML buttons, positioned absolutely over canvas) -->
   <div id="mobileControls">
-    <button class="mbtn" id="mbLeft"  style="left:10px;bottom:52px;width:58px;height:54px">◀</button>
-    <button class="mbtn" id="mbRight" style="left:76px;bottom:52px;width:58px;height:54px">▶</button>
-    <button class="mbtn" id="mbDuck"  style="left:10px;bottom:4px;width:124px;height:42px">▼</button>
-    <button class="mbtn" id="mbAtk"   style="right:76px;bottom:52px;width:58px;height:54px">A</button>
-    <button class="mbtn" id="mbJump"  style="right:10px;bottom:52px;width:58px;height:54px">B</button>
+    <button class="mbtn" id="mbLeft"  aria-label="Esquerda" style="left:18px;bottom:18px;width:64px;height:64px"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="mbtn" id="mbRight" aria-label="Direita"  style="left:94px;bottom:18px;width:64px;height:64px"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="mbtn" id="mbDuck"  aria-label="Abaixar"  style="left:62px;bottom:94px;width:52px;height:52px"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
+    <button class="mbtn" id="mbAtk"   aria-label="Atacar"   style="right:116px;bottom:18px;width:60px;height:60px">Fogo</button>
+    <button class="mbtn" id="mbJump"  aria-label="Pular"    style="right:18px;bottom:36px;width:82px;height:82px">Pular</button>
   </div>
   <!-- Loading screen -->
   <div id="loadingScreen" style="position:absolute;inset:0;z-index:99;background:var(--sky);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink);font-family:var(--font-display);">
@@ -897,8 +900,8 @@ function stopBGM(){ bgmOn=false; }
 function toggleMute(){
   bgmMuted=!bgmMuted;
   const btn=document.getElementById('muteBtn');
-  if(bgmMuted){ stopBGM(); btn.textContent='♪✕'; btn.classList.add('muted'); }
-  else{ btn.classList.remove('muted'); btn.textContent='♪'; startBGM(bgmThemeIdx); }
+  if(bgmMuted){ stopBGM(); btn.innerHTML=HUD_ICON.musicOff; btn.classList.add('muted'); }
+  else{ btn.classList.remove('muted'); btn.innerHTML=HUD_ICON.music; startBGM(bgmThemeIdx); }
 }
 
 // mini canvases for character preview (built once)
@@ -1057,6 +1060,7 @@ function updateMobileControls(){
   if(!mc) return;
   const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
   mc.classList.toggle('active', isTouch && state==='playing' && !paused);
+  const atk=document.getElementById('mbAtk'); if(atk) atk.textContent = selectedChar==='caveman' ? 'Bater' : 'Fogo';
 }
 
 function tryJump(){
@@ -3090,7 +3094,6 @@ function draw(){
   drawGroundShadow(player.x+player.w/2, GROUND+2, 26, .34);
   if(selectedChar==='dino') drawBabyDino(pet.x, pet.y, pet.frame, pet.facing, pet.bobPhase);
   else                      drawSaberTooth(pet.x, pet.y, pet.frame, pet.facing, pet.bobPhase);
-  drawPetSpeech();
   drawPetHUD();
 
   // player
@@ -3100,14 +3103,16 @@ function draw(){
       else                      drawCavemanOn(ctx,player.x,player.y,player.frame,player.ducking,1);
     }
   }
+  drawPetSpeech();
   // nome do jogador acima do boneco
   if(playerName){
-    ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
-    ctx.fillStyle='rgba(0,0,0,0.5)';
-    ctx.fillText(playerName, player.x+24, player.y-88+1);
-    ctx.fillStyle='#ffe66d';
-    ctx.fillText(playerName, player.x+24, player.y-88);
-    ctx.textAlign='left';
+    ctx.save();
+    hudFont(900,12); ctx.textAlign='center'; ctx.textBaseline='middle';
+    const nw=ctx.measureText(playerName).width+16;
+    ctx.fillStyle='#FFFFFF'; ctx.strokeStyle='#2B2A4C'; ctx.lineWidth=2;
+    roundRect(ctx, player.x+24-nw/2, player.y-96, nw, 20, 10, true, true);
+    ctx.fillStyle='#2B2A4C'; ctx.fillText(playerName, player.x+24, player.y-85);
+    ctx.restore();
   }
 
   // fire breath (dino power)
@@ -3125,16 +3130,16 @@ function draw(){
   if(frameCount<150){
     const alpha=Math.min(1,(150-frameCount)/50);
     ctx.globalAlpha=alpha;
-    ctx.fillStyle='rgba(0,0,0,.5)';
-    roundRect(ctx, W/2-160, H/2-38, 320, 64, 12, true, false);
-    ctx.fillStyle='#fff'; ctx.font='bold 18px "Press Start 2P"';
-    ctx.textAlign='center';
+    ctx.fillStyle='#2B2A4C'; roundRect(ctx, W/2-170, H/2-44+5, 340, 84, 22, true, false);
+    ctx.fillStyle='#FFF8E7'; ctx.strokeStyle='#2B2A4C'; ctx.lineWidth=3;
+    roundRect(ctx, W/2-170, H/2-44, 340, 84, 22, true, true);
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#2B2A4C';
     const themeIdx = Math.max(0, THEMES.indexOf(currentTheme));
-    ctx.fillText(trArray('placeNames')[themeIdx] || currentTheme.name, W/2, H/2-10);
-    ctx.font='10px "Press Start 2P"';
-    ctx.fillStyle='#4ecdc4';
-    ctx.fillText(`${tr('phaseHud')} ${phase}`, W/2, H/2+16);
-    ctx.textAlign='left'; ctx.globalAlpha=1;
+    hudFont(700,30,'d');
+    ctx.fillText(trArray('placeNames')[themeIdx] || currentTheme.name, W/2, H/2-12);
+    hudFont(900,14); ctx.fillStyle='#4A4968';
+    ctx.fillText(`${tr('phaseHud')} ${phase}`, W/2, H/2+20);
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.globalAlpha=1;
   }
 
   if(state==='win') drawWinScene();
@@ -3205,147 +3210,158 @@ function drawGroundShadow(x,y,width,alpha){
   ctx.restore();
 }
 
+const HUD_INK='#2B2A4C';
+const HUD_ICON={
+  music:'<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>',
+  musicOff:'<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/><path d="M3 3l18 18" stroke="#FF6B6B"/></svg>',
+  pause:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="#2B2A4C"><rect x="5" y="4" width="5" height="16" rx="2"/><rect x="14" y="4" width="5" height="16" rx="2"/></svg>',
+  play:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="#2B2A4C"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>'
+};
+const HUD_P = {
+  heart:new Path2D('M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z'),
+  speed:new Path2D('M13 2L4 14h7l-1 8 9-12h-7z'),
+  shield:new Path2D('M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'),
+  fire:new Path2D('M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 3 3 3 0-3-1-5 0-8z')
+};
+function hudFont(weight,size,fam){
+  ctx.font = `${weight} ${size}px ${fam==='d'?'Fredoka':'Nunito'}, system-ui, sans-serif`;
+}
+function hudPill(x,y,w,h,fill='#FFFFFF'){
+  ctx.fillStyle=HUD_INK; roundRect(ctx,x,y+3,w,h,h/2,true,false);
+  ctx.fillStyle=fill; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2.5;
+  roundRect(ctx,x,y,w,h,h/2,true,true);
+}
+function hudIcon(path,x,y,size,fill){
+  ctx.save(); ctx.translate(x,y); ctx.scale(size/24,size/24);
+  ctx.fillStyle=fill; ctx.fill(path);
+  ctx.strokeStyle=HUD_INK; ctx.lineWidth=2.4; ctx.lineJoin='round'; ctx.stroke(path);
+  ctx.restore();
+}
+function drawCoin(cx,cy,r){
+  ctx.fillStyle='#FFD23F'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=HUD_INK; hudFont(700,r*1.2,'d'); ctx.textAlign='center'; ctx.fillText('$',cx,cy+1);
+}
+
 function drawHUD(){
   if(state==='menu'||state==='cutscene'||state==='win') return;
-  const bh=34, pad=12;
-  // background bar
-  ctx.fillStyle='rgba(5,10,22,.72)';
-  roundRect(ctx,8,8,W-16,bh,8,true,false);
-  ctx.strokeStyle='rgba(78,205,196,.25)'; ctx.lineWidth=1;
-  roundRect(ctx,8,8,W-16,bh,8,false,true);
-
-  ctx.font='8px "Press Start 2P"';
+  ctx.save();
   ctx.textBaseline='middle';
-  const my=8+bh/2;
+  const Y=10, PH=34, my=Y+PH/2;
+  let x=12, w;
 
-  // fase
-  ctx.fillStyle='#4ecdc4';
-  ctx.textAlign='left';
-  ctx.fillText(`${tr('phaseHud')} ${phase}`,20,my);
-  // player name
-  if(playerName){ ctx.fillStyle='#94a3b8'; ctx.font='6px "Press Start 2P"'; ctx.fillText(playerName,20,my+16); ctx.font='8px "Press Start 2P"'; }
+  // corações (HP) + vidas
+  const livesTxt='×'+lives;
+  hudFont(900,15);
+  w=10+3*24+6+ctx.measureText(livesTxt).width+12;
+  hudPill(x,Y,w,PH);
+  for(let i=0;i<3;i++) hudIcon(HUD_P.heart,x+8+i*24,Y+5,24,i<player.hp?'#FF6B6B':'#E4E2EE');
+  ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText(livesTxt,x+10+72+4,my+1);
+  x+=w+8;
+
+  // moedas
+  hudFont(900,16);
+  const coinTxt=String(totalCoins);
+  w=6+26+8+ctx.measureText(coinTxt).width+12;
+  hudPill(x,Y,w,PH);
+  drawCoin(x+6+13,my,12);
+  hudFont(900,16); ctx.textAlign='left'; ctx.fillStyle=HUD_INK; ctx.fillText(coinTxt,x+6+26+8,my+1);
+  x+=w+8;
 
   // ovos
   const eggsCol=phaseEggs.filter(e=>e.collected).length;
-  ctx.fillText(`🥚 ${eggsCol}/${phaseEggs.length}`,100,my);
+  const eggTxt=`${eggsCol}/${phaseEggs.length}`;
+  w=8+18+8+ctx.measureText(eggTxt).width+12;
+  hudPill(x,Y,w,PH);
+  ctx.fillStyle='#FFF8E7'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(x+8+9,my,8,10.5,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=HUD_INK; ctx.fillText(eggTxt,x+8+18+8,my+1);
 
-  // moedas
-  ctx.fillStyle='#fbbf24';
-  ctx.fillText(`💰 ${totalCoins}`,196,my);
+  // nível do pet (segunda linha)
+  hudFont(900,13);
+  const petTxt=`Pet ${petLevel}`;
+  const pw=12+ctx.measureText(petTxt).width+8+48+12;
+  hudPill(12,Y+PH+10,pw,26);
+  ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText(petTxt,24,Y+PH+10+14);
+  const pbx=24+ctx.measureText(petTxt).width+8, pby=Y+PH+10+8;
+  ctx.fillStyle='#E4E2EE'; roundRect(ctx,pbx,pby,48,10,5,true,false);
+  ctx.fillStyle=petFriend>=100?'#FFD23F':'#7ED957';
+  roundRect(ctx,pbx,pby,Math.max(6,48*Math.min(1,petFriend/100)),10,5,true,false);
+  ctx.strokeStyle=HUD_INK; ctx.lineWidth=1.8; roundRect(ctx,pbx,pby,48,10,5,false,true);
 
-  // pontos com pop
-  if(scorePopTimer > 0){
-    const popS = 1 + 0.45*(scorePopTimer/22);
-    ctx.save();
-    ctx.font=`${Math.round(8*popS)}px "Press Start 2P"`;
-    ctx.fillStyle=`rgba(255,230,109,${0.6+0.4*(scorePopTimer/22)})`;
-    ctx.fillText(`${tr('ptsHud')} ${score}`, 270, my);
+  // progresso da fase + bandeira
+  const prog = portalX>0 ? Math.min(1,Math.max(0,(scrollX+player.x)/portalX)) : 0;
+  const bw=150, bx=W/2-bw/2-8, bh=16, by=Y+9;
+  ctx.fillStyle='#FFFFFF'; roundRect(ctx,bx,by,bw,bh,8,true,false);
+  if(prog>0){
+    ctx.save(); roundRect(ctx,bx,by,bw,bh,8,false,false); ctx.clip();
+    ctx.fillStyle='#7ED957'; ctx.fillRect(bx,by,bw*prog,bh);
+    ctx.strokeStyle=HUD_INK; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(bx+bw*prog,by); ctx.lineTo(bx+bw*prog,by+bh); ctx.stroke();
     ctx.restore();
-    ctx.font='8px "Press Start 2P"';
-  } else {
-    ctx.fillStyle='#4ecdc4';
-    ctx.fillText(`${tr('ptsHud')} ${score}`,270,my);
   }
+  ctx.strokeStyle=HUD_INK; ctx.lineWidth=2.5; roundRect(ctx,bx,by,bw,bh,8,false,true);
+  const fx=bx+bw+10;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath(); ctx.moveTo(fx,by+bh+4); ctx.lineTo(fx,by-6); ctx.stroke();
+  ctx.fillStyle='#FF6B6B'; ctx.beginPath(); ctx.moveTo(fx,by-6); ctx.lineTo(fx+14,by-6); ctx.lineTo(fx+10,by-1); ctx.lineTo(fx+14,by+4); ctx.lineTo(fx,by+4); ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  ctx.fillStyle='#a7f3d0';
-  ctx.fillText(`PET ${petLevel}`,520,my);
-  ctx.fillStyle='rgba(255,255,255,.12)';
-  roundRect(ctx,580,my-7,72,10,4,true,false);
-  ctx.fillStyle=petFriend>=100?'#fde047':'#a7f3d0';
-  roundRect(ctx,580,my-7,Math.max(4,72*(petFriend/100)),10,4,true,false);
-
-  // timer (centro)
+  // tempo
   if(state==='playing' && phaseFramesLeft>0){
     const secs=Math.max(0,Math.ceil(phaseFramesLeft/60));
-    const mm=String(Math.floor(secs/60)).padStart(2,'0');
-    const ss=String(secs%60).padStart(2,'0');
-    const urgent=secs<=10 && Math.floor(frameCount/10)%2===0;
-    ctx.fillStyle=urgent?'#fca5a5':'#4ecdc4';
-    ctx.textAlign='center';
-    ctx.fillText(`⏱ ${mm}:${ss}`,W/2,my);
+    const tt=`${String(Math.floor(secs/60)).padStart(2,'0')}:${String(secs%60).padStart(2,'0')}`;
+    const urgent=secs<=10;
+    const blinkOn=urgent && Math.floor(frameCount/10)%2===0;
+    hudFont(900,14);
+    const tw=ctx.measureText(tt).width+26;
+    hudPill(W/2-8-tw/2,by+bh+10,tw,24,blinkOn?'#FF6B6B':urgent?'#FFE4E4':'#FFFFFF');
+    ctx.fillStyle=HUD_INK; ctx.textAlign='center'; ctx.fillText(tt,W/2-8,by+bh+10+13);
   }
 
-  // vidas (direita)
-  ctx.textAlign='right';
-  ctx.font='9px "Press Start 2P"';
-  ctx.fillStyle='#ff6b6b';
-  ctx.fillText(`♥x${lives}`, W-86, my);
+  // pontos (à esquerda dos botões HTML)
+  const ptsTxt=`${score} ${tr('ptsHud')}`;
+  hudFont(900,15);
+  const sw=ctx.measureText(ptsTxt).width+28;
+  const sx=632-sw;
+  hudPill(sx,Y,sw,PH, scorePopTimer>0?'#FFD23F':'#FFFFFF');
+  ctx.save();
+  ctx.translate(sx+sw/2,my+1);
+  if(scorePopTimer>0){ const k=1+0.3*(scorePopTimer/22); ctx.scale(k,k); }
+  ctx.fillStyle=HUD_INK; ctx.textAlign='center'; ctx.fillText(ptsTxt,0,0);
+  ctx.restore();
 
-  // HP bar animada
-  const hbX=W-56, hbY=my-6, hbW=46, hbH=11;
-  ctx.fillStyle='rgba(255,255,255,0.07)';
-  roundRect(ctx, hbX, hbY, hbW, hbH, 4, true, false);
-  const hbFrac = Math.max(0, hpBarAnim/3);
-  const hbG = ctx.createLinearGradient(hbX,0,hbX+hbW,0);
-  const hbC = hbFrac>0.6?['#4ade80','#22c55e']:hbFrac>0.3?['#fbbf24','#f59e0b']:['#f87171','#ef4444'];
-  hbG.addColorStop(0,hbC[0]); hbG.addColorStop(1,hbC[1]);
-  ctx.fillStyle=hbG;
-  if(hbFrac>0) roundRect(ctx, hbX, hbY, Math.max(5,hbW*hbFrac), hbH, 4, true, false);
-  ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font='5px "Press Start 2P"';
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(`HP ${player.hp}/3`, hbX+hbW/2, hbY+hbH/2);
-
-  // ── INVENTÁRIO (centro-baixo) ──────────────────────────────────────────────
+  // inventário (centro-baixo)
   if(state==='playing'){
-    const puColors = {speed:'#fb923c', shield:'#60a5fa', fire:'#ef4444'};
-    const puIcons  = {speed:'⚡', shield:'🛡', fire:'🔥'};
-    const effDurs  = {speed:480, shield:360, fire:600};
-    const slotSize = 36, slotGap = 10;
-    const totalW = slotSize*2 + slotGap + 24;
-    const cx = W/2 - totalW/2;
-    const cy = H - 50;
-
-    // container
-    ctx.fillStyle='rgba(5,10,22,0.78)';
-    roundRect(ctx, cx-6, cy-4, totalW+12, slotSize+8, 10, true, false);
-    ctx.strokeStyle='rgba(78,205,196,0.25)'; ctx.lineWidth=1;
-    roundRect(ctx, cx-6, cy-4, totalW+12, slotSize+8, 10, false, true);
-
-    // dois slots
-    for(let i=0; i<2; i++){
-      const sx = cx + i*(slotSize+slotGap);
-      const hasItem = !!inventory[i];
-      const col = hasItem ? puColors[inventory[i]] : 'rgba(255,255,255,0.06)';
-      const border = hasItem ? puColors[inventory[i]] : 'rgba(78,205,196,0.3)';
-
-      ctx.fillStyle=col; ctx.strokeStyle=border; ctx.lineWidth=1.8;
-      roundRect(ctx, sx, cy, slotSize, slotSize, 7, true, true);
-
-      // label da tecla [Q] / [E]
-      ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='5px "Press Start 2P"';
-      ctx.textAlign='center'; ctx.textBaseline='top';
-      ctx.fillText(i===0?'[Q]':'[E]', sx+slotSize/2, cy+3);
-
-      // ícone do item
-      if(hasItem){
-        ctx.font='17px serif'; ctx.textBaseline='middle';
-        ctx.fillText(puIcons[inventory[i]], sx+slotSize/2, cy+slotSize/2+4);
-      } else {
-        ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.font='14px serif';
-        ctx.textBaseline='middle';
-        ctx.fillText('—', sx+slotSize/2, cy+slotSize/2+3);
-      }
+    const puColors={speed:'#FF9F6B', shield:'#5BC0FF', fire:'#FF6B6B'};
+    const effDurs={speed:480, shield:360, fire:600};
+    const slot=42, gap=12, totalW=slot*2+gap;
+    const cx=W/2-totalW/2, cy=H-slot-14;
+    for(let i=0;i<2;i++){
+      const sx2=cx+i*(slot+gap), item=inventory[i];
+      ctx.fillStyle=HUD_INK; roundRect(ctx,sx2,cy+3,slot,slot,12,true,false);
+      ctx.fillStyle=item?'#FFFFFF':'#EDEBF5'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2.5;
+      roundRect(ctx,sx2,cy,slot,slot,12,true,true);
+      if(item) hudIcon(HUD_P[item],sx2+slot/2-12,cy+slot/2-12,24,puColors[item]);
+      // tecla
+      ctx.fillStyle='#FFFFFF'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2;
+      roundRect(ctx,sx2-6,cy-8,20,20,6,true,true);
+      hudFont(700,12,'d'); ctx.fillStyle=HUD_INK; ctx.textAlign='center';
+      ctx.fillText(i===0?'Q':'E',sx2+4,cy+2);
     }
-
-    // efeitos ativos — barras abaixo do container
-    let barY = cy + slotSize + 10;
+    // efeitos ativos (acima dos espaços)
+    let barY=cy-30;
     ['speed','shield','fire'].forEach(k=>{
-      if(activeEffects[k] <= 0) return;
-      const frac = activeEffects[k] / effDurs[k];
-      const barW = totalW + 12;
-      ctx.fillStyle='rgba(5,10,22,0.7)';
-      roundRect(ctx, cx-6, barY, barW, 12, 4, true, false);
-      ctx.fillStyle=puColors[k];
-      roundRect(ctx, cx-6, barY, Math.max(6, barW*frac), 12, 4, true, false);
-      ctx.fillStyle='#fff'; ctx.font='6px "Press Start 2P"';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(puIcons[k]+' '+Math.ceil(activeEffects[k]/60)+'s', cx-6+barW/2, barY+6);
-      barY += 16;
+      if(activeEffects[k]<=0) return;
+      const frac=activeEffects[k]/effDurs[k], bw2=totalW+40, bx2=W/2-bw2/2;
+      ctx.fillStyle='#FFFFFF'; roundRect(ctx,bx2,barY,bw2,18,9,true,false);
+      ctx.fillStyle=puColors[k]; roundRect(ctx,bx2,barY,Math.max(10,bw2*frac),18,9,true,false);
+      ctx.strokeStyle=HUD_INK; ctx.lineWidth=2; roundRect(ctx,bx2,barY,bw2,18,9,false,true);
+      hudIcon(HUD_P[k],bx2+4,barY+1,16,'#FFFFFF');
+      hudFont(900,12); ctx.fillStyle=HUD_INK; ctx.textAlign='center';
+      ctx.fillText(Math.ceil(activeEffects[k]/60)+'s',bx2+bw2/2+8,barY+10);
+      barY-=24;
     });
   }
-
-  // Mobile D-pad is now HTML (not canvas-drawn). Visibility handled by updateMobileControls().
-
+  ctx.restore();
   ctx.textBaseline='alphabetic';
   ctx.textAlign='left';
   drawPlaceName();
@@ -3355,24 +3371,15 @@ function drawPlaceName(){
   if(!currentTheme) return;
   const themeIdx = Math.max(0, THEMES.indexOf(currentTheme));
   const name = trArray('placeNames')[themeIdx] || trArray('themeNames')[themeIdx] || currentTheme.name;
-  const x = 16, y = H - 30;
-
+  const txt = `${tr('phaseHud')} ${phase} · ${name}`;
   ctx.save();
-  ctx.font='8px "Press Start 2P"';
-  ctx.textAlign='left';
-  ctx.textBaseline='middle';
-  const w = Math.min(270, Math.max(116, name.length * 8 + 30));
-
-  ctx.fillStyle='rgba(5,10,22,.62)';
-  roundRect(ctx,x,y-14,w,26,8,true,false);
-  ctx.strokeStyle='rgba(255,255,255,.18)';
-  ctx.lineWidth=1;
-  roundRect(ctx,x,y-14,w,26,8,false,true);
-
-  ctx.fillStyle='#fef3c7';
-  ctx.fillText('📍',x+10,y+1);
-  ctx.fillStyle='#e0f2fe';
-  ctx.fillText(name,x+32,y+1);
+  hudFont(900,13);
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  const w = ctx.measureText(txt).width+28, h=28;
+  const mobile = document.getElementById('mobileControls')?.classList.contains('active');
+  const x = mobile ? 130 : 12, y = mobile ? 54 : H-h-14;
+  hudPill(x,y,w,h);
+  ctx.fillStyle=HUD_INK; ctx.fillText(txt,x+14,y+h/2+1);
   ctx.restore();
 }
 
@@ -3469,26 +3476,27 @@ function drawPetSpeech(){
   const alpha = Math.min(1, petSpeech.timer/20);
   const bx = pet.x - 10;
   const by = pet.y - 70;
-  const tw = petSpeech.text.length * 7 + 18;
   ctx.save();
+  hudFont(800,12);
+  const tw = ctx.measureText(petSpeech.text).width + 20;
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.fillStyle = '#FFFFFF';
   roundRect(ctx, bx, by, tw, 22, 6, true, false);
-  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#2B2A4C'; ctx.lineWidth = 1.5;
   roundRect(ctx, bx, by, tw, 22, 6, false, true);
   // tail
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
   ctx.moveTo(bx+14, by+22);
   ctx.lineTo(bx+10, by+30);
   ctx.lineTo(bx+22, by+22);
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.2;
+  ctx.strokeStyle = '#2B2A4C'; ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.moveTo(bx+14, by+22); ctx.lineTo(bx+10, by+30); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(bx+22, by+22); ctx.lineTo(bx+10, by+30); ctx.stroke();
   // text
-  ctx.fillStyle = '#1a1a2e';
-  ctx.font = '7px "Press Start 2P"';
+  ctx.fillStyle = '#2B2A4C';
+  hudFont(800,12);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(petSpeech.text, bx+9, by+11);
@@ -4945,6 +4953,7 @@ function quitGame(){
   if(state === 'menu') return;
   if(!confirm(`${tr('quitTitle')}\n${tr('quitBody')}`)) return;
   paused = false;
+  const pb=document.getElementById('pauseBtn'); if(pb){ pb.innerHTML=HUD_ICON.pause; pb.classList.remove('paused'); }
   stopBGM();
   state = 'menu';
   renderMainMenu();
@@ -4954,21 +4963,21 @@ function togglePause(){
   if(state !== 'playing') return;
   paused = !paused;
   const btn = document.getElementById('pauseBtn');
-  if(btn){ btn.textContent = paused ? '▶' : '⏸'; btn.classList.toggle('paused', paused); }
+  if(btn){ btn.innerHTML = paused ? HUD_ICON.play : HUD_ICON.pause; btn.classList.toggle('paused', paused); }
   if(paused) stopBGM(); else startBGM((phase-1) % BGMS.length);
 }
 
 function drawPauseOverlay(){
-  ctx.fillStyle='rgba(4,8,18,.72)';
+  ctx.save();
+  ctx.fillStyle='rgba(142,216,255,.72)';
   ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#fbbf24';
-  ctx.font='bold 28px "Press Start 2P"';
-  ctx.textAlign='center';
-  ctx.fillText(tr('paused'),W/2,H/2-18);
-  ctx.fillStyle='#7a8fa8';
-  ctx.font='8px "Press Start 2P"';
-  ctx.fillText(tr('pauseHint'),W/2,H/2+16);
-  ctx.textAlign='left';
+  const cw=320, ch=140, cx=W/2-cw/2, cy=H/2-ch/2;
+  ctx.fillStyle='#2B2A4C'; roundRect(ctx,cx,cy+5,cw,ch,22,true,false);
+  ctx.fillStyle='#FFF8E7'; ctx.strokeStyle='#2B2A4C'; ctx.lineWidth=3; roundRect(ctx,cx,cy,cw,ch,22,true,true);
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#2B2A4C';
+  hudFont(700,40,'d'); ctx.fillText(tr('paused'),W/2,cy+56);
+  hudFont(800,14); ctx.fillStyle='#4A4968'; ctx.fillText(tr('pauseHint'),W/2,cy+102);
+  ctx.restore();
 }
 
 setHudButtonTitles();
