@@ -9,7 +9,10 @@
   *{margin:0;padding:0;box-sizing:border-box;}
   html,body{width:100%;height:100%;overflow:hidden;}
   body{
-    background:radial-gradient(ellipse at 50% 30%,#0d1b2a 0%,#090d14 100%);
+    background:
+      radial-gradient(ellipse at 50% 8%,rgba(124,58,237,.28) 0%,transparent 42%),
+      radial-gradient(ellipse at 80% 80%,rgba(0,229,160,.11) 0%,transparent 38%),
+      #050711;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     min-height:100vh;font-family:'Press Start 2P','Courier New',monospace;
     user-select:none;
@@ -18,10 +21,10 @@
     position:relative;
     /* overflow NOT hidden — allows overlays/menus to scroll */
     transform-origin:top left;
-    box-shadow:0 0 0 2px #4ecdc4,0 0 50px rgba(78,205,196,.35),0 0 100px rgba(78,205,196,.1);
+    box-shadow:0 0 0 2px #45f3ff,0 0 18px rgba(69,243,255,.8),0 0 62px rgba(168,85,247,.48),0 0 120px rgba(0,229,160,.16);
     border-radius:14px;
   }
-  canvas{display:block;border-radius:14px;}
+  canvas{display:block;border-radius:14px;image-rendering:pixelated;}
 
   /* ── HUD BUTTONS ── */
   #hudBtns{position:absolute;top:8px;right:10px;display:flex;gap:6px;z-index:10;}
@@ -249,6 +252,10 @@ let phaseFramesLeft = 0;
 let paused = false;
 let cutsceneTimer = 0;
 let currentLang = localStorage.getItem('dinogame_lang') || 'pt';
+let scorePopTimer = 0, lastScoreVal = 0;
+let hpBarAnim = 3;
+let currentHighScore = parseInt(localStorage.getItem('dinogame_highscore') || '0');
+let menuAnimRAF = null, menuAnimTick = 0;
 
 const I18N = {
   pt: {
@@ -841,59 +848,27 @@ function tryJump(){
 const THEMES = [
   {
     name:'Floresta Jurássica',
-    sky:['#5ba3d9','#b8ddf5'],
-    skyMid:'#7ec8e3',
-    horizon:'#a8d8a8',
-    ground:'#7c4a1e',
-    groundTop:'#4a8f3f',
-    groundMid:'#5caa4a',
-    mountainFar:'#4a8a4a',
-    mountainNear:'#3d6e3d',
-    treeLeaf:'#2d7a2d',
-    treeTrunk:'#5c3317',
-    stars:false,
+    sky:['#4ab6ed','#d6f3ff'], skyMid:'#83d3f5', horizon:'#91d678',
+    ground:'#85512e', groundTop:'#72c94b', groundMid:'#a8793f',
+    mountainFar:'#79af70', mountainNear:'#4e8c56', treeLeaf:'#4aae4b', treeTrunk:'#754225', stars:false,
   },
   {
     name:'Deserto Vulcânico',
-    sky:['#c0392b','#e8743a'],
-    skyMid:'#d45f2a',
-    horizon:'#b8671a',
-    ground:'#7a4010',
-    groundTop:'#c87a30',
-    groundMid:'#b06820',
-    mountainFar:'#8b2500',
-    mountainNear:'#6b1800',
-    treeLeaf:'#8b3a00',
-    treeTrunk:'#4a2000',
-    stars:false,
+    sky:['#e9934b','#ffe1a5'], skyMid:'#f7ad58', horizon:'#d7793d',
+    ground:'#82472a', groundTop:'#db8b42', groundMid:'#aa6332',
+    mountainFar:'#bc6243', mountainNear:'#874032', treeLeaf:'#a95435', treeTrunk:'#65332b', stars:false,
   },
   {
     name:'Caverna Glacial',
-    sky:['#05101e','#0a2340'],
-    skyMid:'#0d2a4a',
-    horizon:'#0e3060',
-    ground:'#1a3a5a',
-    groundTop:'#2a6090',
-    groundMid:'#1f4e78',
-    mountainFar:'#0a2040',
-    mountainNear:'#071528',
-    treeLeaf:'#1a5070',
-    treeTrunk:'#0d2535',
-    stars:true,
+    sky:['#80c8ed','#e5f7ff'], skyMid:'#a9dcf4', horizon:'#9bd8e6',
+    ground:'#50749a', groundTop:'#d8f5ff', groundMid:'#76a6c8',
+    mountainFar:'#75abc7', mountainNear:'#4c7d9e', treeLeaf:'#a8e4ee', treeTrunk:'#52748d', stars:false,
   },
   {
     name:'Floresta Bioluminescente',
-    sky:['#0d0020','#1a0040'],
-    skyMid:'#2d0060',
-    horizon:'#1a0840',
-    ground:'#0d1a0d',
-    groundTop:'#0d6b3a',
-    groundMid:'#0a5530',
-    mountainFar:'#1a0050',
-    mountainNear:'#0d0035',
-    treeLeaf:'#00e5a0',
-    treeTrunk:'#1a0840',
-    stars:true,
+    sky:['#6077d9','#c0b6f5'], skyMid:'#918ade', horizon:'#6e9f77',
+    ground:'#35573d', groundTop:'#7ed364', groundMid:'#4d7d4f',
+    mountainFar:'#6871bb', mountainNear:'#4a4c94', treeLeaf:'#72d88e', treeTrunk:'#4b426e', stars:false,
   },
 ];
 
@@ -1091,6 +1066,7 @@ function renderMainMenu(){
     <div class="divider"></div>
     ${nameDisplay}
     <p class="sub">${tr('tagline')}</p>
+    <canvas id="menuDinoAnim" width="300" height="54" style="border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(78,205,196,0.1);"></canvas>
     <button class="btn" onclick="showCharSelect()">▶ ${tr('play')}</button>
     <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
       <button class="btn sec" onclick="showHowToPlay()" style="font-size:6px;padding:7px 14px;">🎮 Como Jogar</button>
@@ -1101,6 +1077,7 @@ function renderMainMenu(){
     <p class="credits">${tr('creditsText')}</p>
   </div>`;
   state = 'menu';
+  setTimeout(startMenuAnimation, 50);
 }
 
 function askPlayerName(){
@@ -1302,6 +1279,7 @@ function backToMenu(){
 }
 
 function startGame(){
+  stopMenuAnimation();
   phase=1; score=0; lives=3; discoveredCreatures=new Set();
   onlineChallenge = null;
   onlineRunFrames = 0;
@@ -1606,7 +1584,7 @@ function beginPhase(){
   player.x=100; player.y=GROUND;
   player.vx=0; player.vy=0;
   player.onGround=true; player.ducking=false;
-  player.invincible=0; player.jumpCount=0; player.hp=3;
+  player.invincible=0; player.jumpCount=0; player.hp=3; hpBarAnim=3;
   particles=[]; phasePlatforms=[]; frameCount=0;
   pet.x=60; pet.y=GROUND; pet.vy=0; pet.onGround=true;
   pet.frame=0; pet.facing=1; pet.history=[];
@@ -1691,6 +1669,7 @@ function saveScore(){
   lb.sort((a,b) => b.score - a.score);
   lb = lb.slice(0, 5);
   localStorage.setItem('dinogame_leaderboard', JSON.stringify(lb));
+  if(score > currentHighScore){ currentHighScore = score; localStorage.setItem('dinogame_highscore', String(score)); }
 }
 
 function finishOnlineChallenge(){
@@ -1715,9 +1694,14 @@ function showOverlay(type){
   const hearts = '♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,3-lives));
   if(type==='gameover'){
     saveScore();
+    const isNewRecord = score > 0 && score >= currentHighScore;
+    const recordLine = isNewRecord
+      ? `<p class="sub" style="color:#ffe66d;font-size:8px">🏆 Novo recorde!</p>`
+      : (currentHighScore > 0 ? `<p class="sub" style="color:#4a6070">Recorde: ${currentHighScore} pts</p>` : '');
     ov.innerHTML=card(`<h2>${tr('gameOver')}</h2><div class="divider"></div>
       <p class="sub">${tr('betterLuck')}</p>
-      <span class="score-big">${score} pts</span>
+      ${recordLine}
+      <span class="score-big" style="font-size:${isNewRecord?'26px':'20px'};${isNewRecord?'color:#ffe66d;text-shadow:0 0 20px rgba(255,230,109,.8)':''}">${score} pts</span>
       <button class="btn" onclick="showCharSelect()">▶ ${tr('newGame')}</button>
       <p class="credits">${tr('creditsText')}</p>`);
     state='dead';
@@ -1776,6 +1760,9 @@ function update(){
   if(state!=='playing') return;
   frameCount++;
   if(onlineChallenge) onlineRunFrames++;
+  if(score !== lastScoreVal){ scorePopTimer = 22; lastScoreVal = score; }
+  scorePopTimer = Math.max(0, scorePopTimer - 1);
+  hpBarAnim += (player.hp - hpBarAnim) * 0.12;
 
   // phase timer countdown
   if(phaseFramesLeft > 0){
@@ -2468,12 +2455,15 @@ function draw(){
 
   // sky — day/night lerp
   const nightSky0='#0a0a1a', nightSky1='#0d1b2a';
-  const skyTop    = lerpColor(t.sky[0],    nightSky0, 1 - dayNight);
-  const skyBot    = lerpColor(t.sky[1],    nightSky1, 1 - dayNight);
-  const skyHoriz  = lerpColor(t.horizon,   nightSky1, 1 - dayNight);
+  const neonLight = dayNight;
+  const skyTop    = lerpColor(t.sky[0],    nightSky0, 1 - neonLight);
+  const skyBot    = lerpColor(t.sky[1],    nightSky1, 1 - neonLight);
+  const skyHoriz  = lerpColor(t.horizon,   nightSky1, 1 - neonLight);
   const skyG = ctx.createLinearGradient(0,0,0,H);
   skyG.addColorStop(0, skyTop); skyG.addColorStop(.6, skyBot); skyG.addColorStop(1, skyHoriz);
   ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H);
+
+  drawNeonAtmosphere(t);
 
   // flash
   if(flashTimer>0 && Math.floor(flashTimer/4)%2===0){
@@ -2481,7 +2471,7 @@ function draw(){
   }
 
   // stars — visible at night for all themes
-  const starsAlpha = Math.max(t.stars ? 0.4 : 0, (1 - dayNight) * 0.9);
+  const starsAlpha = Math.max(t.stars ? 0.4 : 0, (1 - neonLight) * 0.9);
   if(starsAlpha > 0.02){
     // ensure stars array exists even for non-star themes
     if(stars.length === 0){
@@ -2522,6 +2512,7 @@ function draw(){
   drawMountains(scrollX*.1, t.mountainFar, 100, 180, 280);
   // near mountains (parallax 0.2)
   drawMountains(scrollX*.2, t.mountainNear, 70, 130, 220);
+  drawDepthHaze(t);
 
   // far trees (parallax 0.35)
   trees.filter(tr=>tr.layer==='far').forEach(tr=>{
@@ -2603,6 +2594,8 @@ function draw(){
   if(pxP>-100&&pxP<W+100) drawPortal(pxP, phaseEggs.every(e=>e.collected));
 
   // pet (atrás do player)
+  drawGroundShadow(pet.x+15, pet.y+2, 19, .26);
+  drawGroundShadow(player.x+player.w/2, GROUND+2, 26, .34);
   if(selectedChar==='dino') drawBabyDino(pet.x, pet.y, pet.frame, pet.facing, pet.bobPhase);
   else                      drawSaberTooth(pet.x, pet.y, pet.frame, pet.facing, pet.bobPhase);
   drawPetSpeech();
@@ -2656,6 +2649,40 @@ function draw(){
   drawHUD();
 }
 
+function drawNeonAtmosphere(t){
+  ctx.save();
+  // Brilho de sol e partículas suaves, como um mundo 3D de brinquedo.
+  const glow=ctx.createLinearGradient(0,GROUND-150,0,GROUND+5);
+  glow.addColorStop(0,'rgba(0,0,0,0)');
+  glow.addColorStop(1,'rgba(255,246,185,.23)');
+  ctx.fillStyle=glow; ctx.fillRect(0,GROUND-150,W,155);
+  for(let i=0;i<16;i++){
+    const px=((i*137+31-scrollX*.12)%(W+20)+W+20)%(W+20)-10;
+    const py=78+(i*53%(GROUND-130));
+    ctx.globalAlpha=.16+.14*Math.sin(frameCount*.035+i);
+    ctx.fillStyle='#fff8ca'; ctx.beginPath(); ctx.arc(px,py,1.5+(i%3),0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawDepthHaze(t){
+  // Faixas transparentes entre os planos criam distância entre montanhas e cenário.
+  const haze=ctx.createLinearGradient(0,GROUND-165,0,GROUND);
+  haze.addColorStop(0,'rgba(0,0,0,0)');
+  haze.addColorStop(1,'rgba(82,240,255,.12)');
+  ctx.fillStyle=haze; ctx.fillRect(0,GROUND-165,W,165);
+}
+
+function drawGroundShadow(x,y,width,alpha){
+  ctx.save();
+  const shadow=ctx.createRadialGradient(x,y,2,x,y,width);
+  shadow.addColorStop(0,`rgba(0,0,10,${alpha})`);
+  shadow.addColorStop(1,'rgba(0,0,10,0)');
+  ctx.fillStyle=shadow;
+  ctx.beginPath(); ctx.ellipse(x,y,width,width*.22,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 function drawHUD(){
   if(state==='menu'||state==='cutscene'||state==='win') return;
   const bh=34, pad=12;
@@ -2684,9 +2711,19 @@ function drawHUD(){
   ctx.fillStyle='#fbbf24';
   ctx.fillText(`💰 ${totalCoins}`,196,my);
 
-  // pontos
-  ctx.fillStyle='#4ecdc4';
-  ctx.fillText(`${tr('ptsHud')} ${score}`,270,my);
+  // pontos com pop
+  if(scorePopTimer > 0){
+    const popS = 1 + 0.45*(scorePopTimer/22);
+    ctx.save();
+    ctx.font=`${Math.round(8*popS)}px "Press Start 2P"`;
+    ctx.fillStyle=`rgba(255,230,109,${0.6+0.4*(scorePopTimer/22)})`;
+    ctx.fillText(`${tr('ptsHud')} ${score}`, 270, my);
+    ctx.restore();
+    ctx.font='8px "Press Start 2P"';
+  } else {
+    ctx.fillStyle='#4ecdc4';
+    ctx.fillText(`${tr('ptsHud')} ${score}`,270,my);
+  }
 
   ctx.fillStyle='#a7f3d0';
   ctx.fillText(`PET ${petLevel}`,520,my);
@@ -2712,12 +2749,19 @@ function drawHUD(){
   ctx.fillStyle='#ff6b6b';
   ctx.fillText(`♥x${lives}`, W-86, my);
 
-  // HP dots
-  ctx.font='7px "Press Start 2P"';
-  for(let i=0;i<3;i++){
-    ctx.fillStyle=i<player.hp?'#ff9944':'#2a2a3a';
-    ctx.fillText(i<player.hp?'●':'○', W-52+i*10, my+1);
-  }
+  // HP bar animada
+  const hbX=W-56, hbY=my-6, hbW=46, hbH=11;
+  ctx.fillStyle='rgba(255,255,255,0.07)';
+  roundRect(ctx, hbX, hbY, hbW, hbH, 4, true, false);
+  const hbFrac = Math.max(0, hpBarAnim/3);
+  const hbG = ctx.createLinearGradient(hbX,0,hbX+hbW,0);
+  const hbC = hbFrac>0.6?['#4ade80','#22c55e']:hbFrac>0.3?['#fbbf24','#f59e0b']:['#f87171','#ef4444'];
+  hbG.addColorStop(0,hbC[0]); hbG.addColorStop(1,hbC[1]);
+  ctx.fillStyle=hbG;
+  if(hbFrac>0) roundRect(ctx, hbX, hbY, Math.max(5,hbW*hbFrac), hbH, 4, true, false);
+  ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font='5px "Press Start 2P"';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(`HP ${player.hp}/3`, hbX+hbW/2, hbY+hbH/2);
 
   // ── INVENTÁRIO (centro-baixo) ──────────────────────────────────────────────
   if(state==='playing'){
@@ -2824,16 +2868,14 @@ function roundRect(c,x,y,w,h,r,fill,stroke){
 }
 
 function drawCloud(x,y,w,theme){
-  const alpha = theme.stars ? 0.18 : 0.82;
-  ctx.fillStyle = theme.stars ? 'rgba(140,180,220,'+alpha+')' : 'rgba(255,255,255,'+alpha+')';
-  ctx.beginPath();
-  ctx.ellipse(x+w*.5,  y,    w*.45, 18, 0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(x+w*.28, y+10, w*.28, 15, 0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(x+w*.72, y+8,  w*.26, 14, 0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(x+w*.5,  y+14, w*.42, 14, 0,0,Math.PI*2); ctx.fill();
+  ctx.save(); ctx.globalAlpha=.80;
+  const g=ctx.createLinearGradient(x,y-22,x,y+28);
+  g.addColorStop(0,'#ffffff'); g.addColorStop(1,'#d7eef8'); ctx.fillStyle=g;
+  [[.5,0,.45,18],[.28,10,.28,15],[.72,8,.26,14],[.5,14,.42,14]].forEach(([a,b,c,d])=>{
+    ctx.beginPath(); ctx.ellipse(x+w*a,y+b,w*c,d,0,0,Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=.28; ctx.fillStyle='#6db5d2';
+  ctx.beginPath(); ctx.ellipse(x+w*.5,y+24,w*.34,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
 }
 
 function drawMountains(offset,color,heightA,heightB,spacing){
@@ -2842,28 +2884,36 @@ function drawMountains(offset,color,heightA,heightB,spacing){
   for(let i=-1;i<Math.ceil(W/spacing)+2;i++){
     const mx=i*spacing-mo;
     ctx.beginPath();
-    ctx.moveTo(mx,GROUND);
-    ctx.bezierCurveTo(mx+spacing*.2,GROUND, mx+spacing*.25,GROUND-heightA, mx+spacing*.5,GROUND-heightA);
-    ctx.bezierCurveTo(mx+spacing*.75,GROUND-heightA, mx+spacing*.8,GROUND, mx+spacing,GROUND);
+    ctx.moveTo(mx,GROUND); ctx.lineTo(mx+spacing*.18,GROUND-heightA*.35);
+    ctx.lineTo(mx+spacing*.36,GROUND-heightA*.72); ctx.lineTo(mx+spacing*.5,GROUND-heightA);
+    ctx.lineTo(mx+spacing*.7,GROUND-heightA*.48); ctx.lineTo(mx+spacing,GROUND);
     ctx.closePath(); ctx.fill();
+    // uma face iluminada por montanha dá volume sem quebrar o pixel art
+    ctx.fillStyle='rgba(170,245,255,.10)';
+    ctx.beginPath(); ctx.moveTo(mx+spacing*.5,GROUND-heightA);
+    ctx.lineTo(mx+spacing*.7,GROUND-heightA*.48); ctx.lineTo(mx+spacing,GROUND);
+    ctx.lineTo(mx+spacing*.66,GROUND); ctx.closePath(); ctx.fill();
+    ctx.fillStyle=color;
 
     const ox=mx+spacing*.55;
     ctx.beginPath();
-    ctx.moveTo(ox,GROUND);
-    ctx.bezierCurveTo(ox+spacing*.18,GROUND, ox+spacing*.22,GROUND-heightB, ox+spacing*.45,GROUND-heightB);
-    ctx.bezierCurveTo(ox+spacing*.68,GROUND-heightB, ox+spacing*.72,GROUND, ox+spacing*.9,GROUND);
+    ctx.moveTo(ox,GROUND); ctx.lineTo(ox+spacing*.15,GROUND-heightB*.4);
+    ctx.lineTo(ox+spacing*.3,GROUND-heightB); ctx.lineTo(ox+spacing*.48,GROUND-heightB*.5);
+    ctx.lineTo(ox+spacing*.65,GROUND);
     ctx.closePath(); ctx.fill();
   }
 }
 
 function drawTree(x,y,h,w,theme,opacity){
   ctx.globalAlpha=opacity;
-  // trunk
   ctx.fillStyle=theme.treeTrunk;
-  const tw=w*.32; const tx=x-tw/2;
-  roundRect(ctx, tx, y-h*.45, tw, h*.45, tw/2, true, false);
-  // canopy – multi-circle
-  ctx.fillStyle=theme.treeLeaf;
+  const tw=Math.max(6,Math.round(w*.3)), tx=Math.round(x-tw/2);
+  const trunk=ctx.createLinearGradient(tx,0,tx+tw,0);
+  trunk.addColorStop(0,'rgba(45,25,15,.28)'); trunk.addColorStop(.45,theme.treeTrunk); trunk.addColorStop(1,'#d69b54');
+  ctx.fillStyle=trunk; roundRect(ctx,tx,y-h*.45,tw,h*.45,tw/2,true,false);
+  const leaf=ctx.createRadialGradient(x-w*.16,y-h*.75,2,x,y-h*.62,w*.62);
+  leaf.addColorStop(0,'#d8ff9b'); leaf.addColorStop(.42,theme.treeLeaf); leaf.addColorStop(1,'#2c773e');
+  ctx.fillStyle=leaf;
   [[x,y-h*.72,w*.55],[x-w*.3,y-h*.55,w*.38],[x+w*.28,y-h*.52,w*.36]].forEach(([cx,cy,cr])=>{
     ctx.beginPath(); ctx.arc(cx,cy,cr,0,Math.PI*2); ctx.fill();
   });
@@ -2925,22 +2975,32 @@ function drawPetSpeech(){
 }
 
 function drawGround(t){
-  ctx.fillStyle=t.ground;
+  // Solo com iluminação e camadas, para parecer um diorama 3D em vez de uma grade neon.
+  const floor=ctx.createLinearGradient(0,GROUND,0,H);
+  floor.addColorStop(0,t.groundTop);
+  floor.addColorStop(.12,t.groundMid);
+  floor.addColorStop(1,t.ground);
+  ctx.fillStyle=floor;
   ctx.fillRect(0,GROUND,W,H-GROUND);
 
   ctx.fillStyle=t.groundMid;
-  ctx.fillRect(0,GROUND,W,14);
+  ctx.fillRect(0,GROUND,W,5);
+
+  // Sulcos discretos convergem para o horizonte e sugerem volume no terreno.
+  ctx.save();
+  ctx.strokeStyle='rgba(65,98,39,.22)'; ctx.globalAlpha=.45; ctx.lineWidth=1;
+  const vanishX=W*.52, horizon=GROUND+2;
+  for(let x=-240;x<=W+240;x+=92){
+    ctx.beginPath(); ctx.moveTo(vanishX,horizon); ctx.lineTo(x,H); ctx.stroke();
+  }
+  ctx.restore();
 
   ctx.fillStyle=t.groundTop;
-  const humpOff = (scrollX*.8)%60;
-  ctx.beginPath();
-  ctx.moveTo(0,GROUND+4);
-  for(let i=0;i<Math.ceil(W/60)+2;i++){
-    const bx=i*60-humpOff;
-    ctx.quadraticCurveTo(bx+15,GROUND-6, bx+30,GROUND+2);
-    ctx.quadraticCurveTo(bx+45,GROUND+8, bx+60,GROUND+4);
+  const humpOff=(scrollX*.8)%24;
+  for(let x=-24-humpOff;x<W+24;x+=24){
+    ctx.fillRect(Math.round(x),GROUND,16,8);
+    ctx.fillRect(Math.round(x+4),GROUND-4,8,4);
   }
-  ctx.lineTo(W,GROUND+12); ctx.lineTo(0,GROUND+12); ctx.closePath(); ctx.fill();
 
   ctx.strokeStyle=t.groundTop;
   ctx.lineWidth=2.5;
@@ -2956,6 +3016,12 @@ function drawGround(t){
   for(let i=0;i<14;i++){
     const px=((i*173+91)-scrollX*.9)%W;
     ctx.beginPath(); ctx.ellipse(px,GROUND+22,8,5,0,0,Math.PI*2); ctx.fill();
+  }
+
+  ctx.fillStyle='rgba(54,88,37,.16)';
+  for(let i=0;i<18;i++){
+    const x=((i*61-scrollX*.9)%W+W)%W;
+    ctx.fillRect(Math.round(x),GROUND+34+(i%3)*9,12+(i%4)*5,4);
   }
 }
 
@@ -2978,6 +3044,15 @@ function drawPlatform(x, y, w, type){
   // sombra
   ctx.fillStyle='rgba(0,0,0,0.2)';
   ctx.beginPath(); ctx.ellipse(x+w/2,y+7,w*.42,5,0,0,Math.PI*2); ctx.fill();
+
+  // face inferior inclinada: cada plataforma vira um pequeno bloco 3D.
+  const side=type==='stone'?'#536a79':type==='wood'?'#8a4b19':'#6e4829';
+  ctx.fillStyle=side;
+  ctx.beginPath();
+  ctx.moveTo(x,y-h+7); ctx.lineTo(x+w,y-h+7); ctx.lineTo(x+w-7,y+8); ctx.lineTo(x+7,y+8);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.16)';
+  ctx.beginPath(); ctx.moveTo(x,y-h+7); ctx.lineTo(x+7,y-h+12); ctx.lineTo(x+7,y+8); ctx.lineTo(x,y-h+3); ctx.closePath(); ctx.fill();
 
   if(type==='stone'){
     block(ctx,x,y-h,w,h,6,'#94a3b8','#334155',2.5);
@@ -4308,6 +4383,26 @@ function drawPauseOverlay(){
 }
 
 setHudButtonTitles();
+
+function startMenuAnimation(){
+  if(menuAnimRAF) cancelAnimationFrame(menuAnimRAF);
+  function step(){
+    const cvs = document.getElementById('menuDinoAnim');
+    if(!cvs){ menuAnimRAF = null; return; }
+    const c = cvs.getContext('2d');
+    c.clearRect(0,0,cvs.width,cvs.height);
+    menuAnimTick++;
+    c.fillStyle='rgba(78,205,196,0.12)';
+    c.fillRect(0, cvs.height-6, cvs.width, 2);
+    const x = (menuAnimTick * 1.4) % (cvs.width + 80) - 40;
+    if(typeof drawDinoOn === 'function') drawDinoOn(c, x, cvs.height-6, menuAnimTick, false, 0.72);
+    menuAnimRAF = requestAnimationFrame(step);
+  }
+  step();
+}
+function stopMenuAnimation(){
+  if(menuAnimRAF){ cancelAnimationFrame(menuAnimRAF); menuAnimRAF = null; }
+}
 
 function loop(){
   try{
