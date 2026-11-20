@@ -967,6 +967,7 @@ window.addEventListener('keydown', e => {
   if(e.code==='Escape'&&state==='freeroam'){ state='menu'; renderMainMenu(); return; }
   if(e.code==='KeyC'&&state==='freeroam'&&frJob) return;
   if(e.code==='Space'&&state==='freeroam') e.preventDefault();
+  if(e.code==='KeyF'&&state==='freeroam'){ fishPress(); return; }
   if(e.code==='KeyC'&&state==='freeroam'){
     if(frDriving){
       frDriving.occupied=false;
@@ -2010,6 +2011,8 @@ function renderAlbum(){
     <div class="album-grid">${cards}</div>
     <p class="sub">${tr('rareEggs')}</p>
     <div class="album-grid">${eggCards}</div>
+    <p class="sub">Peixes da pescaria</p>
+    <div class="album-grid">${FISH.map(f=>{ const n=loadFishLog()[f.id]||0; return `<button class="map-node album-node ${n?'unlocked':'locked'}"><b>${n?f.name:'???'}</b>${n?checkTag(n+'×'):lockTag('Não pescado')}</button>`; }).join('')}</div>
     <button class="btn sec" onclick="renderWorldMap()">← ${tr('back')}</button>
   </div>`;
 }
@@ -5531,6 +5534,46 @@ const GARAGE_COLORS={
   fire:[['#FF6B6B','Vermelho'],['#FFD23F','Amarelo'],['#FF9F6B','Laranja'],['#B18CFF','Roxo']]
 };
 const HOUSE_SPOT={tx:10,ty:7};
+const PIER={tx:20,y0:10,y1:12};
+const FISH=[
+  {id:'azul',    name:'Peixinho azul', w:50, val:2,  color:'#5BC0FF'},
+  {id:'palhaco', name:'Peixe-palhaço', w:25, val:4,  color:'#FF9F6B'},
+  {id:'baiacu',  name:'Baiacu',        w:12, val:6,  color:'#F2C46D'},
+  {id:'dourado', name:'Peixe dourado', w:6,  val:12, color:'#FFD23F'},
+  {id:'espada',  name:'Peixe-espada',  w:4,  val:15, color:'#B9B6D0'},
+  {id:'bota',    name:'Bota velha',    w:3,  val:0,  color:'#7A7798'},
+];
+let frFish=null;
+function loadFishLog(){ try{ return JSON.parse(localStorage.getItem('dinogame_fish')||'{}'); }catch(e){ return {}; } }
+function atPierEnd(){ return !frDriving && !frJob && Math.floor(frPlayer.tx)===PIER.tx && Math.floor(frPlayer.ty)===PIER.y1; }
+function fishPress(){
+  if(!frFish){ if(atPierEnd()) frFish={stage:'wait',t:0,biteAt:120+Math.floor(Math.random()*180),result:null}; return; }
+  if(frFish.stage==='bite'){
+    let r=Math.random()*FISH.reduce((a,f)=>a+f.w,0), fish=FISH[0];
+    for(const f of FISH){ if((r-=f.w)<0){ fish=f; break; } }
+    const log=loadFishLog(); log[fish.id]=(log[fish.id]||0)+1; localStorage.setItem('dinogame_fish',JSON.stringify(log));
+    totalCoins+=fish.val; frCoinCount+=fish.val; saveProgress();
+    frFish={stage:'caught',t:0,fish,first:log[fish.id]===1};
+  } else if(frFish.stage==='wait'){
+    frFish={stage:'miss',t:0,text:'Cedo demais! O peixe fugiu'};
+  }
+}
+function drawFishIcon(c,x,y,f,sc){
+  c.save(); c.translate(x,y); c.scale(sc,sc);
+  c.strokeStyle='#2B2A4C'; c.lineWidth=3; c.lineJoin='round';
+  if(f.id==='bota'){
+    c.fillStyle=f.color; c.beginPath(); c.moveTo(-10,-16); c.lineTo(4,-16); c.lineTo(4,2); c.lineTo(16,4); c.quadraticCurveTo(20,14,10,14); c.lineTo(-10,14); c.closePath(); c.fill(); c.stroke();
+  } else {
+    c.fillStyle=f.color;
+    c.beginPath(); c.moveTo(14,0); c.lineTo(26,-10); c.lineTo(26,10); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.ellipse(0,0,f.id==='espada'?18:15,f.id==='baiacu'?13:9,0,0,Math.PI*2); c.fill(); c.stroke();
+    if(f.id==='espada'){ c.beginPath(); c.moveTo(-18,0); c.lineTo(-32,-2); c.stroke(); }
+    if(f.id==='palhaco'){ c.fillStyle='#FFFFFF'; c.fillRect(-3,-8,4,16); }
+    c.fillStyle='#FFFFFF'; c.beginPath(); c.arc(-8,-2,3.5,0,Math.PI*2); c.fill(); c.stroke();
+    c.fillStyle='#2B2A4C'; c.beginPath(); c.arc(-8.5,-2,1.6,0,Math.PI*2); c.fill();
+  }
+  c.restore();
+}
 function buyHouse(){
   const c=loadCareer(); if(c.house) return;
   if(totalCoins<300){ alert(tr('notEnough')); return; }
@@ -5744,7 +5787,7 @@ function frTileFloorColor(wx,wy){const tx=Math.floor(wx),ty=Math.floor(wy);if(tx
 
 
 function frIso(tx,ty,cx,cy){return{x:(tx-ty)*FR_TW/2+cx, y:(tx+ty)*FR_TH/2+cy};}
-function frBlocked(tx,ty){const ix=Math.floor(tx),iy=Math.floor(ty);if(ix<0||iy<0||ix>=FR_SZ||iy>=FR_SZ)return true;return FR_MAP[iy][ix]>=3;}
+function frBlocked(tx,ty){const ix=Math.floor(tx),iy=Math.floor(ty);if(ix<0||iy<0||ix>=FR_SZ||iy>=FR_SZ)return true;const t=FR_MAP[iy][ix];return t>=3&&t!==11;}
 
 function startPasseio(){
   stopMenuAnimation();
@@ -5762,6 +5805,8 @@ function startFreeRoam(){
   frJob = null;
   frClock = 0; frWeather = {rain:false, next:1800+Math.floor(Math.random()*1800)};
   applyHouse();
+  for(let y=PIER.y0;y<=PIER.y1;y++) FR_MAP[y][PIER.tx]=11;
+  frFish=null;
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('overlay').style.display='none';
   frPlayer={tx:14.5,ty:3.0,vx:0,vy:0,frame:0,frameT:0,facing:Math.PI/2};
@@ -5840,9 +5885,17 @@ function updateFreeRoam(){
   });
   if(frJob && frJob.type==='taxi') updateTaxiJob();
   if(frJob && frJob.type==='fire') updateFireJob();
+  if(frFish){
+    frFish.t++;
+    if(frFish.stage==='wait' && frFish.t>=frFish.biteAt){ frFish.stage='bite'; frFish.t=0; }
+    else if(frFish.stage==='bite' && frFish.t>50){ frFish={stage:'miss',t:0,text:'Escapou! Puxe mais rápido'}; }
+    else if((frFish.stage==='caught'||frFish.stage==='miss') && frFish.t>150) frFish=null;
+    if(frFish && (frFish.stage==='wait'||frFish.stage==='bite') && (keys['KeyW']||keys['KeyS']||keys['ArrowUp']||keys['ArrowDown'])) frFish=null;
+  }
 }
 
 function frGroundColor(t,tx,ty){
+  if(t===11) return '#C98B5B';
   if(t===9) return ty%2===0?'#5BC0FF':'#6CC8FF';
   if(t===2) return (tx+ty)%2===0?'#7ED957':'#8EDF68';
   if(t===1) return '#FFE9B8';
@@ -5881,7 +5934,7 @@ function drawFreeRoam(){
   const wrapX = frJob && frJob.type==='train';
   const wx = x => ((x%FR_SZ)+FR_SZ)%FR_SZ;
   const tileAt=(x,y)=>(y<0||y>=FR_SZ||(!wrapX&&(x<0||x>=FR_SZ)))?-1:FR_MAP[y][wrapX?wx(x):x];
-  const cat=t=>t===0?'r':t===1?'s':t===2?'g':t===9?'o':t<0?'x':'b';
+  const cat=t=>t===0?'r':t===1?'s':t===2?'g':t===9?'o':t===11?'p':t<0?'x':'b';
 
   // CÉU (dia, noite e chuva)
   const night=frNight(), rain=frWeather.rain;
@@ -5921,7 +5974,7 @@ function drawFreeRoam(){
   draws.forEach(({tx,ty,tile,dist})=>{
     const fog=Math.min(.6,dist/240);
     const pa=proj(tx,ty,0),pb=proj(tx+1,ty,0),pc=proj(tx+1,ty+1,0),pd=proj(tx,ty+1,0);
-    if(tile<3||tile===9){
+    if(tile<3||tile===9||tile===11){
       if(!pa||!pb||!pc||!pd) return;
       const xs=[pa.x,pb.x,pc.x,pd.x],ys=[pa.y,pb.y,pc.y,pd.y];
       if(Math.min(...xs)>W+30||Math.max(...xs)<-30||Math.min(...ys)>H+10)return;
@@ -5929,6 +5982,10 @@ function drawFreeRoam(){
       if(tile===9){ // ondas
         const w0=proj(tx+.2,ty+.5,0),w1=proj(tx+.8,ty+.5,0);
         if(w0&&w1){ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=lw(w0);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(w0.x,w0.y);ctx.lineTo(w1.x,w1.y);ctx.stroke();}
+      }
+      if(tile===11){ // tábuas do píer
+        ctx.strokeStyle='#B37548'; ctx.lineWidth=Math.max(1,lw(pa)*.6);
+        for(let k=1;k<4;k++){ const a=proj(tx,ty+k/4,.004), b2=proj(tx+1,ty+k/4,.004); if(a&&b2){ ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b2.x,b2.y); ctx.stroke(); } }
       }
       if(tile===2 && ty===8){ // trilhos do trem
         for(let sx2=tx+.1;sx2<tx+1;sx2+=.33){
@@ -6048,6 +6105,17 @@ function drawFreeRoam(){
     }
   });
 
+  if(!frJob){
+    const sp=proj(PIER.tx+.5,PIER.y0+.1,.9), sb=proj(PIER.tx+.5,PIER.y0+.1,.05);
+    if(sp&&sb&&sp.d<14){
+      ctx.strokeStyle=INK; ctx.lineWidth=Math.max(1.5,lw(sb)); ctx.beginPath(); ctx.moveTo(sb.x,sb.y); ctx.lineTo(sp.x,sp.y); ctx.stroke();
+      hudFont(900,Math.max(12,Math.min(18,sp.sc*.05)));
+      const tw=ctx.measureText('Píer de pesca').width+18, th=Math.max(20,Math.min(28,sp.sc*.07));
+      ctx.fillStyle='#C98B5B'; roundRect(ctx,sp.x-tw/2,sp.y-th,tw,th,th/2,true,true);
+      ctx.fillStyle='#FFFFFF'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('Píer de pesca',sp.x,sp.y-th/2+1);
+    }
+  }
+
   const treeList = wrapX ? [-1,0,1].flatMap(k=>FR_TREES.map(([x,y])=>[x+FR_SZ*(Math.floor(camX/FR_SZ)+k),y])) : FR_TREES;
   treeList.forEach(([tx,ty])=>{
     if(Math.abs(ty+0.5-TRAIN_Y)<0.7) return;
@@ -6146,6 +6214,22 @@ function drawFreeRoam(){
     }
     ctx.fillStyle='#FFFFFF';
     for(let i=0;i<8;i++){ const a=(i*0.8+T)%6.28; ctx.beginPath(); ctx.arc(tx2+Math.cos(a)*14,ty2+Math.sin(a)*8,3,0,Math.PI*2); ctx.fill(); }
+  }
+
+  // PESCARIA
+  if(frFish && (frFish.stage==='wait'||frFish.stage==='bite')){
+    const bxw=frPlayer.tx+Math.cos(frPlayer.facing)*1.6, byw=frPlayer.ty+Math.sin(frPlayer.facing)*1.6;
+    const dip = frFish.stage==='bite' ? -0.06 : Math.sin(frFish.t*0.12)*0.02;
+    const bp=proj(bxw,byw,0.02+dip);
+    if(bp){
+      ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(W/2+46,H-130); ctx.quadraticCurveTo((W/2+46+bp.x)/2,H-200,bp.x,bp.y); ctx.stroke();
+      ctx.strokeStyle='#7A4A2E'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(W/2+10,H-40); ctx.lineTo(W/2+46,H-130); ctx.stroke();
+      const r=Math.max(5,bp.sc*0.06);
+      if(frFish.stage==='bite'){ ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=2; for(let k=1;k<=2;k++){ ctx.beginPath(); ctx.ellipse(bp.x,bp.y,r*(1.5+k+frFish.t*0.04),r*(0.5+k*.3),0,0,Math.PI*2); ctx.stroke(); } }
+      ctx.fillStyle='#FF6B6B'; ctx.strokeStyle=INK; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(bp.x,bp.y,r,Math.PI,0); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#FFFFFF'; ctx.beginPath(); ctx.arc(bp.x,bp.y,r,0,Math.PI); ctx.fill(); ctx.stroke();
+    }
   }
 
   // NOITE, CHUVA E FARÓIS
@@ -6280,6 +6364,31 @@ function drawFreeRoam(){
     }
   }
 
+  // HUD — pescaria
+  if(!frJob && (atPierEnd() || frFish)){
+    let txt, bg='#FFF8E7';
+    if(!frFish) txt='Aperte F para pescar';
+    else if(frFish.stage==='wait') txt='Esperando o peixe morder...';
+    else if(frFish.stage==='bite'){ txt='PUXE! Aperte F agora!'; bg='#FFD23F'; }
+    else if(frFish.stage==='miss'){ txt=frFish.text; bg='#FFB3B3'; }
+    if(frFish && frFish.stage==='caught'){
+      const f=frFish.fish, cw=320, cx5=W/2-cw/2+40;
+      ctx.fillStyle=INK; roundRect(ctx,cx5,66,cw,96,22,true,false);
+      ctx.fillStyle=f.id==='bota'?'#E4E2EE':'#7ED957'; ctx.strokeStyle=INK; ctx.lineWidth=3; roundRect(ctx,cx5,60,cw,96,22,true,true);
+      ctx.fillStyle='#FFFFFF'; roundRect(ctx,cx5+14,72,72,72,18,true,true);
+      drawFishIcon(ctx,cx5+48,108,f,1.1);
+      ctx.fillStyle=INK; ctx.textAlign='left'; ctx.textBaseline='middle';
+      hudFont(800,13); ctx.fillText(frFish.first?'Novo na coleção!':'Você pescou:',cx5+100,86);
+      hudFont(700,20,'d'); ctx.fillText(f.name,cx5+100,110);
+      hudFont(900,13); ctx.fillText(f.val?`+${f.val} moedas`:'Nada de moedas...',cx5+100,134);
+    } else if(txt){
+      hudFont(900,15); const pw2=ctx.measureText(txt).width+40;
+      hudPill(W/2-pw2/2+40,62,pw2,38,bg);
+      if(!frFish){ frKeycap(W/2-pw2/2+48,67,'F'); }
+      ctx.fillStyle=INK; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(txt,W/2+40+(frFish?0:12),82);
+    }
+  }
+
   // HUD — teclas
   if(frJob){
     const hints = frJob.type==='fire' ? [['W A S D','dirigir'],['Espaço','água'],['Esc','sair']] : frJob.type==='taxi' ? [['W A S D','dirigir'],['Esc','sair']] : [['W','acelerar'],['S','frear'],['A D','virar'],['Esc','sair']];
@@ -6319,7 +6428,7 @@ function drawFreeRoam(){
   for(let y=0;y<FR_SZ;y++)for(let x=mmx0;x<mmx1;x++){
     if(Math.abs(x+.5-frPlayer.tx)>8||Math.abs(y+.5-frPlayer.ty)>8) continue;
     const t=FR_MAP[y][wrapX?wx(x):x];
-    ctx.fillStyle=t>=3&&t!==9?FR_BLDG[t].d:frGroundColor(t,x,y);
+    ctx.fillStyle=FR_BLDG[t]?FR_BLDG[t].d:frGroundColor(t,x,y);
     ctx.fillRect(mx0+x*MS,my0+y*MS,MS+.5,MS+.5);
   }
   frCars.forEach(c=>{ctx.fillStyle=c.color;ctx.strokeStyle=INK;ctx.lineWidth=1;ctx.beginPath();ctx.arc(mx0+c.tx*MS,my0+c.ty*MS,2.5,0,Math.PI*2);ctx.fill();ctx.stroke();});
