@@ -163,6 +163,54 @@
   .skin-card:hover{transform:translateY(-2px);}
   .skin-card.selected{background:var(--sun);border-width:var(--stroke-strong);}
 
+  /* ── CENA 800x450 (menu e mapa) ── */
+  .scene{position:relative;width:800px;height:450px;color:var(--ink);font-family:var(--font-ui);}
+  .scene-bg{position:absolute;inset:0;overflow:visible;pointer-events:none;}
+  .scene button{font-family:var(--font-ui);color:var(--ink);}
+  .chip{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px 0 6px;background:var(--white);
+    border:var(--stroke) solid var(--ink);border-radius:var(--radius-pill);box-shadow:var(--shadow-1);
+    font:900 16px var(--font-ui);color:var(--ink);white-space:nowrap;}
+  button.chip{cursor:pointer;transition:transform var(--t-fast) var(--spring);}
+  button.chip:hover{transform:translateY(-3px) scale(1.03);}
+  .chip-dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--ink);display:inline-flex;align-items:center;
+    justify-content:center;font:700 15px var(--font-display);flex-shrink:0;}
+  .round-btn{width:50px;height:50px;border-radius:50%;background:var(--white);border:var(--stroke) solid var(--ink);
+    box-shadow:var(--shadow-1);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
+    transition:transform var(--t-fast) var(--spring);}
+  .round-btn:hover{transform:translateY(-3px) scale(1.04);}
+  .logo{position:absolute;left:60px;top:92px;display:flex;flex-direction:column;gap:6px;transform:rotate(-4deg);pointer-events:none;}
+  .logo span{font:700 76px/.9 var(--font-display);-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:0 6px 0 var(--ink);}
+  .menu-col{position:absolute;right:48px;top:100px;width:280px;display:flex;flex-direction:column;gap:14px;}
+  .menu-col .btn,.menu-col .btn.sec{width:100%;gap:10px;}
+  .menu-col .btn{height:68px;font-size:30px;box-shadow:var(--shadow-3);}
+  .menu-col .btn.sec{height:52px;font-size:21px;box-shadow:var(--shadow-2);}
+  .btn-locked{height:46px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#E6F6FF;
+    border:var(--stroke) dashed var(--ink);border-radius:var(--radius-pill);font:800 15px var(--font-ui);color:var(--ink);cursor:not-allowed;}
+  .shortcuts{position:absolute;right:30px;bottom:18px;display:flex;gap:14px;}
+  .ico{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;padding:0;cursor:pointer;
+    font:900 12px var(--font-ui);color:var(--ink);transition:transform .2s var(--spring);}
+  .ico:hover{transform:translateY(-4px) rotate(-6deg);}
+  .ico-box{position:relative;width:52px;height:52px;border-radius:18px;border:var(--stroke) solid var(--ink);box-shadow:var(--shadow-1);
+    display:flex;align-items:center;justify-content:center;}
+  .ico-lbl{background:var(--white);border-radius:var(--radius-pill);padding:1px 8px;}
+  .badge{position:absolute;top:-8px;right:-8px;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--coral);
+    border:2px solid var(--ink);font:900 12px/18px var(--font-ui);color:var(--ink);text-align:center;}
+  .topbar{position:absolute;top:16px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:center;}
+  .node{position:absolute;border-radius:50%;border:var(--stroke-strong) solid var(--ink);display:flex;align-items:center;justify-content:center;
+    font:700 28px var(--font-display);color:var(--ink);padding:0;transition:transform var(--t-fast) var(--spring);}
+  .node:not([disabled]){cursor:pointer;}
+  .node:not([disabled]):hover{transform:translateY(-3px) scale(1.06);}
+  .node[disabled]{cursor:not-allowed;}
+  .balloon{display:flex;flex-direction:column;align-items:center;gap:4px;animation:bob 1.4s ease-in-out infinite;pointer-events:none;}
+  .balloon b{background:var(--ink);color:var(--white);font:900 12px var(--font-ui);padding:4px 10px;border-radius:999px;white-space:nowrap;}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .dock{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;padding:8px 14px;background:var(--white);
+    border:var(--stroke) solid var(--ink);border-radius:26px;box-shadow:var(--shadow-2);}
+  .dock button{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px 0 6px;border:var(--stroke) solid var(--ink);
+    border-radius:var(--radius-pill);font:900 14px var(--font-ui);cursor:pointer;white-space:nowrap;transition:transform var(--t-fast) var(--spring);}
+  .dock button:hover{transform:translateY(-3px) scale(1.04);}
+  .dock .chip-dot{background:var(--white);}
+
   /* ── MOBILE D-PAD (HTML buttons, not canvas) ── */
   #mobileControls{
     display:none;position:absolute;bottom:0;left:0;right:0;
@@ -251,7 +299,8 @@
       card.style.transform='none';
       const w=card.offsetWidth, h=card.offsetHeight;
       if(!w||!h)return;
-      const s=Math.min(base, (vw*0.96)/w, (vh*0.96)/h);
+      const pad=card.classList.contains('scene')?1:0.96;
+      const s=Math.min(base, (vw*pad)/w, (vh*pad)/h);
       card.style.transform='scale('+s+')';
     });
   }
@@ -1223,33 +1272,92 @@ function setLanguage(lang){
   renderMainMenu();
 }
 
+function svgIcon(d,size=24,fill=false){
+  return `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill?'#2B2A4C':'none'}" stroke="${fill?'none':'#2B2A4C'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+}
+const ICONS={
+  play:'M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z',
+  city:'M3 21h18M5 21V9l5-3v15M14 21V4l5 3v14',
+  lock:'M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3',
+  user:'M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21c1-4 4-6 8-6s7 2 8 6',
+  gear:'M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+  help:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17.5v.01',
+  globe:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.6 3.5 5.6 3.5 9s-1 6.4-3.5 9c-2.5-2.6-3.5-5.6-3.5-9s1-6.4 3.5-9z',
+  trophy:'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3M12 13v4M9 20h6',
+  star:'M12 3l2.8 5.8 6.2.9-4.5 4.3 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.7l6.2-.9z',
+  book:'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5M9 8h6',
+  back:'M15 5l-7 7 7 7',
+  bag:'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2',
+  shirt:'M8 4l4 3 4-3 4 4-3 3v9H7v-9L4 8z',
+  album:'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5',
+  home:'M3 11l9-7 9 7v9H3zM10 20v-5h4v5',
+  music:'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z'
+};
+function coinChip(){
+  return `<div class="chip"><span class="chip-dot" style="background:var(--sun)">$</span>${totalCoins}</div>`;
+}
+
 function renderMainMenu(){
   setHudButtonTitles();
   const ov = document.getElementById('overlay');
   ov.classList.remove('win-mode');
   ov.style.display = 'flex';
-  const nameDisplay = playerName ? `<p class="sub">${playerName}</p>` : `<button class="btn sec" onclick="askPlayerName()">Seu nome</button>`;
-  ov.innerHTML = `<div class="ocard" id="menuCard">
-    <h1>DinoGame</h1>
-    <div class="divider"></div>
-    ${nameDisplay}
-    <p class="sub">${tr('tagline')}</p>
-    <canvas id="menuDinoAnim" width="300" height="54" style="border-radius:8px;background:rgba(255,255,255,0.4);border:3px solid var(--ink);"></canvas>
-    <button class="btn" onclick="showCharSelect()">${tr('play')}</button>
-    <button class="btn sec" onclick="startFreeRoam()">Jogo Livre</button>
-    ${totalCoins >= 700 ? `<button class="btn sec" onclick="renderPhaseCreator()">Criar Fase</button>` : ''}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
-      <button class="btn sec" onclick="showHowToPlay()">Como Jogar</button>
-      <button class="btn sec" onclick="renderOnlineLocal()">Online Local</button>
-      <button class="btn sec" onclick="showLeaderboard()">Recordes</button>
-      <button class="btn sec" onclick="showLanguageSelect()">${tr('language')}</button>
-      <button class="btn sec" onclick="renderAchievements()">Conquistas${unlockedAchievements.size?` (${unlockedAchievements.size})`:''}</button>
-      <button class="btn sec" onclick="renderDiary()">Diário</button>
+  const canCreate = totalCoins >= 700;
+  const shortcuts = [
+    {label:'Como jogar', bg:'#FFFFFF', d:ICONS.help,   fn:'showHowToPlay()'},
+    {label:'Online',     bg:'#5BC0FF', d:ICONS.globe,  fn:'renderOnlineLocal()'},
+    {label:'Recordes',   bg:'#FFD23F', d:ICONS.trophy, fn:'showLeaderboard()'},
+    {label:'Conquistas', bg:'#FF9F6B', d:ICONS.star,   fn:'renderAchievements()', badge:unlockedAchievements.size},
+    {label:'Diário',     bg:'#B18CFF', d:ICONS.book,   fn:'renderDiary()'}
+  ].map(s=>`<button class="ico" onclick="${s.fn}"><span class="ico-box" style="background:${s.bg}">${svgIcon(s.d,26)}${s.badge?`<span class="badge">${s.badge}</span>`:''}</span><span class="ico-lbl">${s.label}</span></button>`).join('');
+  ov.innerHTML = `<div class="scene" id="menuCard">
+    <svg class="scene-bg" viewBox="0 0 800 450" aria-hidden="true">
+      <circle cx="690" cy="70" r="38" fill="#FFE27A"/>
+      <g fill="#FFFFFF"><circle cx="120" cy="80" r="22"/><circle cx="148" cy="70" r="28"/><circle cx="178" cy="84" r="20"/><rect x="110" y="84" width="80" height="20" rx="10"/></g>
+      <g fill="#FFFFFF" opacity=".85"><circle cx="520" cy="120" r="16"/><circle cx="540" cy="110" r="22"/><circle cx="562" cy="122" r="15"/><rect x="512" y="122" width="62" height="14" rx="7"/></g>
+      <rect x="-2000" y="440" width="4800" height="2000" fill="#4DB85C"/>
+      <ellipse cx="160" cy="470" rx="320" ry="130" fill="#5CC96B"/>
+      <ellipse cx="660" cy="490" rx="330" ry="140" fill="#7ED957"/>
+      <ellipse cx="400" cy="520" rx="460" ry="120" fill="#4DB85C"/>
+    </svg>
+    <canvas id="menuDinoAnim" width="200" height="140" style="position:absolute;left:40px;top:270px;"></canvas>
+    <div class="topbar">
+      <button class="chip" onclick="askPlayerName()"><span class="chip-dot" style="background:var(--grass)">${svgIcon(ICONS.user,16)}</span>${playerName||'Seu nome'}</button>
+      <div style="display:flex;gap:10px;align-items:center">
+        ${coinChip()}
+        <button class="round-btn" aria-label="Idioma e som" onclick="renderSettings()">${svgIcon(ICONS.gear,24)}</button>
+      </div>
     </div>
-    <p class="credits">${tr('creditsText')}</p>
+    <div class="logo"><span style="color:var(--grass)">Dino</span><span style="color:var(--sun);margin-left:44px">Game</span></div>
+    <div class="menu-col">
+      <button class="btn" onclick="showCharSelect()">${svgIcon(ICONS.play,26,true)}${tr('play')}</button>
+      <button class="btn sec" onclick="startFreeRoam()">${svgIcon(ICONS.city,22)}Jogo Livre</button>
+      ${canCreate
+        ? `<button class="btn sec" onclick="renderPhaseCreator()">Criar Fase</button>`
+        : `<button class="btn-locked" disabled>${svgIcon(ICONS.lock,18)}Criar Fase · 700 moedas</button>`}
+    </div>
+    <div class="shortcuts">${shortcuts}</div>
   </div>`;
   state = 'menu';
   setTimeout(startMenuAnimation, 50);
+}
+
+function renderSettings(){
+  const ov = document.getElementById('overlay');
+  ov.style.display = 'flex';
+  ov.innerHTML = `<div class="ocard">
+    <h2>Configurações</h2>
+    <div class="divider"></div>
+    <p class="sub" style="font-weight:900;color:var(--ink)">${tr('language')}</p>
+    <div class="lang-row">
+      ${[['pt','Português'],['en','English'],['es','Español']].map(([k,n])=>`<button class="lang-btn" style="${currentLang===k?'background:var(--sun)':''}" onclick="setLanguage('${k}')">${n}</button>`).join('')}
+    </div>
+    <p class="sub" style="font-weight:900;color:var(--ink)">Música</p>
+    <button class="lang-btn" id="settingsMusic" onclick="toggleMute();renderSettings()">${svgIcon(ICONS.music,18)}&nbsp;${bgmMuted?'Desligada':'Ligada'}</button>
+    <div class="divider"></div>
+    <p class="credits">${tr('creditsText')}</p>
+    <button class="btn sec" onclick="renderMainMenu()">← ${tr('back')}</button>
+  </div>`;
 }
 
 function askPlayerName(){
@@ -1467,36 +1575,46 @@ function renderWorldMap(){
   ov.classList.remove('win-mode');
   ov.style.display='flex';
   const places = trArray('placeNames');
+  const spots = [[152,332],[360,291],[560,299],[660,251]];
+  let balloon = '';
   const nodes = places.map((name,idx)=>{
     const p = idx+1;
-    const locked = p > phase;
-    const isCurrent = p === phase;
-    const completed = p < phase;
-    let style='', icon='', sub='';
-    if(locked){
-      style='background:#EDEBF5;border-style:dashed;box-shadow:none;cursor:not-allowed;color:var(--ink-soft);';
-      icon=''; sub=tr('locked');
-    } else if(isCurrent){
-      style='background:var(--sun);border-width:4px;box-shadow:var(--shadow-2);';
-      icon=''; sub=`<span style="font-weight:900">VOCÊ ESTÁ AQUI</span>`;
-    } else {
-      style='background:#E8F9DF;';
-      icon=''; sub=name;
-    }
-    return `<button class="map-node" style="${style}" ${locked?'disabled':'onclick="launchPhase('+p+')"'}>`+
-      `<b style="font-size:15px">${tr('phaseHud')} ${p}</b><br>${sub}</button>`;
+    const [cx,cy] = spots[idx] || spots[spots.length-1];
+    const locked = p > phase, isCurrent = p === phase;
+    const size = isCurrent ? 72 : locked ? 58 : 64;
+    const bg = isCurrent ? 'var(--sun)' : locked ? 'var(--white)' : 'var(--grass)';
+    const shadow = isCurrent ? '0 6px 0 var(--ink)' : '0 5px 0 var(--ink)';
+    if(isCurrent) balloon = `<div style="position:absolute;left:${cx}px;top:${cy-size/2-44}px;transform:translateX(-50%);pointer-events:none"><div class="balloon"><b>Você está aqui</b><svg width="14" height="8" viewBox="0 0 14 8" aria-hidden="true"><path d="M0 0h14L7 8z" fill="#2B2A4C"/></svg></div></div>`;
+    const label = `${tr('phaseHud')} ${p} · ${name}${locked?' · '+tr('locked'):''}`;
+    return `<button class="node" title="${label}" aria-label="${label}" style="left:${cx-size/2}px;top:${cy-size/2}px;width:${size}px;height:${size}px;background:${bg};box-shadow:${shadow};font-size:${isCurrent?32:26}px" ${locked?'disabled':'onclick="launchPhase('+p+')"'}>${locked?`<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B6A8A" stroke-width="2.8" stroke-linecap="round"><path d="${ICONS.lock}"/></svg>`:p}</button>`;
   }).join('');
-  ov.innerHTML = `<div class="ocard">
-    <h2>${isSecretPhase ? 'Fase Secreta' : tr('worldMap')}</h2>
-    <p class="sub">${tr('coins')}: ${totalCoins} · ${tr('petLevel')}: ${petLevel}</p>
-    <div class="map-grid">${nodes}</div>
-    <div class="shop-row">
-      <button class="btn sec" onclick="renderShop()">${tr('shop')}</button>
-      <button class="btn sec" onclick="renderWardrobe()">${tr('wardrobe')}</button>
-      <button class="btn sec" onclick="renderAlbum()">${tr('album')}</button>
-      <button class="btn sec" onclick="renderBase()">Base</button>
+  const dock = [
+    {label:tr('shop'),     bg:'#FFD23F', d:ICONS.bag,   fn:'renderShop()'},
+    {label:tr('wardrobe'), bg:'#B18CFF', d:ICONS.shirt, fn:'renderWardrobe()'},
+    {label:tr('album'),    bg:'#5BC0FF', d:ICONS.album, fn:'renderAlbum()'},
+    {label:'Base',         bg:'#FF9F6B', d:ICONS.home,  fn:'renderBase()'}
+  ].map(d=>`<button style="background:${d.bg}" onclick="${d.fn}"><span class="chip-dot">${svgIcon(d.d,18)}</span>${d.label}</button>`).join('');
+  ov.innerHTML = `<div class="scene">
+    <svg class="scene-bg" viewBox="0 0 800 450" aria-hidden="true">
+      <g fill="#FFFFFF" opacity=".9"><circle cx="90" cy="110" r="16"/><circle cx="112" cy="100" r="22"/><circle cx="136" cy="112" r="15"/><rect x="80" y="112" width="64" height="14" rx="7"/></g>
+      <g fill="#FFFFFF" opacity=".9"><circle cx="660" cy="100" r="14"/><circle cx="680" cy="92" r="20"/><circle cx="702" cy="102" r="13"/><rect x="650" y="102" width="62" height="12" rx="6"/></g>
+      <path d="M40 340 Q60 170 220 160 Q420 120 560 170 Q760 200 760 340 Q740 420 400 425 Q60 430 40 340 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5"/>
+      <path d="M70 350 Q90 210 230 200 Q420 170 550 210 Q720 240 730 345 Q700 400 400 405 Q90 408 70 350 Z" fill="#9BE66F"/>
+      <path d="M152 332 C210 250 280 360 360 291 S 500 220 560 299 S 640 330 660 251" fill="none" stroke="#FFF3C4" stroke-width="18" stroke-linecap="round"/>
+      <path d="M152 332 C210 250 280 360 360 291 S 500 220 560 299 S 640 330 660 251" fill="none" stroke="#E8C66A" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 14"/>
+      <g fill="#4DB85C" stroke="#2B2A4C" stroke-width="3"><circle cx="250" cy="230" r="16"/><circle cx="470" cy="360" r="18"/><circle cx="620" cy="380" r="14"/><circle cx="110" cy="280" r="14"/></g>
+    </svg>
+    <div class="topbar">
+      <button class="round-btn" aria-label="${tr('back')}" onclick="showCharSelect()">${svgIcon(ICONS.back,24)}</button>
+      <div style="height:48px;padding:0 26px;display:flex;align-items:center;background:var(--sun);border:3px solid var(--ink);border-radius:999px;box-shadow:var(--shadow-1);font:700 24px var(--font-display)">${isSecretPhase ? 'Fase Secreta' : tr('worldMap')}</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="chip" style="padding:0 16px">${tr('petLevel')} ${petLevel}</div>
+        ${coinChip()}
+      </div>
     </div>
-    <button class="btn sec" onclick="showCharSelect()">← ${tr('back')}</button>
+    ${nodes}
+    ${balloon}
+    <div class="dock">${dock}</div>
   </div>`;
 }
 
@@ -5282,10 +5400,9 @@ function startMenuAnimation(){
     const c = cvs.getContext('2d');
     c.clearRect(0,0,cvs.width,cvs.height);
     menuAnimTick++;
-    c.fillStyle='rgba(78,205,196,0.12)';
-    c.fillRect(0, cvs.height-6, cvs.width, 2);
-    const x = (menuAnimTick * 1.4) % (cvs.width + 80) - 40;
-    if(typeof drawDinoOn === 'function') drawDinoOn(c, x, cvs.height-6, menuAnimTick, false, 0.72);
+    c.fillStyle='rgba(43,42,76,.16)';
+    c.beginPath(); c.ellipse(90, cvs.height-8, 46, 6, 0, 0, Math.PI*2); c.fill();
+    if(typeof drawDinoOn === 'function') drawDinoOn(c, 40, cvs.height-8, 0, false, 1.5);
     menuAnimRAF = requestAnimationFrame(step);
   }
   step();
