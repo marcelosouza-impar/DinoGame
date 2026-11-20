@@ -5363,7 +5363,20 @@ const FURNITURE = [
   {id:'tapete', name:'Tapete', w:2, d:2, aw:160, rug:true, art:(c)=>{ c.beginPath(); c.ellipse(80,-8,80,10,0,0,Math.PI*2); c.fillStyle='#B18CFF'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.stroke(); c.beginPath(); c.ellipse(80,-8,52,6,0,0,Math.PI*2); c.strokeStyle='#FFFFFF'; c.lineWidth=2; c.stroke(); }},
 ];
 let houseData=null, houseSel=0, houseRot=0, houseUndo=[], houseButtons=[], hp={x:2.5,y:8.5,facing:-Math.PI/2,frame:0,moving:false}, houseMsg=null;
-function loadHouseData(){ try{ const d=JSON.parse(localStorage.getItem('dinogame_house3d')||'null'); if(d&&d.items) return d; }catch(e){} return {items:[],wall:0,floor:0}; }
+const HOUSE_DEFAULT_ITEMS=[
+  {id:'estante',tx:1,ty:1},{id:'tv',tx:3,ty:1},{id:'planta',tx:6,ty:1},
+  {id:'sofa',tx:2,ty:3},{id:'tapete',tx:2,ty:4},{id:'luminaria',tx:1,ty:3},{id:'aquario',tx:5,ty:3},
+  {id:'mesa',tx:4,ty:7},{id:'cadeira',tx:5,ty:7},{id:'geladeira',tx:6,ty:9},
+  {id:'estante',tx:8,ty:1},{id:'luminaria',tx:10,ty:1},{id:'cama',tx:11,ty:1},{id:'planta',tx:12,ty:1},
+  {id:'tapete',tx:9,ty:6},{id:'bau',tx:12,ty:9},{id:'aquario',tx:12,ty:5}
+];
+function loadHouseData(){
+  let d=null;
+  try{ d=JSON.parse(localStorage.getItem('dinogame_house3d')||'null'); }catch(e){}
+  if(!d||!d.items) d={items:[],wall:0,floor:0};
+  if(!d.items.length) d.items=HOUSE_DEFAULT_ITEMS.map(o=>({...o,r:0}));
+  return d;
+}
 function saveHouseData(){ localStorage.setItem('dinogame_house3d',JSON.stringify(houseData)); }
 function nearHouseDoor(){ return loadCareer().house && !frDriving && !frJob && Math.hypot(frPlayer.tx-(HOUSE_SPOT.tx+1),frPlayer.ty-(HOUSE_SPOT.ty-.4))<1.6; }
 function itemFoot(o){ const f=FURNITURE.find(x=>x.id===o.id); return o.r ? [f.d,f.w] : [f.w,f.d]; }
