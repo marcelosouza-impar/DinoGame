@@ -5495,7 +5495,27 @@ let frNPCs=[],frCoins=[],frCoinCount=0,frTotalCoins=0;
 let frCars=[],frDriving=null;
 let frJob=null;
 const TRAIN_Y=8.5;
-const TRAIN_STATIONS=[{x:3.5,name:'Estação Centro'},{x:15,name:'Estação Floresta'},{x:26.5,name:'Estação Praia'}];
+const ST_NAMES=['Centro','Floresta','Praia','Lago','Colina','Vale','Pedras','Ninho'];
+const ST_GAP=10;
+function stationAt(k){ return {k, x:k*ST_GAP+5, name:'Estação '+ST_NAMES[((k%ST_NAMES.length)+ST_NAMES.length)%ST_NAMES.length]}; }
+function stationsNear(x,range){
+  const out=[]; for(let k=Math.floor((x-range)/ST_GAP);k<=Math.ceil((x+range)/ST_GAP);k++) out.push(stationAt(k));
+  return out;
+}
+function stationWaiting(k){
+  const w=frJob.waiting;
+  if(!(k in w) || (w[k]===0 && frJob.frames>=(frJob.refill[k]||0))) w[k]=1+Math.floor(Math.random()*3);
+  return w[k];
+}
+const BLDG_NAMES={3:'azul',4:'vermelho',5:'verde',6:'laranja',7:'roxo',8:'amarelo'};
+function placeName(p){
+  const tx=Math.floor(p.x), ty=Math.floor(p.y);
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const t=(FR_MAP[ty+dy]||[])[tx+dx];
+    if(BLDG_NAMES[t]) return 'no prédio '+BLDG_NAMES[t];
+  }
+  return 'na calçada';
+}
 function loadCareer(){ try{ return Object.assign({earned:0,taxiRides:0,trainStops:0}, JSON.parse(localStorage.getItem('dinogame_career')||'{}')); }catch(e){ return {earned:0,taxiRides:0,trainStops:0}; } }
 function jobPay(n,label){
   totalCoins+=n; frJob.earned+=n; saveProgress();
@@ -5548,65 +5568,91 @@ function startJob(type){
     const taxi={tx:14.5,ty:3.0,color:'#FFD23F',occupied:true,facing:0,taxi:true};
     frCars.push(taxi); frDriving=taxi;
     frPlayer.tx=taxi.tx; frPlayer.ty=taxi.ty; frPlayer.facing=0;
-    const ps=pickSpot(taxi.tx,taxi.ty,4);
-    frJob={type:'taxi',earned:0,frames:0,stage:'pickup',pass:ps,dest:null,start:0,msg:null};
-    jobMsg('Pegue o passageiro marcado!',true);
+    frJob={type:'taxi',earned:0,frames:0,stage:'free',offerAt:240,offerUntil:0,pass:null,dest:null,start:0,msg:null};
+    jobMsg('Passeie pela cidade e espere uma corrida',true);
   } else {
-    frJob={type:'train',earned:0,frames:0,train:{x:1.2,dir:1,speed:0},target:0,boarding:0,msg:null};
+    frJob={type:'train',earned:0,frames:0,train:{x:1.2,dir:1,speed:0},boarding:0,riders:[],waiting:{},refill:{},lastStop:null,msg:null};
     frPlayer.tx=1.2; frPlayer.ty=TRAIN_Y; frPlayer.facing=0;
-    jobMsg('Acelere com W e pare na estação!',true);
+    jobMsg('W acelera, S freia, A/D vira o trem',true);
   }
 }
-function trainNextTarget(){
+function trainStationHere(){
   const t=frJob.train;
-  let cands=TRAIN_STATIONS.map((st,i)=>({st,i})).filter(o=>(o.st.x-t.x)*t.dir>0.9);
-  if(!cands.length){ t.dir*=-1; cands=TRAIN_STATIONS.map((st,i)=>({st,i})).filter(o=>(o.st.x-t.x)*t.dir>0.9); }
-  cands.sort((a,b)=>Math.abs(a.st.x-t.x)-Math.abs(b.st.x-t.x));
-  frJob.target=cands.length?cands[0].i:0;
+  return stationsNear(t.x,ST_GAP).find(st=>Math.abs(st.x-t.x)<1.0) || null;
 }
 function updateTrainJob(){
   const t=frJob.train;
   if(frJob.boarding>0){
     t.speed=0; frJob.boarding--;
     if(frJob.boarding===0){
-      const off=Math.abs(TRAIN_STATIONS[frJob.target].x-t.x);
-      if(off<0.3) jobPay(7,'Parada perfeita!'); else jobPay(4,'Passageiros embarcaram!');
-      trainNextTarget();
+      const st=trainStationHere(); if(!st) return;
+      const perfect=Math.abs(st.x-t.x)<0.3;
+      const off=frJob.riders.filter(r=>r.dest===st.k).length;
+      frJob.riders=frJob.riders.filter(r=>r.dest!==st.k);
+      const room=Math.max(0,12-frJob.riders.length);
+      const on=Math.min(room,stationWaiting(st.k));
+      for(let i=0;i<on;i++){
+        let d; do{ d=st.k+(Math.random()<.5?-1:1)*(1+Math.floor(Math.random()*3)); }while(d===st.k);
+        frJob.riders.push({dest:d});
+      }
+      frJob.waiting[st.k]-=on; if(frJob.waiting[st.k]===0) frJob.refill[st.k]=frJob.frames+1800;
+      const pay=off*5+(perfect&&off?2:0);
+      const parts=[]; if(on) parts.push(`${on} subiram`); if(off) parts.push(`${off} desceram`);
+      if(pay) jobPay(pay,(perfect?'Parada perfeita! ':'')+parts.join(' · '));
+      else jobMsg(parts.length?parts.join(' · '):'Ninguém nesta estação',!!parts.length);
     }
   } else {
+    if((keys['KeyA']||keys['ArrowLeft']) && t.dir>0){ t.dir=-1; t.speed=0; }
+    if((keys['KeyD']||keys['ArrowRight']) && t.dir<0){ t.dir=1; t.speed=0; }
     if(keys['KeyW']||keys['ArrowUp']) t.speed=Math.min(0.14,t.speed+0.0025);
     else if(keys['KeyS']||keys['ArrowDown']) t.speed=Math.max(0,t.speed-0.006);
     else t.speed*=0.996;
     if(t.speed<0.0008) t.speed=0;
     t.x+=t.dir*t.speed;
-    if(t.x<0.8||t.x>FR_SZ-0.8){ t.x=Math.max(0.8,Math.min(FR_SZ-0.8,t.x)); t.speed=0; t.dir*=-1; jobMsg('Fim da linha, voltando',false); trainNextTarget(); }
-    const st=TRAIN_STATIONS[frJob.target];
-    const ahead=(st.x-t.x)*t.dir;
-    if(t.speed===0 && Math.abs(st.x-t.x)<0.9){ frJob.boarding=90; jobMsg('Passageiros subindo...',true); }
-    else if(ahead<-0.9){ jobMsg(`Passou da ${st.name}!`,false); trainNextTarget(); }
+    const st=trainStationHere();
+    if(!st) frJob.lastStop=null;
+    else if(t.speed===0 && frJob.lastStop!==st.k){ frJob.lastStop=st.k; frJob.boarding=70; jobMsg('Parando na '+st.name+'...',true); }
   }
   frPlayer.tx=t.x; frPlayer.ty=TRAIN_Y; frPlayer.facing=t.dir>0?0:Math.PI;
+}
+function trainTarget(){
+  const t=frJob.train;
+  if(frJob.riders.length){
+    const ks=[...new Set(frJob.riders.map(r=>r.dest))].map(stationAt);
+    ks.sort((a,b)=>Math.abs(a.x-t.x)-Math.abs(b.x-t.x));
+    return {st:ks[0], drop:true};
+  }
+  const ahead=stationsNear(t.x,ST_GAP*2).filter(st=>(st.x-t.x)*t.dir>-0.5).sort((a,b)=>Math.abs(a.x-t.x)-Math.abs(b.x-t.x));
+  return {st:ahead[0]||stationAt(0), drop:false};
 }
 function updateTaxiJob(){
   const car=frDriving; if(!car) return;
   frJob.frames++;
-  if(frJob.stage==='pickup'){
+  if(frJob.stage==='free' && frJob.frames>=frJob.offerAt){
+    frJob.pass=pickSpot(car.tx,car.ty,3);
+    frJob.stage='offer'; frJob.offerUntil=frJob.frames+600;
+  } else if(frJob.stage==='offer'){
+    if(keys['KeyE']) { frJob.stage='pickup'; jobMsg('Corrida aceita! Vá até o pino',true); }
+    else if(keys['KeyX'] || frJob.frames>=frJob.offerUntil){
+      frJob.stage='free'; frJob.pass=null; frJob.offerAt=frJob.frames+300+Math.floor(Math.random()*300);
+      jobMsg(keys['KeyX']?'Corrida recusada':'A corrida expirou',false);
+    }
+  } else if(frJob.stage==='pickup'){
     if(Math.hypot(car.tx-frJob.pass.x,car.ty-frJob.pass.y)<1.2){
       frJob.stage='drop'; frJob.start=frJob.frames;
       frJob.dest=pickSpot(frJob.pass.x,frJob.pass.y,8);
       frJob.tripDist=Math.hypot(frJob.dest.x-frJob.pass.x,frJob.dest.y-frJob.pass.y);
-      jobMsg('Passageiro a bordo! Siga o pino.',true);
+      jobMsg('Passageiro a bordo! Leve '+placeName(frJob.dest),true);
     }
-  } else if(Math.hypot(car.tx-frJob.dest.x,car.ty-frJob.dest.y)<1.2){
+  } else if(frJob.stage==='drop' && Math.hypot(car.tx-frJob.dest.x,car.ty-frJob.dest.y)<1.2){
     const time=frJob.frames-frJob.start, par=frJob.tripDist*80+180;
     const pay=5+Math.round(frJob.tripDist*0.6)+(time<par?3:0);
     jobPay(pay, time<par?'Corrida rápida!':'Corrida concluída!');
-    frJob.stage='pickup'; frJob.dest=null;
-    frJob.pass=pickSpot(car.tx,car.ty,4);
+    frJob.stage='free'; frJob.dest=null; frJob.pass=null;
+    frJob.offerAt=frJob.frames+240+Math.floor(Math.random()*360);
   }
 }
-let frZBuf=null;
-function frDarken(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return`rgb(${Math.round(r*.6)},${Math.round(g*.6)},${Math.round(b*.6)})`;}
+
 function frLighten(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return`rgb(${Math.min(255,Math.round(r*1.35))},${Math.min(255,Math.round(g*1.35))},${Math.min(255,Math.round(b*1.35))})`;}
 function frTileFloorColor(wx,wy){const tx=Math.floor(wx),ty=Math.floor(wy);if(tx<0||tx>=FR_SZ||ty<0||ty>=FR_SZ)return'#111';const t=FR_MAP[ty][tx];if(t===9)return'#0c4a6e';if(t===2)return'#1a3d1a';if(t===1)return'#2a2f3a';if(t===0)return'#1e1e1e';return'#111';}
 
@@ -5741,7 +5787,9 @@ function drawFreeRoam(){
   }
   const quad=(pts)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();};
   const lw=(p)=>Math.max(.6,Math.min(3.2,p.sc*.012));
-  const tileAt=(x,y)=>(x<0||y<0||x>=FR_SZ||y>=FR_SZ)?-1:FR_MAP[y][x];
+  const wrapX = frJob && frJob.type==='train';
+  const wx = x => ((x%FR_SZ)+FR_SZ)%FR_SZ;
+  const tileAt=(x,y)=>(y<0||y>=FR_SZ||(!wrapX&&(x<0||x>=FR_SZ)))?-1:FR_MAP[y][wrapX?wx(x):x];
   const cat=t=>t===0?'r':t===1?'s':t===2?'g':t===9?'o':t<0?'x':'b';
 
   // CÉU
@@ -5762,8 +5810,9 @@ function drawFreeRoam(){
 
   // CHÃO + PRÉDIOS — do mais longe para o mais perto
   const draws=[];
-  for(let ty=0;ty<FR_SZ;ty++)for(let tx=0;tx<FR_SZ;tx++){
-    const tile=FR_MAP[ty][tx];
+  const tx0 = wrapX ? Math.floor(camX)-16 : 0, tx1 = wrapX ? Math.floor(camX)+17 : FR_SZ;
+  for(let ty=0;ty<FR_SZ;ty++)for(let tx=tx0;tx<tx1;tx++){
+    const tile=FR_MAP[ty][wrapX?wx(tx):tx];
     const dist=(tx+0.5-camX)**2+(ty+0.5-camY)**2;
     if(dist<(tile===9?400:196))draws.push({tx,ty,tile,dist});
   }
@@ -5845,7 +5894,7 @@ function drawFreeRoam(){
 
   // ÁRVORES
   // ESTAÇÕES DE TREM
-  TRAIN_STATIONS.forEach(st=>{
+  stationsNear(camX,16).filter(st=>wrapX || (st.x>0 && st.x<FR_SZ)).forEach(st=>{
     const pts=[proj(st.x-1.2,TRAIN_Y+.36,.1),proj(st.x+1.2,TRAIN_Y+.36,.1),proj(st.x+1.2,TRAIN_Y+.9,.1),proj(st.x-1.2,TRAIN_Y+.9,.1)];
     if(pts.every(Boolean) && pts[0].d<16){
       ctx.fillStyle='#FFE9B8'; quad(pts); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=lw(pts[0]); ctx.stroke();
@@ -5859,10 +5908,22 @@ function drawFreeRoam(){
           ctx.fillStyle=INK; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(st.name,sp.x,sp.y-th/2+1);
         }
       }
+      if(frJob && frJob.type==='train'){
+        const n=stationWaiting(st.k);
+        for(let i=0;i<n;i++){
+          const pb=proj(st.x-0.6+i*0.45,TRAIN_Y+.7,.1), ph=proj(st.x-0.6+i*0.45,TRAIN_Y+.7,.55);
+          if(!pb||!ph) continue;
+          const h=pb.y-ph.y, w=h*.5;
+          ctx.fillStyle=['#B18CFF','#5BC0FF','#FF9F6B'][i%3]; ctx.strokeStyle=INK; ctx.lineWidth=Math.max(1,lw(pb)*.8);
+          roundRect(ctx,ph.x-w/2,ph.y+h*.38,w,h*.6,w*.3,true,true);
+          ctx.beginPath(); ctx.arc(ph.x,ph.y+h*.2,w*.42,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        }
+      }
     }
   });
 
-  FR_TREES.forEach(([tx,ty])=>{
+  const treeList = wrapX ? [-1,0,1].flatMap(k=>FR_TREES.map(([x,y])=>[x+FR_SZ*(Math.floor(camX/FR_SZ)+k),y])) : FR_TREES;
+  treeList.forEach(([tx,ty])=>{
     if(Math.abs(ty+0.5-TRAIN_Y)<0.7) return;
     const dist2=(tx+0.5-camX)**2+(ty+0.5-camY)**2;if(dist2>250)return;
     const p0=proj(tx+0.5,ty+0.5,0),p1=proj(tx+0.5,ty+0.5,0.28),p2=proj(tx+0.5,ty+0.5,0.62);
@@ -5932,9 +5993,10 @@ function drawFreeRoam(){
   // MARCADOR DO OBJETIVO
   let jobTarget=null;
   if(frJob){
-    jobTarget = frJob.type==='taxi' ? (frJob.stage==='pickup'?frJob.pass:frJob.dest) : {x:TRAIN_STATIONS[frJob.target].x, y:TRAIN_Y};
-    const col = frJob.type==='taxi' && frJob.stage==='drop' ? '#7ED957' : '#FF6B6B';
-    const g=proj(jobTarget.x,jobTarget.y,0.01), tp=proj(jobTarget.x,jobTarget.y,1.05+Math.sin(performance.now()/300)*.08);
+    if(frJob.type==='taxi') jobTarget = frJob.stage==='drop' ? frJob.dest : frJob.pass;
+    else { const tt=trainTarget(); jobTarget={x:tt.st.x,y:TRAIN_Y}; }
+    const col = frJob.type==='taxi' ? (frJob.stage==='drop'?'#7ED957':frJob.stage==='offer'?'#FFD23F':'#FF6B6B') : (trainTarget().drop?'#7ED957':'#FF6B6B');
+    const g=jobTarget&&proj(jobTarget.x,jobTarget.y,0.01), tp=jobTarget&&proj(jobTarget.x,jobTarget.y,1.05+Math.sin(performance.now()/300)*.08);
     if(g&&tp){
       ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,g.sc*.02);
       ctx.beginPath(); ctx.ellipse(g.x,g.y,g.sc*.45,g.sc*.12,0,0,Math.PI*2); ctx.stroke();
@@ -5983,11 +6045,33 @@ function drawFreeRoam(){
   ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(zone,zx+10+20+6,31);
 
   // HUD — objetivo do trabalho
-  if(frJob && jobTarget){
+  if(frJob && frJob.type==='taxi' && frJob.stage==='free'){
+    hudFont(900,15); const goal='Passeie pela cidade · aguarde uma corrida';
+    const gw=ctx.measureText(goal).width+32, gx=W/2-gw/2+40;
+    hudPill(gx,12,gw,40,'#FFF8E7'); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(goal,gx+16,33);
+  }
+  if(frJob && frJob.type==='taxi' && frJob.stage==='offer'){
+    const left=Math.max(0,(frJob.offerUntil-frJob.frames)/600);
+    const txt=`Nova corrida! Passageiro ${placeName(frJob.pass)}`;
+    hudFont(900,16); const cw=Math.max(ctx.measureText(txt).width+36,330), cx4=W/2-cw/2+40;
+    ctx.fillStyle=INK; roundRect(ctx,cx4,64,cw,92,22,true,false);
+    ctx.fillStyle='#FFD23F'; ctx.strokeStyle=INK; ctx.lineWidth=3; roundRect(ctx,cx4,58,cw,92,22,true,true);
+    ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(txt,cx4+cw/2,80);
+    let kx2=cx4+cw/2-140;
+    kx2+=frKeycap(kx2,96,'E')+6; hudFont(900,14); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText('aceitar',kx2,111); kx2+=ctx.measureText('aceitar').width+26;
+    kx2+=frKeycap(kx2,96,'X')+6; hudFont(900,14); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText('recusar',kx2,111);
+    ctx.fillStyle='#FFFFFF'; roundRect(ctx,cx4+20,134,cw-40,8,4,true,false);
+    ctx.fillStyle='#FF6B6B'; roundRect(ctx,cx4+20,134,Math.max(6,(cw-40)*left),8,4,true,false);
+  }
+  if(frJob && jobTarget && !(frJob.type==='taxi' && frJob.stage!=='pickup' && frJob.stage!=='drop')){
     const dist=Math.round(Math.hypot(jobTarget.x-frPlayer.tx,jobTarget.y-frPlayer.ty)*10);
-    const goal = frJob.type==='taxi'
-      ? (frJob.stage==='pickup' ? `Pegue o passageiro · ${dist} m` : `Leve até o pino verde · ${dist} m`)
-      : (frJob.boarding>0 ? 'Passageiros subindo...' : `Próxima: ${TRAIN_STATIONS[frJob.target].name} · ${dist} m`);
+    let goal;
+    if(frJob.type==='taxi') goal = frJob.stage==='pickup' ? `Busque o passageiro ${placeName(frJob.pass)} · ${dist} m` : `Leve ${placeName(frJob.dest)} · ${dist} m`;
+    else {
+      const tt=trainTarget();
+      goal = frJob.boarding>0 ? 'Passageiros subindo e descendo...'
+        : `No trem: ${frJob.riders.length} · ${tt.drop?'Descida':'Próxima'}: ${tt.st.name} · ${dist} m`;
+    }
     hudFont(900,15);
     const gw=ctx.measureText(goal).width+70, gx=W/2-gw/2+40;
     hudPill(gx,12,gw,40,'#FFF8E7');
@@ -6007,7 +6091,9 @@ function drawFreeRoam(){
       ctx.strokeStyle=INK; ctx.lineWidth=2.5; roundRect(ctx,sx3,60,sw,14,7,false,true);
       hudFont(900,12); ctx.fillStyle=INK; ctx.textAlign='right'; ctx.fillText('velocidade',sx3-8,68);
     }
-    if(frJob.msg && performance.now()<frJob.msg.until){
+  }
+  if(frJob){
+    if(frJob.msg && performance.now()<frJob.msg.until && !(frJob.type==='taxi'&&frJob.stage==='offer')){
       hudFont(900,16);
       const mw=ctx.measureText(frJob.msg.text).width+32;
       hudPill(W/2-mw/2,92,mw,36,frJob.msg.good?'#7ED957':'#FFB3B3');
@@ -6017,7 +6103,7 @@ function drawFreeRoam(){
 
   // HUD — teclas
   if(frJob){
-    const hints = frJob.type==='taxi' ? [['W A S D','dirigir'],['Esc','sair']] : [['W','acelerar'],['S','frear'],['Esc','sair']];
+    const hints = frJob.type==='taxi' ? [['W A S D','dirigir'],['Esc','sair']] : [['W','acelerar'],['S','frear'],['A D','virar'],['Esc','sair']];
     hudFont(900,13);
     let pw=12; hints.forEach(([k,l])=>{ pw += k.split(' ').length*32 + ctx.measureText(l).width + 18; });
     const py=H-16-46;
@@ -6050,14 +6136,15 @@ function drawFreeRoam(){
   ctx.save(); ctx.beginPath(); ctx.arc(mcx,mcy,R,0,Math.PI*2); ctx.clip();
   ctx.fillStyle='#FFE9B8'; ctx.fillRect(mcx-R,mcy-R,R*2,R*2);
   const mx0=mcx-frPlayer.tx*MS, my0=mcy-frPlayer.ty*MS;
-  for(let y=0;y<FR_SZ;y++)for(let x=0;x<FR_SZ;x++){
+  const mmx0 = wrapX ? Math.floor(frPlayer.tx)-9 : 0, mmx1 = wrapX ? Math.floor(frPlayer.tx)+10 : FR_SZ;
+  for(let y=0;y<FR_SZ;y++)for(let x=mmx0;x<mmx1;x++){
     if(Math.abs(x+.5-frPlayer.tx)>8||Math.abs(y+.5-frPlayer.ty)>8) continue;
-    const t=FR_MAP[y][x];
+    const t=FR_MAP[y][wrapX?wx(x):x];
     ctx.fillStyle=t>=3&&t!==9?FR_BLDG[t].d:frGroundColor(t,x,y);
     ctx.fillRect(mx0+x*MS,my0+y*MS,MS+.5,MS+.5);
   }
   frCars.forEach(c=>{ctx.fillStyle=c.color;ctx.strokeStyle=INK;ctx.lineWidth=1;ctx.beginPath();ctx.arc(mx0+c.tx*MS,my0+c.ty*MS,2.5,0,Math.PI*2);ctx.fill();ctx.stroke();});
-  ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(mx0,my0+TRAIN_Y*MS); ctx.lineTo(mx0+FR_SZ*MS,my0+TRAIN_Y*MS); ctx.stroke();
+  ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(mcx-R,my0+TRAIN_Y*MS); ctx.lineTo(mcx+R,my0+TRAIN_Y*MS); ctx.stroke();
   if(jobTarget){ ctx.fillStyle=frJob.type==='taxi'&&frJob.stage==='drop'?'#7ED957':'#FF6B6B'; ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(mx0+jobTarget.x*MS,my0+jobTarget.y*MS,5,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
   ctx.translate(mx0+frPlayer.tx*MS,my0+frPlayer.ty*MS); ctx.rotate(camA+Math.PI/2);
   ctx.fillStyle='#FF6B6B'; ctx.strokeStyle=INK; ctx.lineWidth=2;
