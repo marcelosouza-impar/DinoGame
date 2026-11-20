@@ -258,6 +258,25 @@ let currentHighScore = parseInt(localStorage.getItem('dinogame_highscore') || '0
 let menuAnimRAF = null, menuAnimTick = 0;
 let customPhaseConfig = null;
 let editorBlocks = [], editorEnemyLevel = 0, editorBlockType = 0;
+// combo
+let stompCombo = 0, stompComboTimer = 0;
+// achievements
+const ACHIEVEMENTS = [
+  {id:'first_win',   icon:'🏆', name:'Primeira Vitória',  desc:'Complete uma fase'},
+  {id:'no_damage',   icon:'🛡️', name:'Sem Arranhão',      desc:'Complete uma fase sem tomar dano'},
+  {id:'coin100',     icon:'💰', name:'Colecionador',       desc:'Colete 100 moedas no total'},
+  {id:'combo3',      icon:'🦶', name:'Combo x3',           desc:'Pise em 3 inimigos seguidos'},
+  {id:'all_phases',  icon:'🌍', name:'Explorador',         desc:'Complete todas as 4 fases'},
+  {id:'boss_kill',   icon:'💀', name:'Caçador de Chefes', desc:'Derrote o chefe final'},
+];
+let unlockedAchievements = new Set(JSON.parse(localStorage.getItem('dinogame_achievements') || '[]'));
+let achieveNotifQueue = [], achieveNotifTimer = 0;
+// boss
+let phaseBoss = null;
+// diary
+let phaseDiary = JSON.parse(localStorage.getItem('dinogame_diary') || '[]');
+// per-phase damage flag
+let phaseNoDamage = true;
 const EDITOR_BTYPES = [
   {name:'Madeira', w:100, h:20, draw:(c,x,y,w,h)=>{ c.fillStyle='#854d0e'; c.fillRect(x,y,w,h); c.fillStyle='#a0633a'; for(let i=0;i<h;i+=6){c.fillRect(x,y+i,w,2);} c.strokeStyle='#5a2d0a'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
   {name:'Pedra',   w:44, h:44, draw:(c,x,y,w,h)=>{ c.fillStyle='#6b7280'; c.fillRect(x,y,w,h); c.fillStyle='#9ca3af'; c.fillRect(x+2,y+2,w-4,8); c.fillRect(x+2,y+14,w/2-4,8); c.fillRect(x+w/2+2,y+14,w/2-4,8); c.strokeStyle='#374151'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
@@ -458,6 +477,60 @@ const ACCESSORIES = {
     {id:'headphones', name:'Fone', cost:5},
   ],
 };
+function unlockAchievement(id){
+  if(unlockedAchievements.has(id)) return;
+  unlockedAchievements.add(id);
+  localStorage.setItem('dinogame_achievements', JSON.stringify([...unlockedAchievements]));
+  const a = ACHIEVEMENTS.find(x=>x.id===id);
+  if(a) achieveNotifQueue.push(a);
+}
+
+function renderDiary(){
+  const ov = document.getElementById('overlay');
+  const themeIcons = ['🌿','🌋','❄️','✨'];
+  const rows = phaseDiary.length ? phaseDiary.map(e=>`
+    <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:8px;padding:6px 10px;margin:3px 0;">
+      <span style="font-size:14px;">${themeIcons[(e.phase-1)%4]||'🦕'}</span>
+      <div style="flex:1;text-align:left;">
+        <div style="font-size:6px;color:#4ecdc4;">Fase ${e.phase}</div>
+        <div style="font-size:5px;color:#94a3b8;">${e.date} · ⏱ ${e.time}s · 💰 ${e.coins}</div>
+      </div>
+      <span style="font-size:9px;">${e.noDamage?'🛡️':''}</span>
+    </div>`).join('') : '<p class="sub">Nenhuma fase completada ainda.</p>';
+  ov.innerHTML = `<div class="ocard" style="max-height:85vh;overflow-y:auto;">
+    <h2>📖 Diário do Explorador</h2>
+    <div class="divider"></div>
+    ${rows}
+    <div class="divider"></div>
+    <button class="btn sec" onclick="renderMainMenu()" style="font-size:7px;padding:8px 18px;">← Voltar</button>
+  </div>`;
+  ov.style.display='flex';
+}
+
+function renderAchievements(){
+  const ov = document.getElementById('overlay');
+  const rows = ACHIEVEMENTS.map(a=>{
+    const got = unlockedAchievements.has(a.id);
+    return `<div style="display:flex;align-items:center;gap:8px;background:${got?'rgba(78,205,196,.1)':'rgba(255,255,255,.03)'};border:1px solid ${got?'rgba(78,205,196,.3)':'rgba(255,255,255,.07)'};border-radius:8px;padding:6px 10px;margin:3px 0;opacity:${got?1:.45};">
+      <span style="font-size:14px;">${a.icon}</span>
+      <div style="text-align:left;">
+        <div style="font-size:6px;color:${got?'#4ecdc4':'#94a3b8'};">${a.name}</div>
+        <div style="font-size:5px;color:#64748b;">${a.desc}</div>
+      </div>
+      ${got?'<span style="margin-left:auto;font-size:8px;">✅</span>':''}
+    </div>`;
+  }).join('');
+  ov.innerHTML = `<div class="ocard" style="max-height:85vh;overflow-y:auto;">
+    <h2>🏅 Conquistas</h2>
+    <p class="sub">${unlockedAchievements.size}/${ACHIEVEMENTS.length} desbloqueadas</p>
+    <div class="divider"></div>
+    ${rows}
+    <div class="divider"></div>
+    <button class="btn sec" onclick="renderMainMenu()" style="font-size:7px;padding:8px 18px;">← Voltar</button>
+  </div>`;
+  ov.style.display='flex';
+}
+
 function saveProgress(){
   const data = {
     totalCoins, unlockedPhase, petXP, petLevel,
@@ -1056,6 +1129,17 @@ function generatePhase(p){
       bobOffset:Math.random()*Math.PI*2,
     });
   }
+
+  // boss na última fase
+  phaseBoss = null;
+  if(p === 4 && !secret && !cp){
+    phaseBoss = {
+      x: len - 600, y: GROUND,
+      w:90, h:90, hp:8, maxHp:8,
+      vx:-0.7, frame:0, frameTimer:0, alive:true,
+      hitFlash:0,
+    };
+  }
 }
 
 // ─── GAME FLOW ────────────────────────────────────────────────────────────────
@@ -1105,6 +1189,8 @@ function renderMainMenu(){
       <button class="btn sec" onclick="renderOnlineLocal()" style="font-size:6px;padding:7px 14px;">🌐 Online Local</button>
       <button class="btn sec" onclick="showLeaderboard()" style="font-size:6px;padding:7px 14px;">🏆 Recordes</button>
       <button class="btn sec" onclick="showLanguageSelect()" style="font-size:6px;padding:7px 14px;">🌎 ${tr('language')}</button>
+      <button class="btn sec" onclick="renderAchievements()" style="font-size:6px;padding:7px 14px;">🏅 Conquistas${unlockedAchievements.size?` (${unlockedAchievements.size})`:''}</button>
+      <button class="btn sec" onclick="renderDiary()" style="font-size:6px;padding:7px 14px;">📖 Diário</button>
     </div>
     <p class="credits">${tr('creditsText')}</p>
   </div>`;
@@ -1312,7 +1398,7 @@ function backToMenu(){
 }
 
 function startGame(){
-  stopMenuAnimation();
+  stopMenuAnimation(); stopWardrobeAnimation();
   phase=1; score=0; lives=3; discoveredCreatures=new Set();
   onlineChallenge = null;
   onlineRunFrames = 0;
@@ -1523,7 +1609,7 @@ function renderWardrobe(){
 
     <p class="sub">PETS</p>
     <div class="wardrobe-row">${skinCards('baby')}${skinCards('saber')}</div>
-    <button class="btn sec" onclick="renderWorldMap()" style="font-size:5px;padding:5px 10px;">← ${tr('back')}</button>
+    <button class="btn sec" onclick="stopWardrobeAnimation();renderWorldMap()" style="font-size:5px;padding:5px 10px;">← ${tr('back')}</button>
   </div>`;
   setTimeout(renderWardrobePreviews, 20);
 }
@@ -1566,8 +1652,28 @@ function chooseAccessory(char,id){
   renderWardrobe();
 }
 
+let wardrobeAnimRAF=null, wardrobeAnimTick=0;
+function stopWardrobeAnimation(){ if(wardrobeAnimRAF){cancelAnimationFrame(wardrobeAnimRAF);wardrobeAnimRAF=null;} }
+function startWardrobeAnimation(){
+  stopWardrobeAnimation();
+  function step(){
+    wardrobeAnimTick++;
+    ['dino','caveman'].forEach(char=>{
+      const cvs=document.getElementById(`preview-full-${char}`);
+      if(!cvs){ stopWardrobeAnimation(); return; }
+      const c=cvs.getContext('2d');
+      c.clearRect(0,0,cvs.width,cvs.height);
+      const frame=Math.floor(wardrobeAnimTick/8)%4;
+      if(char==='dino') drawDinoOn(c,9,cvs.height-4,frame,false,0.34);
+      else              drawCavemanOn(c,9,cvs.height-4,frame,false,0.34);
+    });
+    wardrobeAnimRAF=requestAnimationFrame(step);
+  }
+  wardrobeAnimRAF=requestAnimationFrame(step);
+}
+
 function renderWardrobePreviews(){
-  // Full character previews (skin + all accessories)
+  // Full character previews (skin + all accessories) — animated via startWardrobeAnimation
   ['dino','caveman'].forEach(char=>{
     const cvs = document.getElementById(`preview-full-${char}`);
     if(cvs){
@@ -1577,6 +1683,7 @@ function renderWardrobePreviews(){
       else              drawCavemanOn(c, 9, cvs.height-4, 0, false, 0.34);
     }
   });
+  startWardrobeAnimation();
   // Skin thumbnail previews
   ['dino','caveman','baby','saber'].forEach(char=>{
     SKINS[char].forEach(s=>{
@@ -1628,6 +1735,7 @@ function beginPhase(){
   player.vx=0; player.vy=0;
   player.onGround=true; player.ducking=false;
   player.invincible=0; player.jumpCount=0; player.hp=3; hpBarAnim=3;
+  phaseNoDamage=true; stompCombo=0; stompComboTimer=0;
   particles=[]; phasePlatforms=[]; frameCount=0;
   pet.x=60; pet.y=GROUND; pet.vy=0; pet.onGround=true;
   pet.frame=0; pet.facing=1; pet.history=[];
@@ -2046,6 +2154,10 @@ function update(){
       if(player.vy>1 && player.y<=enemy.y-enemy.h*.4){
         discoverCreature(enemy.type);
         enemy.alive=false; player.vy=JUMP_FORCE*.6; score+=50;
+        stompCombo++; stompComboTimer=90;
+        const comboBonus=stompCombo>=3?stompCombo*5:0;
+        if(comboBonus){totalCoins+=comboBonus;score+=comboBonus*10;floatText(`COMBO x${stompCombo}! +${comboBonus}`,ex+enemy.w/2,enemy.y-enemy.h,'#ffe66d');}
+        if(stompCombo>=3){unlockAchievement('combo3');}
         spawnParticles(ex+enemy.w/2, enemy.y-enemy.h/2,'#ff6b6b',12); updateUI();
       } else { hurt(); }
     }
@@ -2099,7 +2211,20 @@ function update(){
   const allEggs = phaseEggs.every(e=>e.collected);
   const pxPor = portalX-scrollX;
   if(allEggs && rectsOverlap(player.x+10,player.y-52,player.w-20,52, pxPor,GROUND-110,64,110)){
-    score+=500; updateUI(); showOverlay(isSecretPhase ? 'secretclear' : 'phaseclear');
+    score+=500; updateUI();
+    // achievements & diary on phase clear
+    if(!isSecretPhase){
+      unlockAchievement('first_win');
+      if(phaseNoDamage) unlockAchievement('no_damage');
+      if(phase===4) unlockAchievement('all_phases');
+      const elapsed=Math.round((calcPhaseFrames(phase)+shopUpgrades.timeBoost*600-phaseFramesLeft)/60);
+      const diaryEntry={phase,date:new Date().toLocaleDateString('pt-BR'),time:elapsed,coins:totalCoins,noDamage:phaseNoDamage};
+      phaseDiary.unshift(diaryEntry);
+      if(phaseDiary.length>20) phaseDiary=phaseDiary.slice(0,20);
+      localStorage.setItem('dinogame_diary',JSON.stringify(phaseDiary));
+      saveProgress();
+    }
+    showOverlay(isSecretPhase ? 'secretclear' : 'phaseclear');
   }
   const spxPor = secretPortalX-scrollX;
   if(!isSecretPhase && secretUnlocked && rectsOverlap(player.x+10,player.y-52,player.w-20,52, spxPor,GROUND-96,54,96)){
@@ -2140,6 +2265,38 @@ function update(){
   particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life--;});
   particles=particles.filter(p=>p.life>0);
   clouds.forEach(c=>{c.x-=c.speed; if(c.x+c.w<0) c.x=currentLen;});
+
+  // stomp combo timer
+  if(stompComboTimer>0){ stompComboTimer--; if(stompComboTimer===0) stompCombo=0; }
+
+  // boss update
+  if(phaseBoss && phaseBoss.alive){
+    const bx=phaseBoss.x-scrollX;
+    phaseBoss.x+=phaseBoss.vx;
+    if(phaseBoss.x-scrollX < 80) phaseBoss.vx=Math.abs(phaseBoss.vx);
+    phaseBoss.frameTimer++; if(phaseBoss.frameTimer>12){phaseBoss.frame=(phaseBoss.frame+1)%4;phaseBoss.frameTimer=0;}
+    if(phaseBoss.hitFlash>0) phaseBoss.hitFlash--;
+    const pHX=player.x+10,pHY=player.y-52,pHW=player.w-20,pHH=52;
+    const bex=phaseBoss.x-scrollX, bey=phaseBoss.y-phaseBoss.h;
+    if(rectsOverlap(pHX,pHY,pHW,pHH, bex+16,bey+10,phaseBoss.w-32,phaseBoss.h-10)){
+      if(player.vy>1 && player.y<=phaseBoss.y-phaseBoss.h*.4){
+        phaseBoss.hp--; phaseBoss.hitFlash=18;
+        player.vy=JUMP_FORCE*.7; score+=200; updateUI();
+        spawnParticles(bex+phaseBoss.w/2,bey+phaseBoss.h/2,'#ef4444',16);
+        if(phaseBoss.hp<=0){
+          phaseBoss.alive=false; totalCoins+=30; score+=1000; updateUI();
+          spawnParticles(bex+phaseBoss.w/2,bey+phaseBoss.h/2,'#fbbf24',30);
+          unlockAchievement('boss_kill'); saveProgress();
+        }
+      } else { hurt(); }
+    }
+  }
+
+  // achievement: coin 100
+  if(totalCoins>=100) unlockAchievement('coin100');
+  // notif timer
+  if(achieveNotifTimer>0) achieveNotifTimer--;
+  else if(achieveNotifQueue.length>0){ achieveNotifTimer=180; }
 }
 
 function activatePowerup(slot){
@@ -2216,6 +2373,7 @@ function hurt(){
     spawnParticles(player.x+player.w/2,player.y-22,'#60a5fa',14);
     return;
   }
+  phaseNoDamage=false; stompCombo=0;
   player.hp--;
   player.invincible=70; flashTimer=22;
   spawnParticles(player.x+player.w/2,player.y-22,'#ff6b6b',16);
@@ -2232,6 +2390,10 @@ function hurt(){
 
 function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
   return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+}
+let floatTexts=[];
+function floatText(text,x,y,color='#ffe66d'){
+  floatTexts.push({text,x,y,color,life:60,vy:-1.2});
 }
 function spawnParticles(x,y,color,n){
   for(let i=0;i<n;i++){
@@ -2612,6 +2774,31 @@ function draw(){
     drawEnemy(enemy,ex);
   });
 
+  // boss
+  if(phaseBoss && phaseBoss.alive){
+    const bx=phaseBoss.x-scrollX, by=phaseBoss.y-phaseBoss.h;
+    // flash branco ao tomar dano
+    ctx.save();
+    if(phaseBoss.hitFlash>0){ ctx.globalAlpha=phaseBoss.hitFlash/18*0.6; ctx.fillStyle='#fff'; ctx.fillRect(bx,by,phaseBoss.w,phaseBoss.h); }
+    ctx.restore();
+    // corpo grande — trex gigante vermelho
+    ctx.save();
+    ctx.translate(bx+phaseBoss.w/2, phaseBoss.y);
+    ctx.scale(1.7,1.7);
+    drawDinoOn(ctx, -27, 0, phaseBoss.frame, false, 1);
+    ctx.restore();
+    // tint vermelho
+    ctx.save(); ctx.globalAlpha=0.35; ctx.globalCompositeOperation='source-atop';
+    ctx.fillStyle='#ef4444'; ctx.fillRect(bx,by,phaseBoss.w,phaseBoss.h);
+    ctx.restore();
+    // HP bar do boss (topo da tela)
+    const bpct=phaseBoss.hp/phaseBoss.maxHp;
+    ctx.fillStyle='rgba(5,10,22,.85)'; roundRect(ctx,W/2-100,6,200,14,5,true,false);
+    ctx.fillStyle='#ef4444'; roundRect(ctx,W/2-98,8,Math.round(196*bpct),10,4,true,false);
+    ctx.fillStyle='#fbbf24'; ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillText(`💀 CHEFE  ${phaseBoss.hp}/${phaseBoss.maxHp}`,W/2,20);
+  }
+
   // coins
   drawCoins();
 
@@ -2691,6 +2878,36 @@ function draw(){
 
   if(state==='win') drawWinScene();
   drawHUD();
+
+  // float texts (combo, bônus)
+  floatTexts.forEach(ft=>{
+    ctx.globalAlpha=Math.min(1,ft.life/20);
+    ctx.font='7px "Press Start 2P"';
+    ctx.textAlign='center'; ctx.fillStyle=ft.color;
+    const sx=ft.x-scrollX;
+    ctx.fillText(ft.text, sx, ft.y);
+  });
+  floatTexts.forEach(ft=>{ft.y+=ft.vy;ft.life--;});
+  floatTexts=floatTexts.filter(ft=>ft.life>0);
+  ctx.globalAlpha=1; ctx.textAlign='left';
+
+  // achievement notification
+  if(achieveNotifQueue.length>0 && achieveNotifTimer>0){
+    const a=achieveNotifQueue[0];
+    const alpha=achieveNotifTimer<30?achieveNotifTimer/30:achieveNotifTimer>150?1:(achieveNotifTimer-150)/30;
+    const ny=50+Math.min(0,(180-achieveNotifTimer)*2);
+    ctx.save(); ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+    ctx.fillStyle='rgba(5,10,22,.92)'; roundRect(ctx,W-200,ny,192,34,8,true,false);
+    ctx.strokeStyle='#fbbf24'; ctx.lineWidth=1.5; roundRect(ctx,W-200,ny,192,34,8,false,true);
+    ctx.font='10px serif'; ctx.textAlign='left'; ctx.fillStyle='#ffe66d';
+    ctx.fillText(a.icon,W-194,ny+22);
+    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ffe66d';
+    ctx.fillText('Conquista!',W-178,ny+12);
+    ctx.font='4.5px "Press Start 2P"'; ctx.fillStyle='#e2e8f0';
+    ctx.fillText(a.name,W-178,ny+24);
+    ctx.restore();
+    if(achieveNotifTimer===1){ achieveNotifQueue.shift(); if(achieveNotifQueue.length>0) achieveNotifTimer=180; }
+  }
 }
 
 function drawNeonAtmosphere(t){
