@@ -383,6 +383,7 @@ let currentHighScore = parseInt(localStorage.getItem('dinogame_highscore') || '0
 let menuAnimRAF = null, menuAnimTick = 0;
 let customPhaseConfig = null;
 let editorBlocks = [], editorEnemyLevel = 0, editorBlockType = 0, editorErase = false, edButtons = [];
+let editorSlotId = null, editorName = 'Minha fase', edDirty = false, edToast = null;
 let editorItems = [], editorEnemies = [], editorTab = 'blocks', editorItemType = 0, editorEnemyType = 0, edUndo = [], edRedo = [];
 const EDITOR_ITEMS = [
   {kind:'egg',    name:'Ovo'},
@@ -999,6 +1000,7 @@ window.addEventListener('keydown', e => {
     }
     if(e.code==='KeyB') placeEditorBlock(player.x+scrollX, player.y);
     if(e.code==='Enter') renderEditorFinish();
+    if(e.code==='KeyS' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); saveEditorPhase(); return; }
     if(e.code==='KeyZ' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(e.shiftKey) edRedoAction(); else edUndoAction(); return; }
     if(e.code==='Backspace'||e.code==='Delete') edUndoAction();
     if(e.code==='KeyX') editorErase=!editorErase;
@@ -5023,16 +5025,29 @@ setHudButtonTitles();
 
 function renderPhaseCreator(){
   const ov = document.getElementById('overlay');
-  ov.innerHTML = `<div class="ocard">
+  const list = loadSavedPhases();
+  const rows = list.length ? list.map(f=>`
+    <div class="row-card">
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:900">${f.name.replace(/[<>&"]/g,'')}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft)">${f.blocks.length} blocos · ${(f.items||[]).length} itens · ${(f.enemies||[]).length} inimigos</div>
+      </div>
+      <button class="btn sec" style="height:36px;font-size:14px;padding:0 12px" onclick="startEditor('${f.id}')">Editar</button>
+      <button class="btn sec" style="height:36px;font-size:14px;padding:0 12px;background:var(--grass)" onclick="playSavedPhase('${f.id}')">Jogar</button>
+      <button class="btn sec" style="height:36px;font-size:14px;padding:0 12px;background:var(--coral)" onclick="deleteSavedPhase('${f.id}')">Apagar</button>
+    </div>`).join('') : '<p class="sub">Você ainda não salvou nenhuma fase.</p>';
+  ov.innerHTML = `<div class="ocard wide">
     <h2>Criar Fase</h2>
-    <p class="sub">Desbloqueado com 700 moedas!</p>
+    <p class="sub">Construa sua fase no editor e salve para jogar depois.</p>
     <div class="divider"></div>
-    <p class="sub">Construa sua fase no editor visual.<br>Ande pelo cenário e coloque blocos para criar plataformas.</p>
+    <p class="sub" style="font-weight:900;color:var(--ink)">Suas fases</p>
+    <div style="display:flex;flex-direction:column;gap:8px;width:100%">${rows}</div>
+    <div class="divider"></div>
     <div class="khint" style="text-align:left;line-height:2.4">
-      <span class="keycap">B</span> ou clique: colocar bloco &nbsp; <span class="keycap">X</span> colocar/apagar<br>
-      <span class="keycap">1</span>–<span class="keycap">5</span> tipo de bloco &nbsp; <span class="keycap">DEL</span> desfazer &nbsp; <span class="keycap">ENTER</span> testar
+      <span class="keycap">B</span> ou clique: colocar &nbsp; <span class="keycap">X</span> colocar/apagar &nbsp; <span class="keycap">1</span>–<span class="keycap">5</span> escolher<br>
+      <span class="keycap">Ctrl</span>+<span class="keycap">S</span> salvar &nbsp; <span class="keycap">Ctrl</span>+<span class="keycap">Z</span> desfazer &nbsp; <span class="keycap">ENTER</span> testar
     </div>
-    <button class="btn" onclick="startEditor()">Entrar no Editor</button>
+    <button class="btn" onclick="startEditor()">Nova fase</button>
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
   </div>`;
   ov.style.display='flex';
@@ -5055,9 +5070,52 @@ function launchCustomPhase(){
   state='playing';
 }
 
+// ─── FASES SALVAS ─────────────────────────────────────────────────────────────
+function loadSavedPhases(){
+  try{ return JSON.parse(localStorage.getItem('dinogame_myphases') || '[]'); }catch(e){ return []; }
+}
+function storeSavedPhases(list){ localStorage.setItem('dinogame_myphases', JSON.stringify(list)); }
+function saveEditorPhase(){
+  const list = loadSavedPhases();
+  if(!editorSlotId){
+    const name = prompt('Nome da fase:', `Minha fase ${list.length+1}`);
+    if(name === null) return;
+    editorName = (name.trim() || `Minha fase ${list.length+1}`).substring(0,24);
+    editorSlotId = 'f' + Date.now();
+  }
+  const data = {id:editorSlotId, name:editorName, savedAt:Date.now(), enemyLevel:editorEnemyLevel,
+    blocks:editorBlocks.map(o=>({...o})), items:editorItems.map(o=>({...o})), enemies:editorEnemies.map(o=>({...o}))};
+  const i = list.findIndex(f=>f.id===editorSlotId);
+  if(i>=0) list[i]=data; else list.push(data);
+  storeSavedPhases(list);
+  edDirty = false;
+  edToast = {text:'Fase salva!', until:performance.now()+1800};
+}
+function deleteSavedPhase(id){
+  const f = loadSavedPhases().find(x=>x.id===id);
+  if(!f || !confirm(`Apagar a fase "${f.name}"? Isso não pode ser desfeito.`)) return;
+  storeSavedPhases(loadSavedPhases().filter(x=>x.id!==id));
+  renderPhaseCreator();
+}
+function playSavedPhase(id){
+  const f = loadSavedPhases().find(x=>x.id===id);
+  if(!f) return;
+  stopMenuAnimation();
+  customPhaseConfig={theme:0,enemy:f.enemyLevel||0,eggs:3,time:120,platforms:f.blocks.map(o=>({...o})),items:f.items||[],enemies:f.enemies||[]};
+  document.getElementById('overlay').style.display='none';
+  phase=99; isSecretPhase=false;
+  beginPhase(); state='playing';
+}
+
 // ─── EDITOR DE FASE ───────────────────────────────────────────────────────────
-function startEditor(){
+function startEditor(id){
   editorBlocks = []; editorItems = []; editorEnemies = []; edUndo = []; edRedo = []; editorTab = 'blocks'; editorErase = false;
+  editorSlotId = null; editorName = 'Minha fase'; edDirty = false; edToast = null; editorEnemyLevel = 0;
+  const saved = id ? loadSavedPhases().find(f=>f.id===id) : null;
+  if(saved){
+    editorSlotId = saved.id; editorName = saved.name; editorEnemyLevel = saved.enemyLevel || 0;
+    editorBlocks = saved.blocks.map(o=>({...o})); editorItems = (saved.items||[]).map(o=>({...o})); editorEnemies = (saved.enemies||[]).map(o=>({...o}));
+  }
   stopMenuAnimation();
   player.x=100; player.y=GROUND; player.vx=0; player.vy=0;
   player.onGround=true; player.ducking=false; player.invincible=0; player.jumpCount=0; player.hp=3;
@@ -5095,6 +5153,7 @@ function placeEditorBlock(wx, wy){
 
 function edList(name){ return name==='items'?editorItems:name==='enemies'?editorEnemies:editorBlocks; }
 function edAdd(name,obj){
+  edDirty = true;
   edList(name).push(obj);
   edUndo.push({op:'add',name,obj}); edRedo=[];
 }
@@ -5109,7 +5168,7 @@ function edEraseAt(wx,wy){
     for(let i=list.length-1;i>=0;i--){
       const [bx,by,bw,bh]=edBox(name,list[i]);
       if(wx>=bx&&wx<=bx+bw&&wy>=by&&wy<=by+bh){
-        const obj=list.splice(i,1)[0];
+        const obj=list.splice(i,1)[0]; edDirty=true;
         edUndo.push({op:'del',name,obj,idx:i}); edRedo=[];
         return;
       }
@@ -5122,8 +5181,8 @@ function edApply(a,reverse){
   if(adding){ if(a.op==='del') list.splice(Math.min(a.idx,list.length),0,a.obj); else list.push(a.obj); }
   else { const i=list.indexOf(a.obj); if(i>=0) list.splice(i,1); }
 }
-function edUndoAction(){ const a=edUndo.pop(); if(!a) return; edApply(a,true); edRedo.push(a); }
-function edRedoAction(){ const a=edRedo.pop(); if(!a) return; edApply(a,false); edUndo.push(a); }
+function edUndoAction(){ const a=edUndo.pop(); if(!a) return; edDirty=true; edApply(a,true); edRedo.push(a); }
+function edRedoAction(){ const a=edRedo.pop(); if(!a) return; edDirty=true; edApply(a,false); edUndo.push(a); }
 
 function edDrawItem(kind,x,y,scale=1){
   ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
@@ -5148,6 +5207,7 @@ function drawEditorBlock(c,b,sx){
 
 const ED_OFF = 44, ED_DRAWER_Y = 338;
 const ED_ICON = {
+  save:new Path2D('M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7'),
   back:new Path2D('M15 5l-7 7 7 7'),
   undo:new Path2D('M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3'),
   redo:new Path2D('M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3'),
@@ -5226,10 +5286,14 @@ function drawEditor(){
 
   // ── BARRA DO TOPO ──
   ctx.save(); ctx.textBaseline='middle';
-  edRoundBtn(14,12,ED_ICON.back,()=>{ state='menu'; renderMainMenu(); });
+  edRoundBtn(14,12,ED_ICON.back,()=>{
+    if(edDirty && !confirm('Sair do editor sem salvar as mudanças?')) return;
+    state='menu'; renderPhaseCreator();
+  });
   hudFont(700,19,'d');
-  const titleW=ctx.measureText('Minha fase').width+32;
-  hudPill(68,12,titleW,44); ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText('Minha fase',84,35);
+  const shownName = editorName.length>13 ? editorName.slice(0,12)+'…' : editorName;
+  const titleW=ctx.measureText(shownName).width+32;
+  hudPill(68,12,titleW,44); ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText(shownName,84,35);
   // Colocar / Apagar
   const gx=68+titleW+10;
   hudFont(900,13);
@@ -5252,6 +5316,20 @@ function drawEditor(){
   edButtons.push({x:tx,y:8,w:tw,h:52,fn:()=>renderEditorFinish()});
   edRoundBtn(tx-54,12,ED_ICON.redo,()=>edRedoAction());
   edRoundBtn(tx-104,12,ED_ICON.undo,()=>edUndoAction());
+  // Salvar
+  hudFont(900,14);
+  const svW=ctx.measureText('Salvar').width+46, svX=tx-114-svW;
+  hudPill(svX,12,svW,44, edDirty?'#FFFFFF':'#E8F9DF');
+  edIcon(ED_ICON.save,svX+10,23,20,false);
+  ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText('Salvar',svX+34,35);
+  if(edDirty){ ctx.fillStyle='#FF6B6B'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(svX+svW-6,16,6,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
+  edButtons.push({x:svX,y:12,w:svW,h:44,fn:()=>saveEditorPhase()});
+  // aviso "Fase salva!"
+  if(edToast && performance.now()<edToast.until){
+    hudFont(900,15); const tw3=ctx.measureText(edToast.text).width+32;
+    hudPill(W/2-tw3/2,72,tw3,34,'#7ED957');
+    ctx.fillStyle=HUD_INK; ctx.textAlign='center'; ctx.fillText(edToast.text,W/2,90);
+  }
 
   // ── GAVETA ──
   const dy=ED_DRAWER_Y;
