@@ -362,7 +362,8 @@ const MOVE_SPEED  = 4.8;
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let state = 'menu';
 let score = 0, lives = 3, phase = 1;
-const MAX_PHASES = 4;
+const MAX_PHASES = 7;
+const SECRET_PHASE = 50;
 let scrollX = 0;
 let currentLen = 4000;
 let portalX = 0;
@@ -403,7 +404,7 @@ const ACHIEVEMENTS = [
   {id:'no_damage',   icon:'🛡️', name:'Sem Arranhão',      desc:'Complete uma fase sem tomar dano'},
   {id:'coin100',     icon:'💰', name:'Colecionador',       desc:'Colete 100 moedas no total'},
   {id:'combo3',      icon:'🦶', name:'Combo x3',           desc:'Pise em 3 inimigos seguidos'},
-  {id:'all_phases',  icon:'🌍', name:'Explorador',         desc:'Complete todas as 4 fases'},
+  {id:'all_phases',  icon:'🌍', name:'Explorador',         desc:'Complete todas as 7 fases'},
   {id:'boss_kill',   icon:'💀', name:'Caçador de Chefes', desc:'Derrote o chefe final'},
 ];
 let unlockedAchievements = new Set(JSON.parse(localStorage.getItem('dinogame_achievements') || '[]'));
@@ -451,8 +452,8 @@ const I18N = {
     albumTitle:'Álbum de criaturas', albumHint:'As criaturas aparecem aqui quando você encontra ou derrota cada uma.',
     muteTitle:'Música [M]', pauseTitle:'Pausar [P]', quitShortTitle:'Sair para o Menu',
     creditsText:'Martin Coradi de Souza · 2026 · Co-autoria: Claude Code',
-    themeNames:['Floresta Jurássica','Deserto Vulcânico','Caverna Glacial','Floresta Bioluminescente'],
-    placeNames:['Vale de Arandu','Dunas de Kairós','Gruta de Nivalis','Bosque de Lúmina'],
+    themeNames:['Floresta Jurássica','Deserto Vulcânico','Caverna Glacial','Floresta Bioluminescente','Praia Tropical','Pântano Nebuloso','Vulcão Final'],
+    placeNames:['Vale de Arandu','Dunas de Kairós','Gruta de Nivalis','Bosque de Lúmina','Praia de Coralis','Charco de Umbra','Pico de Ignis'],
     cutsceneDino:['Até logo,','família! 🦕'], cutsceneCaveman:['Tchau,','pessoal! 🪓'], cutsceneStart:'Uma nova aventura começa...', cutsceneSkip:'[ESPAÇO] Pular',
     petLines:{
       idle:['Vamos lá!','Que aventura!','Por aqui!','Siga em frente!'],
@@ -489,8 +490,8 @@ const I18N = {
     albumTitle:'Creature album', albumHint:'Creatures appear here when you meet or defeat each one.',
     muteTitle:'Music [M]', pauseTitle:'Pause [P]', quitShortTitle:'Exit to Menu',
     creditsText:'Martin Coradi de Souza · 2026 · Co-authorship: Claude Code',
-    themeNames:['Jurassic Forest','Volcanic Desert','Glacial Cave','Bioluminescent Forest'],
-    placeNames:['Arandu Valley','Kairos Dunes','Nivalis Grotto','Lumina Grove'],
+    themeNames:['Jurassic Forest','Volcanic Desert','Glacial Cave','Bioluminescent Forest','Tropical Beach','Misty Swamp','Final Volcano'],
+    placeNames:['Arandu Valley','Kairos Dunes','Nivalis Grotto','Lumina Grove','Coralis Beach','Umbra Marsh','Ignis Peak'],
     cutsceneDino:['Goodbye,','family! 🦕'], cutsceneCaveman:['Bye,','everyone! 🪓'], cutsceneStart:'A new adventure begins...', cutsceneSkip:'[SPACE] Skip',
     petLines:{
       idle:["Let's go!",'Adventure time!','This way!','Keep going!'],
@@ -527,8 +528,8 @@ const I18N = {
     albumTitle:'Álbum de criaturas', albumHint:'Las criaturas aparecen aquí cuando las encuentras o derrotas.',
     muteTitle:'Música [M]', pauseTitle:'Pausar [P]', quitShortTitle:'Salir al Menú',
     creditsText:'Martin Coradi de Souza · 2026 · Coautoría: Claude Code',
-    themeNames:['Bosque Jurásico','Desierto Volcánico','Cueva Glacial','Bosque Bioluminiscente'],
-    placeNames:['Valle de Arandu','Dunas de Kairos','Gruta de Nivalis','Bosque de Lúmina'],
+    themeNames:['Bosque Jurásico','Desierto Volcánico','Cueva Glacial','Bosque Bioluminiscente','Playa Tropical','Pantano Brumoso','Volcán Final'],
+    placeNames:['Valle de Arandu','Dunas de Kairos','Gruta de Nivalis','Bosque de Lúmina','Playa de Coralis','Charca de Umbra','Pico de Ignis'],
     cutsceneDino:['Adiós,','familia! 🦕'], cutsceneCaveman:['¡Adiós,','todos! 🪓'], cutsceneStart:'Una nueva aventura comienza...', cutsceneSkip:'[ESPACIO] Saltar',
     petLines:{
       idle:['¡Vamos!','¡Qué aventura!','¡Por aquí!','¡Sigue adelante!'],
@@ -1147,11 +1148,29 @@ const THEMES = [
     ground:'#4A4968', groundTop:'#7ED957', groundMid:'#7E5BD6',
     mountainFar:'#D4BFFF', mountainNear:'#9A7BE8', treeLeaf:'#5BC0FF', treeTrunk:'#7E5BD6', stars:false,
   },
+  {
+    name:'Praia Tropical',
+    sky:['#7FD3FF','#D6F5FF'], skyMid:'#A9E5FF', horizon:'#5BC0FF',
+    ground:'#D9A05B', groundTop:'#FFE9B8', groundMid:'#F2D49B',
+    mountainFar:'#9BE66F', mountainNear:'#5CC96B', treeLeaf:'#7ED957', treeTrunk:'#C98B5B', stars:false,
+  },
+  {
+    name:'Pântano Nebuloso',
+    sky:['#9FD9C8','#E2F5EC'], skyMid:'#BFE6D8', horizon:'#CDEBDD',
+    ground:'#7A6A4F', groundTop:'#5CC96B', groundMid:'#8A7A55',
+    mountainFar:'#B5D9C8', mountainNear:'#7FB89E', treeLeaf:'#4DB85C', treeTrunk:'#7A5A3A', stars:false,
+  },
+  {
+    name:'Vulcão Final',
+    sky:['#FF9F6B','#FFD6AE'], skyMid:'#FFBB8A', horizon:'#FFC49E',
+    ground:'#7A4A3A', groundTop:'#C98B5B', groundMid:'#9A5A40',
+    mountainFar:'#D9733F', mountainNear:'#A64B2A', treeLeaf:'#FF6B6B', treeTrunk:'#7A4A3A', stars:false,
+  },
 ];
 
 // ─── PHASE GENERATION ─────────────────────────────────────────────────────────
 function generatePhase(p){
-  const secret = p === 5;
+  const secret = p === SECRET_PHASE;
   const cp = (p === 99 && customPhaseConfig) ? customPhaseConfig : null;
   if(cp){ currentTheme = THEMES[cp.theme]; }
   else { currentTheme = secret ? THEMES[3] : THEMES[(p-1) % THEMES.length]; }
@@ -1317,10 +1336,11 @@ function generatePhase(p){
 
   // boss + alavanca na última fase
   phaseBoss = null; phaseLever = null; boulderRoll = null;
-  if(p === 4 && !secret && !cp){
+  if((p === 4 || p === MAX_PHASES) && !secret && !cp){
+    const bossHp = p === MAX_PHASES ? 12 : 8;
     phaseBoss = {
       x: len - 600, y: GROUND,
-      w:90, h:90, hp:8, maxHp:8,
+      w:90, h:90, hp:bossHp, maxHp:bossHp,
       vx:-0.7, frame:0, frameTimer:0, alive:true,
       hitFlash:0,
     };
@@ -1652,13 +1672,13 @@ function renderWorldMap(){
   ov.classList.remove('win-mode');
   ov.style.display='flex';
   const places = trArray('placeNames');
-  const spots = [[152,332],[360,291],[560,299],[660,251]];
+  const spots = [[110,330],[205,268],[300,322],[400,252],[500,318],[600,256],[690,316]];
   let balloon = '';
   const nodes = places.map((name,idx)=>{
     const p = idx+1;
     const [cx,cy] = spots[idx] || spots[spots.length-1];
     const locked = p > phase, isCurrent = p === phase;
-    const size = isCurrent ? 72 : locked ? 58 : 64;
+    const size = isCurrent ? 64 : locked ? 50 : 56;
     const bg = isCurrent ? 'var(--sun)' : locked ? 'var(--white)' : 'var(--grass)';
     const shadow = isCurrent ? '0 6px 0 var(--ink)' : '0 5px 0 var(--ink)';
     if(isCurrent) balloon = `<div style="position:absolute;left:${cx}px;top:${cy-size/2-44}px;transform:translateX(-50%);pointer-events:none"><div class="balloon"><b>Você está aqui</b><svg width="14" height="8" viewBox="0 0 14 8" aria-hidden="true"><path d="M0 0h14L7 8z" fill="#2B2A4C"/></svg></div></div>`;
@@ -1677,9 +1697,9 @@ function renderWorldMap(){
       <g fill="#FFFFFF" opacity=".9"><circle cx="660" cy="100" r="14"/><circle cx="680" cy="92" r="20"/><circle cx="702" cy="102" r="13"/><rect x="650" y="102" width="62" height="12" rx="6"/></g>
       <path d="M40 340 Q60 170 220 160 Q420 120 560 170 Q760 200 760 340 Q740 420 400 425 Q60 430 40 340 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5"/>
       <path d="M70 350 Q90 210 230 200 Q420 170 550 210 Q720 240 730 345 Q700 400 400 405 Q90 408 70 350 Z" fill="#9BE66F"/>
-      <path d="M152 332 C210 250 280 360 360 291 S 500 220 560 299 S 640 330 660 251" fill="none" stroke="#FFF3C4" stroke-width="18" stroke-linecap="round"/>
-      <path d="M152 332 C210 250 280 360 360 291 S 500 220 560 299 S 640 330 660 251" fill="none" stroke="#E8C66A" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 14"/>
-      <g fill="#4DB85C" stroke="#2B2A4C" stroke-width="3"><circle cx="250" cy="230" r="16"/><circle cx="470" cy="360" r="18"/><circle cx="620" cy="380" r="14"/><circle cx="110" cy="280" r="14"/></g>
+      <path d="M110 330 C150 280 170 268 205 268 S 270 330 300 322 S 360 252 400 252 S 470 320 500 318 S 570 252 600 256 S 660 320 690 316" fill="none" stroke="#FFF3C4" stroke-width="18" stroke-linecap="round"/>
+      <path d="M110 330 C150 280 170 268 205 268 S 270 330 300 322 S 360 252 400 252 S 470 320 500 318 S 570 252 600 256 S 660 320 690 316" fill="none" stroke="#E8C66A" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 14"/>
+      <g fill="#4DB85C" stroke="#2B2A4C" stroke-width="3"><circle cx="300" cy="225" r="14"/><circle cx="400" cy="345" r="16"/><circle cx="560" cy="210" r="13"/><circle cx="180" cy="350" r="12"/></g>
     </svg>
     <div class="topbar">
       <button class="round-btn" aria-label="${tr('back')}" onclick="showCharSelect()">${svgIcon(ICONS.back,24)}</button>
@@ -1726,7 +1746,7 @@ function renderNest(){
 function startSecretPhase(){
   returnPhase = phase > 0 && phase <= MAX_PHASES ? phase : 1;
   isSecretPhase = true;
-  phase = 5;
+  phase = SECRET_PHASE;
   document.getElementById('overlay').style.display='none';
   beginPhase();
   state='playing';
@@ -1736,7 +1756,7 @@ function launchPhase(p){
   onlineChallenge = null;
   onlineRunFrames = 0;
   phase = p;
-  isSecretPhase = p === 5;
+  isSecretPhase = p === SECRET_PHASE;
   document.getElementById('overlay').style.display='none';
   const seen = localStorage.getItem('dinogame_intro_seen');
   if(!seen && p===1){
@@ -2016,7 +2036,7 @@ function resumeFromCheckpoint(){
 
 function nextPhase(){
   if(phase === 99){ customPhaseConfig = null; showOverlay('win'); return; }
-  const routes = {1:[2,3],2:[4],3:[4],4:[]};
+  const routes = {1:[2,3],2:[4],3:[4],4:[5],5:[6],6:[7],7:[]};
   const next = routes[phase] || [];
   if(!next.length){ showOverlay('win'); return; }
   next.forEach(p=>unlockedPhase = Math.max(unlockedPhase, p));
@@ -2462,7 +2482,7 @@ function update(){
     if(!isSecretPhase){
       unlockAchievement('first_win');
       if(phaseNoDamage) unlockAchievement('no_damage');
-      if(phase===4) unlockAchievement('all_phases');
+      if(phase===MAX_PHASES) unlockAchievement('all_phases');
       const elapsed=Math.round((calcPhaseFrames(phase)+shopUpgrades.timeBoost*600-phaseFramesLeft)/60);
       const diaryEntry={phase,date:new Date().toLocaleDateString('pt-BR'),time:elapsed,coins:totalCoins,noDamage:phaseNoDamage};
       phaseDiary.unshift(diaryEntry);
@@ -3190,7 +3210,7 @@ function draw(){
     hudFont(700,30,'d');
     ctx.fillText(trArray('placeNames')[themeIdx] || currentTheme.name, W/2, H/2-12);
     hudFont(900,14); ctx.fillStyle='#4A4968';
-    ctx.fillText(`${tr('phaseHud')} ${phase}`, W/2, H/2+20);
+    ctx.fillText(phaseLabel(), W/2, H/2+20);
     ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.globalAlpha=1;
   }
 
@@ -3420,11 +3440,13 @@ function drawHUD(){
   drawPlaceName();
 }
 
+function phaseLabel(){ return isSecretPhase ? 'Fase secreta' : phase===99 ? 'Minha fase' : `${tr('phaseHud')} ${phase}`; }
+
 function drawPlaceName(){
   if(!currentTheme) return;
   const themeIdx = Math.max(0, THEMES.indexOf(currentTheme));
   const name = trArray('placeNames')[themeIdx] || trArray('themeNames')[themeIdx] || currentTheme.name;
-  const txt = `${tr('phaseHud')} ${phase} · ${name}`;
+  const txt = `${phaseLabel()} · ${name}`;
   ctx.save();
   hudFont(900,13);
   ctx.textAlign='left'; ctx.textBaseline='middle';
