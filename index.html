@@ -381,6 +381,20 @@ let currentHighScore = parseInt(localStorage.getItem('dinogame_highscore') || '0
 let menuAnimRAF = null, menuAnimTick = 0;
 let customPhaseConfig = null;
 let editorBlocks = [], editorEnemyLevel = 0, editorBlockType = 0, editorErase = false, edButtons = [];
+let editorItems = [], editorEnemies = [], editorTab = 'blocks', editorItemType = 0, editorEnemyType = 0, edUndo = [], edRedo = [];
+const EDITOR_ITEMS = [
+  {kind:'egg',    name:'Ovo'},
+  {kind:'coin',   name:'Moeda'},
+  {kind:'speed',  name:'Raio'},
+  {kind:'shield', name:'Escudo'},
+  {kind:'fire',   name:'Fogo'},
+];
+const EDITOR_ENEMIES = [
+  {type:'ptero',  name:'Ptero'},
+  {type:'trex',   name:'T-Rex'},
+  {type:'anky',   name:'Anky'},
+  {type:'raptor', name:'Raptor'},
+];
 // combo
 let stompCombo = 0, stompComboTimer = 0;
 // achievements
@@ -981,9 +995,14 @@ window.addEventListener('keydown', e => {
     }
     if(e.code==='KeyB') placeEditorBlock(player.x+scrollX, player.y);
     if(e.code==='Enter') renderEditorFinish();
-    if(e.code==='Backspace'||e.code==='Delete') editorBlocks.pop();
+    if(e.code==='KeyZ' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(e.shiftKey) edRedoAction(); else edUndoAction(); return; }
+    if(e.code==='Backspace'||e.code==='Delete') edUndoAction();
     if(e.code==='KeyX') editorErase=!editorErase;
-    const kNum=parseInt(e.key); if(kNum>=1&&kNum<=EDITOR_BTYPES.length) editorBlockType=kNum-1;
+    const kNum=parseInt(e.key);
+    const cat=editorTab==='items'?EDITOR_ITEMS:editorTab==='enemies'?EDITOR_ENEMIES:EDITOR_BTYPES;
+    if(kNum>=1&&kNum<=cat.length){
+      if(editorTab==='items') editorItemType=kNum-1; else if(editorTab==='enemies') editorEnemyType=kNum-1; else editorBlockType=kNum-1;
+    }
   }
 });
 window.addEventListener('keyup', e => {
@@ -1006,13 +1025,14 @@ canvas.addEventListener('mousedown', e => {
     const hit=edButtons.find(b=>cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h);
     if(hit){ hit.fn(); return; }
     if(cy>=ED_DRAWER_Y) return;
-    const wx=cx+scrollX, wy=cy+ED_OFF;
-    if(editorErase){
-      const i=editorBlocks.findIndex(b=>wx>=b.x&&wx<=b.x+b.w&&wy>=b.y-b.h&&wy<=b.y);
-      if(i>=0) editorBlocks.splice(i,1);
-    } else {
-      placeEditorBlock(wx, wy);
+    const wx=cx+scrollX, wy=Math.min(cy+ED_OFF,GROUND);
+    if(editorErase) edEraseAt(wx,wy);
+    else if(editorTab==='items') edAdd('items',{kind:EDITOR_ITEMS[editorItemType].kind,x:Math.round(wx),y:Math.round(Math.min(wy,GROUND-14))});
+    else if(editorTab==='enemies'){
+      const t=EDITOR_ENEMIES[editorEnemyType].type;
+      edAdd('enemies',{type:t,x:Math.round(wx-27),y:t==='ptero'?Math.round(Math.min(wy,GROUND-60)):GROUND});
     }
+    else placeEditorBlock(wx, wy);
     return;
   }
   if(state !== 'playing' || paused) return;
@@ -1192,7 +1212,10 @@ function generatePhase(p){
 
   // eggs — metade no chão, metade em cima de plataformas
   phaseEggs = [];
-  const eggCount = cp ? cp.eggs : ((secret ? 6 : 2+p) + (onlineChallenge ? (onlineChallenge.bonusEggs || 0) : 0));
+  const cpItems = (cp && cp.items) || [];
+  const cpEnemies = (cp && cp.enemies) || [];
+  const cpEggs = cpItems.filter(o=>o.kind==='egg');
+  const eggCount = cpEggs.length ? 0 : cp ? cp.eggs : ((secret ? 6 : 2+p) + (onlineChallenge ? (onlineChallenge.bonusEggs || 0) : 0));
   const eggKinds = ['normal','normal','gold','blue','red','rainbow','fossil','ghost','dragon'];
   for(let i=0;i<eggCount;i++){
     const onPlat = phasePlatforms.length>0 && i%2===1;
@@ -1204,10 +1227,11 @@ function generatePhase(p){
       kind: i===0 ? 'normal' : eggKinds[Math.floor(Math.random()*eggKinds.length)],
     });
   }
+  cpEggs.forEach(o=>phaseEggs.push({x:o.x,y:o.y,r:16,collected:false,bob:Math.random()*Math.PI*2,kind:'normal'}));
 
   // obstáculos
   phaseObstacles = [];
-  if((p >= 3 && !secret) || cp){
+  if(((p >= 3 && !secret) || cp) && !cpEnemies.length){
     const obsTypes = ['rock','cactus','fire','log'];
     const obsCount = cp ? [1,3,6][cp.enemy] : (DIFF[difficulty].obsBase + (p-2)*2);
     for(let i=0;i<obsCount;i++){
@@ -1223,7 +1247,9 @@ function generatePhase(p){
 
   // coins
   phaseCoins = [];
-  const coinCount = secret ? 24 : 8 + phase * 2;
+  const cpCoins = cpItems.filter(o=>o.kind==='coin');
+  const coinCount = cpCoins.length ? 0 : secret ? 24 : 8 + phase * 2;
+  cpCoins.forEach(o=>phaseCoins.push({x:o.x,y:o.y,collected:false,bob:Math.random()*Math.PI*2}));
   for(let i = 0; i < coinCount; i++){
     phaseCoins.push({
       x: 300 + Math.random() * (len - 700),
@@ -1239,7 +1265,9 @@ function generatePhase(p){
   // power-up items
   powerupItems = []; inventory = []; activeEffects = {speed:0, shield:0, fire:0};
   const puTypes = ['speed','shield','fire'];
-  const puCount = secret ? 4 : 1 + phase;
+  const cpPowerups = cpItems.filter(o=>['speed','shield','fire'].includes(o.kind));
+  const puCount = cpPowerups.length ? 0 : secret ? 4 : 1 + phase;
+  cpPowerups.forEach(o=>powerupItems.push({x:o.x-10,y:o.y,type:o.kind,collected:false,bob:Math.random()*Math.PI*2}));
   for(let i = 0; i < puCount; i++){
     powerupItems.push({
       x: 400 + i * Math.floor((len - 600) / puCount) + Math.random() * 80,
@@ -1266,7 +1294,7 @@ function generatePhase(p){
   // enemies
   phaseEnemies = [];
   const enemyTypes = ['ptero','trex','anky','raptor'];
-  const enemyCount = cp ? [1,3,6][cp.enemy] : (secret ? 0 : DIFF[difficulty].enemyBase + p + (onlineChallenge ? (onlineChallenge.enemyBonus || 0) : 0));
+  const enemyCount = cpEnemies.length ? 0 : cp ? [1,3,6][cp.enemy] : (secret ? 0 : DIFF[difficulty].enemyBase + p + (onlineChallenge ? (onlineChallenge.enemyBonus || 0) : 0));
   const speedMult = DIFF[difficulty].speedMult;
   for(let i=0;i<enemyCount;i++){
     const t = enemyTypes[Math.floor(Math.random()*enemyTypes.length)];
@@ -1280,6 +1308,12 @@ function generatePhase(p){
       bobOffset:Math.random()*Math.PI*2,
     });
   }
+
+  cpEnemies.forEach(o=>{
+    const flying=o.type==='ptero';
+    phaseEnemies.push({x:o.x,y:o.y,type:o.type,w:54,h:flying?38:54,
+      vx:-(0.8+Math.random()*0.3)*speedMult, flying, frame:0, frameTimer:0, alive:true, bobOffset:Math.random()*Math.PI*2});
+  });
 
   // boss + alavanca na última fase
   phaseBoss = null; phaseLever = null; boulderRoll = null;
@@ -3993,16 +4027,7 @@ function drawCoins(){
     const cx = coin.x - scrollX;
     if(cx < -30 || cx > W + 30) return;
     const cy = coin.y + Math.sin(coin.bob) * 4;
-    // glow
-    ctx.fillStyle='rgba(251,191,36,0.25)';
-    ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI*2); ctx.fill();
-    // outer circle
-    ctx.fillStyle='#fbbf24';
-    ctx.strokeStyle='#92400e'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    // inner highlight
-    ctx.fillStyle='#fde68a';
-    ctx.beginPath(); ctx.arc(cx - 2, cy - 2, 4, 0, Math.PI*2); ctx.fill();
+    edDrawItem('coin', cx, cy, 0.85);
   });
 }
 
@@ -4028,25 +4053,12 @@ function drawTraps(){
 
 // ─── POWER-UP ITEMS ───────────────────────────────────────────────────────────
 function drawPowerupItems(){
-  const puColors = {speed:'#fb923c', shield:'#60a5fa', fire:'#ef4444'};
-  const puIcons  = {speed:'⚡', shield:'🛡', fire:'🔥'};
   powerupItems.forEach(item=>{
     if(item.collected) return;
     const ix = item.x - scrollX;
     if(ix < -40 || ix > W + 40) return;
     const iy = item.y + Math.sin(item.bob) * 4;
-    // glow
-    ctx.fillStyle = puColors[item.type] + '44';
-    ctx.beginPath(); ctx.arc(ix + 10, iy - 10, 18, 0, Math.PI*2); ctx.fill();
-    // box
-    ctx.fillStyle = puColors[item.type];
-    ctx.strokeStyle = OL; ctx.lineWidth = 2;
-    roundRect(ctx, ix, iy - 20, 20, 20, 5, true, true);
-    // icon
-    ctx.font = '12px serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(puIcons[item.type], ix + 10, iy - 10);
-    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    edDrawItem(item.type, ix+10, iy, 1);
   });
 }
 
@@ -4897,7 +4909,7 @@ function launchCustomPhase(){
 
 // ─── EDITOR DE FASE ───────────────────────────────────────────────────────────
 function startEditor(){
-  editorBlocks = [];
+  editorBlocks = []; editorItems = []; editorEnemies = []; edUndo = []; edRedo = []; editorTab = 'blocks'; editorErase = false;
   stopMenuAnimation();
   player.x=100; player.y=GROUND; player.vx=0; player.vy=0;
   player.onGround=true; player.ducking=false; player.invincible=0; player.jumpCount=0; player.hp=3;
@@ -4930,7 +4942,55 @@ function placeEditorBlock(wx, wy){
   const bx=Math.round((wx-bt.w/2)/bt.w)*bt.w;
   const by=wy!==undefined?Math.min(Math.round(wy/bt.h)*bt.h,GROUND):player.y;
   if(editorBlocks.some(b=>Math.abs(b.x-bx)<8&&Math.abs(b.y-by)<8)) return;
-  editorBlocks.push({x:bx,y:by,w:bt.w,h:bt.h,typeIdx:editorBlockType,type:'stone'});
+  edAdd('blocks',{x:bx,y:by,w:bt.w,h:bt.h,typeIdx:editorBlockType,type:'stone'});
+}
+
+function edList(name){ return name==='items'?editorItems:name==='enemies'?editorEnemies:editorBlocks; }
+function edAdd(name,obj){
+  edList(name).push(obj);
+  edUndo.push({op:'add',name,obj}); edRedo=[];
+}
+function edBox(name,o){
+  if(name==='blocks') return [o.x,o.y-o.h,o.w,o.h];
+  if(name==='items') return o.kind==='egg'||o.kind==='coin' ? [o.x-16,o.y-18,32,36] : [o.x-14,o.y-28,28,28];
+  return o.type==='ptero' ? [o.x,o.y-30,60,60] : [o.x,o.y-60,60,60];
+}
+function edEraseAt(wx,wy){
+  for(const name of ['enemies','items','blocks']){
+    const list=edList(name);
+    for(let i=list.length-1;i>=0;i--){
+      const [bx,by,bw,bh]=edBox(name,list[i]);
+      if(wx>=bx&&wx<=bx+bw&&wy>=by&&wy<=by+bh){
+        const obj=list.splice(i,1)[0];
+        edUndo.push({op:'del',name,obj,idx:i}); edRedo=[];
+        return;
+      }
+    }
+  }
+}
+function edApply(a,reverse){
+  const list=edList(a.name);
+  const adding = (a.op==='add') !== reverse;
+  if(adding){ if(a.op==='del') list.splice(Math.min(a.idx,list.length),0,a.obj); else list.push(a.obj); }
+  else { const i=list.indexOf(a.obj); if(i>=0) list.splice(i,1); }
+}
+function edUndoAction(){ const a=edUndo.pop(); if(!a) return; edApply(a,true); edRedo.push(a); }
+function edRedoAction(){ const a=edRedo.pop(); if(!a) return; edApply(a,false); edUndo.push(a); }
+
+function edDrawItem(kind,x,y,scale=1){
+  ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
+  if(kind==='egg') drawEgg(0,0,16,'normal');
+  else if(kind==='coin'){
+    ctx.fillStyle='#FFD23F'; ctx.strokeStyle=OL; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=OL; hudFont(700,12,'d'); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('$',0,1);
+  } else {
+    const col={speed:'#FF9F6B',shield:'#5BC0FF',fire:'#FF6B6B'}[kind];
+    ctx.fillStyle=OL; roundRect(ctx,-14,-25,28,28,8,true,false);
+    ctx.fillStyle=col; ctx.strokeStyle=OL; ctx.lineWidth=2.5; roundRect(ctx,-14,-28,28,28,8,true,true);
+    hudIcon(HUD_P[kind],-9,-23,18,'#FFFFFF');
+  }
+  ctx.restore();
 }
 
 function drawEditorBlock(c,b,sx){
@@ -4942,6 +5002,7 @@ const ED_OFF = 44, ED_DRAWER_Y = 338;
 const ED_ICON = {
   back:new Path2D('M15 5l-7 7 7 7'),
   undo:new Path2D('M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3'),
+  redo:new Path2D('M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3'),
   plus:new Path2D('M12 5v14M5 12h14'),
   erase:new Path2D('M7 21h10M5 15l9-9 5 5-9 9H8z'),
   play:new Path2D('M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z')
@@ -4981,14 +5042,22 @@ function drawEditor(){
   for(let gx=Math.floor(scrollX/60)*60;gx<scrollX+W+60;gx+=60){
     ctx.beginPath(); ctx.moveTo(gx-scrollX,ED_OFF); ctx.lineTo(gx-scrollX,GROUND-4); ctx.stroke();
   }
-  // blocos
+  // blocos, itens e inimigos
   for(const b of editorBlocks){
     const sx=b.x-scrollX;
     if(sx>-b.w-10&&sx<W+10) drawEditorBlock(ctx,b,sx);
   }
+  for(const it of editorItems){
+    const sx=it.x-scrollX;
+    if(sx>-40&&sx<W+40) edDrawItem(it.kind,sx,it.y,1);
+  }
+  for(const en of editorEnemies){
+    const sx=en.x-scrollX;
+    if(sx>-80&&sx<W+80) drawEnemy({type:en.type,y:en.y,w:54,vx:-1,frame:0},sx);
+  }
   // prévia do bloco
   const bt=EDITOR_BTYPES[editorBlockType];
-  if(!editorErase){
+  if(!editorErase && editorTab==='blocks'){
     const previewX=Math.round((player.x-bt.w/2+scrollX)/bt.w)*bt.w-scrollX;
     ctx.save(); ctx.globalAlpha=0.45; bt.draw(ctx,previewX,player.y-bt.h,bt.w,bt.h); ctx.restore();
     ctx.strokeStyle=HUD_INK; ctx.lineWidth=2; ctx.setLineDash([6,5]);
@@ -5033,62 +5102,86 @@ function drawEditor(){
   edIcon(ED_ICON.play,tx+16,22,22,true);
   ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText('Testar',tx+44,35);
   edButtons.push({x:tx,y:8,w:tw,h:52,fn:()=>renderEditorFinish()});
-  edRoundBtn(tx-54,12,ED_ICON.undo,()=>editorBlocks.pop());
+  edRoundBtn(tx-54,12,ED_ICON.redo,()=>edRedoAction());
+  edRoundBtn(tx-104,12,ED_ICON.undo,()=>edUndoAction());
 
   // ── GAVETA ──
   const dy=ED_DRAWER_Y;
   ctx.fillStyle='#FFF8E7'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=4;
   ctx.beginPath(); ctx.moveTo(-4,H+4); ctx.lineTo(-4,dy+26); ctx.quadraticCurveTo(-4,dy,22,dy); ctx.lineTo(W-22,dy); ctx.quadraticCurveTo(W+4,dy,W+4,dy+26); ctx.lineTo(W+4,H+4); ctx.closePath(); ctx.fill(); ctx.stroke();
   // aba + contador + posição
-  hudFont(900,13);
-  const tabW=ctx.measureText('Blocos').width+28;
-  ctx.fillStyle=HUD_INK; roundRect(ctx,16,dy+10,tabW,28,14,true,false);
-  ctx.fillStyle='#FFFFFF'; ctx.textAlign='center'; ctx.fillText('Blocos',16+tabW/2,dy+25);
+  let tabX=16;
+  [['blocks','Blocos'],['items','Itens'],['enemies','Inimigos']].forEach(([key,lbl])=>{
+    hudFont(900,13);
+    const tw2=ctx.measureText(lbl).width+28, act=editorTab===key;
+    ctx.fillStyle=act?HUD_INK:'#FFFFFF'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2;
+    roundRect(ctx,tabX,dy+10,tw2,28,14,true,true);
+    ctx.fillStyle=act?'#FFFFFF':HUD_INK; ctx.textAlign='center'; ctx.fillText(lbl,tabX+tw2/2,dy+25);
+    edButtons.push({x:tabX,y:dy+10,w:tw2,h:28,fn:()=>{editorTab=key;editorErase=false;}});
+    tabX+=tw2+8;
+  });
   const barW=240, barX=W-16-barW, barY=dy+12;
-  const cnt=`${editorBlocks.length} blocos`;
+  const cnt = editorTab==='items' ? `${editorItems.length} itens` : editorTab==='enemies' ? `${editorEnemies.length} inimigos` : `${editorBlocks.length} blocos`;
   ctx.fillStyle=HUD_INK; ctx.textAlign='right'; ctx.fillText(cnt,barX-12,dy+25);
   ctx.fillStyle='#FFFFFF'; roundRect(ctx,barX,barY,barW,24,12,true,false);
   ctx.save(); roundRect(ctx,barX,barY,barW,24,12,false,false); ctx.clip();
   ctx.fillStyle='#C98B5B'; ctx.fillRect(barX,barY+16,barW,8);
   ctx.fillStyle=HUD_INK;
   editorBlocks.forEach(b=>ctx.fillRect(barX+b.x/currentLen*barW-1,barY+8,3,8));
+  ctx.fillStyle='#D9A800'; editorItems.forEach(it=>ctx.fillRect(barX+it.x/currentLen*barW-1,barY+4,3,6));
+  ctx.fillStyle='#7E5BD6'; editorEnemies.forEach(en=>ctx.fillRect(barX+en.x/currentLen*barW-1,barY+10,3,8));
   ctx.fillStyle='#FF6B6B'; ctx.fillRect(barX+(currentLen-220)/currentLen*barW,barY+4,3,12);
   const winW=Math.max(16,W/currentLen*barW), winX=barX+scrollX/currentLen*barW;
   ctx.fillStyle='rgba(255,210,63,.45)'; roundRect(ctx,winX,barY+1,winW,22,11,true,false);
   ctx.strokeStyle=HUD_INK; ctx.lineWidth=2.5; roundRect(ctx,winX,barY+1,winW,22,11,false,true);
   ctx.restore();
   ctx.strokeStyle=HUD_INK; ctx.lineWidth=3; roundRect(ctx,barX,barY,barW,24,12,false,true);
-  // cartões de bloco
-  EDITOR_BTYPES.forEach((b,i)=>{
-    const sel=i===editorBlockType, sw=72, sh=62;
+  // cartões da aba aberta
+  const cards = editorTab==='items' ? EDITOR_ITEMS : editorTab==='enemies' ? EDITOR_ENEMIES : EDITOR_BTYPES;
+  const selIdx = editorTab==='items' ? editorItemType : editorTab==='enemies' ? editorEnemyType : editorBlockType;
+  cards.forEach((b,i)=>{
+    const sel=i===selIdx, sw=72, sh=62;
     const sx=28+i*(sw+16), sy=dy+48-(sel?6:0);
     ctx.fillStyle=HUD_INK; roundRect(ctx,sx,sy+(sel?7:4),sw,sh,18,true,false);
     ctx.fillStyle=sel?'#FFD23F':'#FFFFFF'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=3;
     roundRect(ctx,sx,sy,sw,sh,18,true,true);
-    const k=Math.min((sw-18)/b.w,24/b.h,1), bw=b.w*k, bh=b.h*k;
-    ctx.save(); b.draw(ctx,sx+(sw-bw)/2,sy+8+(26-bh)/2,bw,bh); ctx.restore();
-    hudFont(900,12); ctx.fillStyle=HUD_INK; ctx.textAlign='center'; ctx.fillText(b.name,sx+sw/2,sy+sh-12);
-    ctx.fillStyle='#FFFFFF'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(sx+2,sy+2,12,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    if(editorTab==='blocks'){
+      const k=Math.min((sw-18)/b.w,24/b.h,1), bw=b.w*k, bh=b.h*k;
+      ctx.save(); b.draw(ctx,sx+(sw-bw)/2,sy+8+(26-bh)/2,bw,bh); ctx.restore();
+    } else if(editorTab==='items'){
+      edDrawItem(b.kind,sx+sw/2,b.kind==='egg'||b.kind==='coin'?sy+22:sy+34,b.kind==='egg'?0.8:0.9);
+    } else {
+      ctx.save(); ctx.beginPath(); ctx.rect(sx+3,sy+3,sw-6,sh-20); ctx.clip();
+      ctx.translate(sx+sw/2-14,sy+(b.type==='ptero'?20:40)); ctx.scale(.5,.5);
+      drawEnemy({type:b.type,y:0,w:54,vx:-1,frame:0},0);
+      ctx.restore();
+    }
+    hudFont(900,12); ctx.fillStyle=HUD_INK; ctx.textAlign='center'; ctx.fillText(b.name,sx+sw/2,sy+sh-10);
+    ctx.fillStyle='#FFFFFF'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(sx+2,sy+2,12,0,Math.PI*2); ctx.fill(); ctx.stroke();
     hudFont(700,12,'d'); ctx.fillStyle=HUD_INK; ctx.fillText(String(i+1),sx+2,sy+3);
-    edButtons.push({x:sx-10,y:sy-10,w:sw+10,h:sh+10,fn:()=>{editorBlockType=i;editorErase=false;}});
+    edButtons.push({x:sx-10,y:sy-10,w:sw+10,h:sh+10,fn:()=>{
+      if(editorTab==='items') editorItemType=i; else if(editorTab==='enemies') editorEnemyType=i; else editorBlockType=i;
+      editorErase=false;
+    }});
   });
   // dica de teclas
   hudFont(800,12); ctx.fillStyle='#4A4968'; ctx.textAlign='right';
-  ctx.fillText('B coloca · X apaga · DEL desfaz · ENTER testa',W-16,dy+90);
+  ctx.fillText('Clique coloca · X apaga · Ctrl+Z desfaz',W-16,dy+80);
+  ctx.fillText('Ctrl+Shift+Z refaz · ENTER testa',W-16,dy+98);
   ctx.restore();
 }
 
 function renderEditorFinish(){
   const ov=document.getElementById('overlay');
   ov.innerHTML=`<div class="ocard">
-    <h2>Escolha os inimigos</h2>
-    <p class="sub">${editorBlocks.length} blocos na sua fase</p>
+    <h2>${editorEnemies.length ? 'Pronto para testar' : 'Escolha os inimigos'}</h2>
+    <p class="sub">${editorBlocks.length} blocos · ${editorItems.length} itens · ${editorEnemies.length} inimigos</p>
     <div class="divider"></div>
-    <div class="diff-row">
+    ${editorEnemies.length ? `<p class="sub">Os inimigos que você colocou entram na fase.</p>` : `<div class="diff-row">
       <button class="diff-btn facil active" id="ed-e0" onclick="edEnemySel(0,this)">Poucos</button>
       <button class="diff-btn normal" id="ed-e1" onclick="edEnemySel(1,this)">Médio</button>
       <button class="diff-btn dificil" id="ed-e2" onclick="edEnemySel(2,this)">Muitos</button>
-    </div>
+    </div>`}
     <div class="divider"></div>
     <button class="btn" onclick="launchEditorPhase()">Jogar fase</button>
     <button class="btn sec" onclick="document.getElementById('overlay').style.display='none';state='editor';">← Voltar ao Editor</button>
@@ -5104,7 +5197,8 @@ function edEnemySel(level,btn){
 }
 
 function launchEditorPhase(){
-  customPhaseConfig={theme:0,enemy:editorEnemyLevel,eggs:3,time:120,platforms:[...editorBlocks]};
+  customPhaseConfig={theme:0,enemy:editorEnemyLevel,eggs:3,time:120,platforms:[...editorBlocks],
+    items:editorItems.map(o=>({...o})), enemies:editorEnemies.map(o=>({...o}))};
   document.getElementById('overlay').style.display='none';
   phase=99; isSecretPhase=false;
   beginPhase(); state='playing';
