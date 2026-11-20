@@ -1337,8 +1337,8 @@ function generatePhase(p){
   });
 
   // boss + alavanca na última fase
-  phaseChaser = (p >= 2 && p <= MAX_PHASES && !secret && !cp && Math.random() < 1/3)
-    ? {x:0, y:GROUND, vy:0, onGround:true, active:false, alive:true, mode:Math.random()<.5?'twenty':'random', spawnAt:null, hp:3, hitCd:0, hitFlash:0, facing:1}
+  phaseChaser = (p >= 1 && p <= MAX_PHASES && !secret && !cp)
+    ? {x:0, y:GROUND, vy:0, onGround:true, active:false, alive:true, spawnAt:null, hp:3, hitCd:0, hitFlash:0, facing:1}
     : null;
   phaseBoss = null; phaseLever = null; boulderRoll = null;
   if((p === 4 || p === MAX_PHASES) && !secret && !cp){
@@ -2030,7 +2030,7 @@ function restartPhase(){
 }
 
 function resumeFromCheckpoint(){
-  if(phaseChaser && phaseChaser.alive){ phaseChaser.active=false; phaseChaser.mode='random'; phaseChaser.spawnAt=frameCount+600; }
+  if(phaseChaser && phaseChaser.alive){ phaseChaser.active=false; phaseChaser.spawnAt=frameCount+600; }
   scrollX = Math.max(0, Math.min(currentLen-W, checkpointX - W*0.28));
   player.x = W*0.28; player.y = GROUND;
   player.vx=0; player.vy=0; player.hp=3; player.invincible=90;
@@ -2593,8 +2593,7 @@ function update(){
     const ch=phaseChaser;
     if(ch.spawnAt===null){
       const total = phaseFramesLeft + frameCount;
-      if(ch.mode==='twenty' && total <= 25*60) ch.mode='random';
-      ch.spawnAt = ch.mode==='twenty' ? total - 20*60 : Math.round(total*(0.15+Math.random()*0.55));
+      ch.spawnAt = Math.max(5*60, Math.min(total - 20*60, Math.round(total*(0.2+Math.random()*0.25))));
     }
     if(!ch.active && frameCount>=ch.spawnAt){
       const behind = player.x > 220;
