@@ -5347,19 +5347,20 @@ function hrWall(x,y){
   if(x===7 && !(y>=4&&y<=6)) return true;
   return false;
 }
+function fb(c,x,y,w,h,r,fill){ c.fillStyle=fill; c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; roundRect(c,x,y,w,h,Math.min(r,w/2,h/2),true,true); }
 const FURNITURE = [
-  {id:'cama',      name:'Cama',      w:1, d:2, h:.38, side:'#C98B5B', top:'#FF8FC7', deco:'cama'},
-  {id:'sofa',      name:'Sofá',      w:2, d:1, h:.45, side:'#2F8FD0', top:'#5BC0FF'},
-  {id:'mesa',      name:'Mesa',      w:1, d:1, h:.45, side:'#B37548', top:'#C98B5B'},
-  {id:'cadeira',   name:'Cadeira',   w:1, d:1, h:.3,  side:'#B37548', top:'#FFD23F', inset:.25},
-  {id:'estante',   name:'Estante',   w:1, d:1, h:1.0, side:'#C98B5B', top:'#B37548', deco:'livros', inset:.2},
-  {id:'tv',        name:'TV',        w:1, d:1, h:.75, side:'#2B2A4C', top:'#2B2A4C', deco:'tela', inset:.3},
-  {id:'aquario',   name:'Aquário',   w:1, d:1, h:.6,  side:'#A7DEFF', top:'#5BC0FF', deco:'peixe', inset:.15},
-  {id:'planta',    name:'Planta',    w:1, d:1, h:.3,  side:'#FF9F6B', top:'#7A4A2E', inset:.3, bush:'#7ED957'},
-  {id:'luminaria', name:'Luminária', w:1, d:1, h:.9,  side:'#7A7798', top:'#7A7798', inset:.42, shade:'#FFD23F'},
-  {id:'geladeira', name:'Geladeira', w:1, d:1, h:1.1, side:'#FFFFFF', top:'#E4E2EE', deco:'porta', inset:.1},
-  {id:'bau',       name:'Baú',       w:1, d:1, h:.4,  side:'#D9733F', top:'#FF9F6B', inset:.1},
-  {id:'tapete',    name:'Tapete',    w:2, d:2, h:.02, side:'#B18CFF', top:'#B18CFF', rug:true},
+  {id:'cama', name:'Cama', w:1, d:2, aw:150, art:(c)=>{ fb(c,0,-34,150,26,8,'#C98B5B'); fb(c,6,-48,138,18,8,'#FFFFFF'); fb(c,50,-50,94,22,8,'#FF8FC7'); fb(c,8,-58,36,14,7,'#FFFFFF'); fb(c,0,-62,14,62,5,'#B37548'); fb(c,136,-46,14,46,5,'#B37548'); }},
+  {id:'sofa', name:'Sofá', w:2, d:1, aw:140, art:(c)=>{ fb(c,0,-64,140,36,14,'#5BC0FF'); fb(c,12,-38,116,24,8,'#A7DEFF'); fb(c,0,-42,22,34,8,'#2F8FD0'); fb(c,118,-42,22,34,8,'#2F8FD0'); fb(c,10,-10,10,10,3,'#2B2A4C'); fb(c,120,-10,10,10,3,'#2B2A4C'); }},
+  {id:'mesa', name:'Mesa', w:1, d:1, aw:100, art:(c)=>{ fb(c,0,-52,100,12,5,'#C98B5B'); fb(c,8,-42,10,42,3,'#B37548'); fb(c,82,-42,10,42,3,'#B37548'); }},
+  {id:'cadeira', name:'Cadeira', w:1, d:1, aw:44, art:(c)=>{ fb(c,4,-66,10,66,3,'#B37548'); fb(c,4,-32,36,9,4,'#FFD23F'); fb(c,32,-24,8,24,3,'#B37548'); }},
+  {id:'estante', name:'Estante', w:1, d:1, aw:80, art:(c)=>{ fb(c,0,-132,80,132,6,'#C98B5B'); ['#FF6B6B','#5BC0FF','#FFD23F','#7ED957','#B18CFF'].forEach((col,i)=>{ fb(c,8+i*13,-122,10,30,2,col); fb(c,10+i*12,-82,9,30,2,['#FF9F6B','#7ED957','#FF8FC7','#5BC0FF','#FFD23F'][i]); }); fb(c,6,-90,68,6,2,'#B37548'); fb(c,6,-50,68,6,2,'#B37548'); }},
+  {id:'tv', name:'TV', w:1, d:1, aw:90, art:(c)=>{ fb(c,10,-24,70,24,5,'#C98B5B'); fb(c,0,-86,90,60,8,'#2B2A4C'); fb(c,8,-79,74,46,5,'#5BC0FF'); c.fillStyle='rgba(255,255,255,.35)'; c.fillRect(12,-75,20,8); }},
+  {id:'aquario', name:'Aquário', w:1, d:1, aw:84, art:(c)=>{ fb(c,6,-20,72,20,4,'#C98B5B'); fb(c,0,-78,84,58,8,'#A7DEFF'); c.fillStyle='#5BC0FF'; c.fillRect(4,-62,76,40); drawFishIcon(c,34,-44,FISH[1],0.7); drawFishIcon(c,60,-34,FISH[0],0.5); c.fillStyle='#7ED957'; c.fillRect(10,-30,6,10); c.fillRect(70,-32,5,12); }},
+  {id:'planta', name:'Planta', w:1, d:1, aw:48, art:(c)=>{ fb(c,10,-30,28,30,6,'#FF9F6B'); [[24,-66,15],[11,-50,12],[37,-50,12]].forEach(([dx,dy,r])=>{ c.beginPath(); c.arc(dx,dy,r,0,Math.PI*2); c.fillStyle='#7ED957'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.stroke(); }); }},
+  {id:'luminaria', name:'Luminária', w:1, d:1, aw:40, art:(c)=>{ fb(c,8,-8,24,8,4,'#2B2A4C'); fb(c,17,-94,6,88,3,'#7A7798'); c.beginPath(); c.moveTo(4,-92); c.lineTo(12,-118); c.lineTo(28,-118); c.lineTo(36,-92); c.closePath(); c.fillStyle='#FFD23F'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.stroke(); }},
+  {id:'geladeira', name:'Geladeira', w:1, d:1, aw:62, art:(c)=>{ fb(c,0,-126,62,126,10,'#FFFFFF'); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.beginPath(); c.moveTo(0,-82); c.lineTo(62,-82); c.stroke(); fb(c,48,-114,6,22,3,'#B9B6D0'); fb(c,48,-72,6,30,3,'#B9B6D0'); }},
+  {id:'bau', name:'Baú', w:1, d:1, aw:80, art:(c)=>{ fb(c,0,-44,80,44,8,'#D9733F'); fb(c,0,-56,80,18,9,'#FF9F6B'); fb(c,34,-46,12,12,3,'#FFD23F'); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.beginPath(); c.moveTo(16,-38); c.lineTo(16,0); c.moveTo(64,-38); c.lineTo(64,0); c.stroke(); }},
+  {id:'tapete', name:'Tapete', w:2, d:2, aw:160, rug:true, art:(c)=>{ c.beginPath(); c.ellipse(80,-8,80,10,0,0,Math.PI*2); c.fillStyle='#B18CFF'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.stroke(); c.beginPath(); c.ellipse(80,-8,52,6,0,0,Math.PI*2); c.strokeStyle='#FFFFFF'; c.lineWidth=2; c.stroke(); }},
 ];
 let houseData=null, houseSel=0, houseRot=0, houseUndo=[], houseButtons=[], hp={x:2.5,y:8.5,facing:-Math.PI/2,frame:0,moving:false}, houseMsg=null;
 function loadHouseData(){ try{ const d=JSON.parse(localStorage.getItem('dinogame_house3d')||'null'); if(d&&d.items) return d; }catch(e){} return {items:[],wall:0,floor:0}; }
@@ -5452,16 +5453,27 @@ function drawHouse(){
   // caixas: paredes e móveis
   const boxes=[];
   for(let y=0;y<HR_H;y++)for(let x=0;x<HR_W;x++) if(hrWall(x,y)) boxes.push({x0:x,y0:y,x1:x+1,y1:y+1,h:1.05,side:wallC,top:shadeHex(wallC,.8),wall:true,tx:x,ty:y});
-  houseData.items.forEach(o=>{
-    const f=FURNITURE.find(z=>z.id===o.id); const [fw,fd]=itemFoot(o); const ins=f.inset||0;
-    boxes.push({x0:o.tx+ins,y0:o.ty+ins,x1:o.tx+fw-ins,y1:o.ty+fd-ins,h:f.h,side:f.side,top:f.top,f,o,rug:f.rug});
-  });
+  // tapetes no chão
+  const rugQuad=(x0,y0,x1,y1,fill,stroke)=>{ const q=[proj(x0,y0,.01),proj(x1,y0,.01),proj(x1,y1,.01),proj(x0,y1,.01)]; if(q.some(v=>!v)) return; ctx.fillStyle=fill; quad(q); ctx.fill(); if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=lw(q[0]); ctx.stroke(); } };
+  houseData.items.forEach(o=>{ const f=FURNITURE.find(z=>z.id===o.id); if(!f.rug) return; const [fw,fd]=itemFoot(o);
+    rugQuad(o.tx+.1,o.ty+.1,o.tx+fw-.1,o.ty+fd-.1,'#B18CFF',INK); rugQuad(o.tx+.45,o.ty+.45,o.tx+fw-.45,o.ty+fd-.45,'#D4BFFF',null); });
+  // contorno do lugar onde o móvel vai
   const t=houseTarget(), tf=FURNITURE[houseSel];
-  boxes.push({x0:t.tx+(tf.inset||0),y0:t.ty+(tf.inset||0),x1:t.tx+t.fw-(tf.inset||0),y1:t.ty+t.fd-(tf.inset||0),h:tf.h,side:t.ok?'rgba(126,217,87,.35)':'rgba(255,107,107,.35)',top:t.ok?'rgba(126,217,87,.45)':'rgba(255,107,107,.45)',ghost:true,rug:tf.rug});
-  boxes.forEach(b=>b.dist=((b.x0+b.x1)/2-camX)**2+((b.y0+b.y1)/2-camY)**2);
-  boxes.sort((a,b)=>(a.rug!==b.rug)?(a.rug?-1:1):b.dist-a.dist);
+  rugQuad(t.tx+.05,t.ty+.05,t.tx+t.fw-.05,t.ty+t.fd-.05, t.ok?'rgba(126,217,87,.4)':'rgba(255,107,107,.4)', t.ok?'#4DB85C':'#D94848');
+  houseData.items.forEach(o=>{ const f=FURNITURE.find(z=>z.id===o.id); if(f.rug) return; const [fw,fd]=itemFoot(o);
+    boxes.push({sprite:true,cx:o.tx+fw/2,cy:o.ty+fd/2,size:Math.max(fw,fd)*.9,f}); });
+  if(!tf.rug && t.ok) boxes.push({sprite:true,cx:t.tx+t.fw/2,cy:t.ty+t.fd/2,size:Math.max(t.fw,t.fd)*.9,f:tf,ghost:true});
+  boxes.forEach(b=>b.dist = b.sprite ? (b.cx-camX)**2+(b.cy-camY)**2 : ((b.x0+b.x1)/2-camX)**2+((b.y0+b.y1)/2-camY)**2);
+  boxes.sort((a,b)=>b.dist-a.dist);
   const inset=(p0,p1,p1t,p0t,u0,v0,u1,v1)=>{ const L=(a,b,k)=>({x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k}); const P=(u,v)=>L(L(p0t,p1t,u),L(p0,p1,u),v); return [P(u0,v0),P(u1,v0),P(u1,v1),P(u0,v1)]; };
   boxes.forEach(b=>{
+    if(b.sprite){
+      const p=proj(b.cx,b.cy,0); if(!p) return;
+      const k=p.sc/120;
+      ctx.save(); if(b.ghost) ctx.globalAlpha=.45;
+      ctx.translate(p.x-b.f.aw*k/2,p.y); ctx.scale(k,k); b.f.art(ctx); ctx.restore();
+      return;
+    }
     const A=proj(b.x0,b.y0,0),B=proj(b.x1,b.y0,0),C=proj(b.x1,b.y1,0),D=proj(b.x0,b.y1,0);
     const At=proj(b.x0,b.y0,b.h),Bt=proj(b.x1,b.y0,b.h),Ct=proj(b.x1,b.y1,b.h),Dt=proj(b.x0,b.y1,b.h);
     const face=(p0,p1,p1t,p0t,col,outer)=>{
@@ -5529,13 +5541,7 @@ function drawHouse(){
     const sel=i===houseSel, cw=56, ch=58, cx=16+i*(cw+8), cy=dy+26-(sel?4:0);
     ctx.fillStyle=INK; roundRect(ctx,cx,cy+(sel?5:3),cw,ch,14,true,false);
     ctx.fillStyle=sel?'#FFD23F':'#FFFFFF'; ctx.strokeStyle=INK; ctx.lineWidth=3; roundRect(ctx,cx,cy,cw,ch,14,true,true);
-    // miniatura: caixa isométrica simples
-    const ix=cx+cw/2, iy=cy+30, sw=f.rug?20:14, hh=Math.min(22,6+f.h*16);
-    ctx.lineWidth=2;
-    ctx.fillStyle=f.top; ctx.beginPath(); ctx.moveTo(ix,iy-hh-7); ctx.lineTo(ix+sw,iy-hh); ctx.lineTo(ix,iy-hh+7); ctx.lineTo(ix-sw,iy-hh); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=shadeHex(f.side,.9); ctx.beginPath(); ctx.moveTo(ix-sw,iy-hh); ctx.lineTo(ix,iy-hh+7); ctx.lineTo(ix,iy+7); ctx.lineTo(ix-sw,iy); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=shadeHex(f.side,.75); ctx.beginPath(); ctx.moveTo(ix+sw,iy-hh); ctx.lineTo(ix,iy-hh+7); ctx.lineTo(ix,iy+7); ctx.lineTo(ix+sw,iy); ctx.closePath(); ctx.fill(); ctx.stroke();
-    if(f.bush||f.shade){ ctx.fillStyle=f.bush||f.shade; ctx.beginPath(); ctx.arc(ix,iy-hh-9,8,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
+    { const k=Math.min(44/f.aw,0.28); ctx.save(); ctx.translate(cx+cw/2-f.aw*k/2, cy+38); ctx.scale(k,k); f.art(ctx); ctx.restore(); }
     hudFont(900,12); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(f.name.length>8?f.name.slice(0,7)+'.':f.name,cx+cw/2,cy+ch-8);
     hudFont(700,11,'d'); ctx.fillStyle='#4A4968'; ctx.fillText(i<9?String(i+1):i===9?'0':'',cx+8,cy+9);
     houseButtons.push({x:cx,y:cy,w:cw,h:ch,fn:()=>{houseSel=i;}});
