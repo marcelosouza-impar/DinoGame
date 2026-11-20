@@ -290,20 +290,7 @@
   </div>
 </div>
 
-<div id="overlay" style="display:none;">
-    <div class="ocard" id="menuCard">
-      <h1>DinoGame</h1>
-      <div class="divider"></div>
-      <h2>Escolha o idioma</h2>
-      <p class="sub">Choose language · Elige idioma</p>
-      <div class="lang-row">
-        <button class="lang-btn" onclick="setLanguage('pt')">Português</button>
-        <button class="lang-btn" onclick="setLanguage('en')">English</button>
-        <button class="lang-btn" onclick="setLanguage('es')">Español</button>
-      </div>
-      <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>
-    </div>
-  </div>
+<div id="overlay" style="display:none;"></div>
 <script>
 // ─── RESPONSIVE SCALING ────────────────────────────────────────────────────────
 (function applyScale(){
@@ -376,7 +363,7 @@ let difficulty = 'normal'; // 'facil' | 'normal' | 'dificil'
 let phaseFramesLeft = 0;
 let paused = false;
 let cutsceneTimer = 0;
-let currentLang = localStorage.getItem('dinogame_lang') || 'pt';
+let currentLang = 'pt';
 let scorePopTimer = 0, lastScoreVal = 0;
 let hpBarAnim = 3;
 let currentHighScore = parseInt(localStorage.getItem('dinogame_highscore') || '0');
@@ -1490,32 +1477,6 @@ function generatePhase(p){
 }
 
 // ─── GAME FLOW ────────────────────────────────────────────────────────────────
-function showLanguageSelect(){
-  setHudButtonTitles();
-  const ov = document.getElementById('overlay');
-  ov.classList.remove('win-mode');
-  ov.style.display = 'flex';
-  ov.innerHTML = `<div class="ocard" id="menuCard">
-    <h1>DinoGame</h1>
-    <div class="divider"></div>
-    <h2>Escolha o idioma</h2>
-    <p class="sub">Choose language · Elige idioma</p>
-    <div class="lang-row">
-      <button class="lang-btn" onclick="setLanguage('pt')">Português</button>
-      <button class="lang-btn" onclick="setLanguage('en')">English</button>
-      <button class="lang-btn" onclick="setLanguage('es')">Español</button>
-    </div>
-    <p class="credits">${tr('creditsText')}</p>
-  </div>`;
-  state = 'menu';
-}
-
-function setLanguage(lang){
-  currentLang = lang;
-  localStorage.setItem('dinogame_lang', lang);
-  setHudButtonTitles();
-  renderMainMenu();
-}
 
 function svgIcon(d,size=24,fill=false){
   return `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill?'#2B2A4C':'none'}" stroke="${fill?'none':'#2B2A4C'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
@@ -1575,7 +1536,7 @@ function renderMainMenu(){
       <button class="chip" onclick="askPlayerName()"><span class="chip-dot" style="background:var(--grass)">${svgIcon(ICONS.user,16)}</span>${playerName||'Seu nome'}</button>
       <div style="display:flex;gap:10px;align-items:center">
         ${coinChip()}
-        <button class="round-btn" aria-label="Idioma e som" onclick="renderSettings()">${svgIcon(ICONS.gear,24)}</button>
+        <button class="round-btn" aria-label="Configurações" onclick="renderSettings()">${svgIcon(ICONS.gear,24)}</button>
       </div>
     </div>
     <div class="logo"><span style="color:var(--grass)">Dino</span><span style="color:var(--sun);margin-left:44px">Game</span></div>
@@ -1602,10 +1563,6 @@ function renderSettings(){
   ov.innerHTML = `<div class="ocard">
     <h2>Configurações</h2>
     <div class="divider"></div>
-    <p class="sub" style="font-weight:900;color:var(--ink)">${tr('language')}</p>
-    <div class="lang-row">
-      ${[['pt','Português'],['en','English'],['es','Español']].map(([k,n])=>`<button class="lang-btn" style="${currentLang===k?'background:var(--sun)':''}" onclick="setLanguage('${k}')">${n}</button>`).join('')}
-    </div>
     <p class="sub" style="font-weight:900;color:var(--ink)">Música</p>
     <button class="lang-btn" id="settingsMusic" onclick="toggleMute();renderSettings()">${svgIcon(ICONS.music,18)}&nbsp;${bgmMuted?'Desligada':'Ligada'}</button>
     <div class="divider"></div>
@@ -6943,17 +6900,17 @@ function loop(){
   document.fonts.ready.then(()=>{
     clearInterval(tick);
     if(bar) bar.style.width = '100%';
-    setTimeout(()=>{
-      if(ls) ls.style.display = 'none';
-      if(ov) ov.style.display = 'flex';
-    }, 400);
+    setTimeout(openMenu, 400);
   });
-  // fallback se fonts.ready não disparar
-  setTimeout(()=>{
+  let opened = false;
+  function openMenu(){
+    if(opened) return; opened = true;
     clearInterval(tick);
     if(ls) ls.style.display = 'none';
-    if(ov) ov.style.display = 'flex';
-  }, 4000);
+    renderMainMenu();
+  }
+  // fallback se fonts.ready não disparar
+  setTimeout(openMenu, 4000);
 })();
 
 initMobileDpad();
