@@ -1077,6 +1077,11 @@ window.addEventListener('keydown', e => {
     if(lane!==undefined){ e.preventDefault(); partyPress(lane); }
     return;
   }
+  if(state==='house' && hrMode==='hosp'){
+    if(e.code==='Escape') exitHouse();
+    else if(e.code==='KeyE'||e.code==='Space'){ e.preventDefault(); if(!hospCure() && Math.hypot(hp.x-(HR_DOOR.x+.5),hp.y-HR_DOOR.y)<1.4) exitHouse(); }
+    return;
+  }
   if(state==='house'){
     if(e.code==='Escape') exitHouse();
     else if(e.code==='KeyZ' && (e.ctrlKey||e.metaKey)) houseUndoAction();
@@ -1089,6 +1094,7 @@ window.addEventListener('keydown', e => {
     return;
   }
   if(e.code==='KeyE'&&state==='freeroam'&&nearHouseDoor()){ enterHouse(); return; }
+  if(e.code==='KeyE'&&state==='freeroam'&&nearHospitalDoor()){ enterHospital(); return; }
   if(e.code==='Escape'&&state==='freeroam'){ state='menu'; renderMainMenu(); return; }
   if(e.code==='KeyC'&&state==='freeroam'&&frJob) return;
   if(e.code==='Space'&&state==='freeroam') e.preventDefault();
@@ -5332,6 +5338,7 @@ const HR_DOOR = {x:2, y:HR_H-1};
 function hrWall(x,y){
   if(x<0||y<0||x>=HR_W||y>=HR_H) return true;
   if(x===0||y===0||x===HR_W-1||y===HR_H-1) return true;
+  if(hrMode==='hosp') return false;
   if(x===7 && !(y>=4&&y<=6)) return true;
   return false;
 }
@@ -5350,6 +5357,49 @@ const FURNITURE = [
   {id:'bau', name:'Baú', w:1, d:1, ah:56, aw:80, art:(c)=>{ fb(c,0,-44,80,44,8,'#D9733F'); fb(c,0,-56,80,18,9,'#FF9F6B'); fb(c,34,-46,12,12,3,'#FFD23F'); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.beginPath(); c.moveTo(16,-38); c.lineTo(16,0); c.moveTo(64,-38); c.lineTo(64,0); c.stroke(); }},
   {id:'tapete', name:'Tapete', w:2, d:2, ah:18, aw:160, rug:true, art:(c)=>{ c.beginPath(); c.ellipse(80,-8,80,10,0,0,Math.PI*2); c.fillStyle='#B18CFF'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.stroke(); c.beginPath(); c.ellipse(80,-8,52,6,0,0,Math.PI*2); c.strokeStyle='#FFFFFF'; c.lineWidth=2; c.stroke(); }},
 ];
+// hospital: mesmo motor da casa, com móveis fixos e pacientes
+let hrMode='house', hospPatients=[], hospCured=0, hospSpawn=0;
+const HOSP_FURN = [
+  {id:'leito', name:'Leito', w:1, d:2, ah:70, aw:150, art:(c)=>{ fb(c,0,-30,150,14,6,'#B9B6D0'); fb(c,6,-46,138,18,8,'#FFFFFF'); fb(c,52,-48,92,22,8,'#8FE3C8'); fb(c,10,-56,38,14,7,'#FFFFFF'); fb(c,0,-70,14,70,5,'#5BC0FF'); fb(c,136,-50,14,50,5,'#5BC0FF'); c.fillStyle='#2B2A4C'; [24,126].forEach(x=>{ c.beginPath(); c.arc(x,-7,7,0,Math.PI*2); c.fill(); }); }},
+  {id:'balcao', name:'Balcão', w:2, d:1, ah:80, aw:170, art:(c)=>{ fb(c,0,-70,170,70,8,'#FFFFFF'); fb(c,-4,-80,178,14,6,'#5BC0FF'); c.fillStyle='#FF6B6B'; c.fillRect(77,-56,16,40); c.fillRect(65,-44,40,16); }},
+  {id:'armario', name:'Remédios', w:1, d:1, ah:124, aw:72, art:(c)=>{ fb(c,0,-124,72,124,8,'#FFFFFF'); fb(c,8,-96,56,88,5,'#D6F1FF'); ['#FF6B6B','#FFD23F','#7ED957','#B18CFF'].forEach((col,i)=>{ fb(c,12+i*13,-88,10,22,3,col); fb(c,12+i*13,-50,10,22,3,['#5BC0FF','#FF8FC7','#FF9F6B','#7ED957'][i]); }); fb(c,8,-62,56,5,2,'#B9B6D0'); c.fillStyle='#FF6B6B'; c.fillRect(32,-120,8,20); c.fillRect(26,-114,20,8); }},
+];
+function furnOf(id){ return FURNITURE.find(z=>z.id===id) || HOSP_FURN.find(z=>z.id===id); }
+const HOSP_ITEMS=[
+  {id:'leito',tx:3,ty:1},{id:'leito',tx:5,ty:1},{id:'leito',tx:7,ty:1},{id:'leito',tx:9,ty:1},{id:'leito',tx:11,ty:1},
+  {id:'leito',tx:9,ty:5},{id:'leito',tx:11,ty:5},
+  {id:'planta',tx:1,ty:1},{id:'planta',tx:12,ty:1},{id:'armario',tx:12,ty:8},{id:'armario',tx:12,ty:9},
+  {id:'balcao',tx:4,ty:8},{id:'cadeira',tx:1,ty:5},{id:'cadeira',tx:1,ty:6},{id:'cadeira',tx:1,ty:7},{id:'planta',tx:6,ty:9}
+];
+function hospBeds(){ return houseData.items.filter(o=>o.id==='leito'); }
+function hospAddPatient(){
+  const free=hospBeds().filter(b=>!hospPatients.some(p=>p.bed===b));
+  if(!free.length) return;
+  const b=free[Math.floor(Math.random()*free.length)];
+  hospPatients.push({bed:b,x:b.tx+.5,y:b.ty+1.4,c:['#7ED957','#B18CFF','#5BC0FF','#FF9F6B','#FF8FC7'][Math.floor(Math.random()*5)],cured:0,ph:Math.random()*6});
+}
+function hospNearPatient(){
+  let best=null, bd=1.6;
+  hospPatients.forEach(p=>{ if(p.cured) return; const d=Math.hypot(hp.x-p.x,hp.y-(p.bed.ty+1)); if(d<bd){ bd=d; best=p; } });
+  return best;
+}
+function hospCure(){
+  const p=hospNearPatient(); if(!p) return false;
+  p.cured=performance.now(); hospCured++;
+  totalCoins+=3; saveProgress();
+  houseMsg={text:`Dino curado! +3 moedas`,until:performance.now()+1800};
+  return true;
+}
+function nearHospitalDoor(){ return !frDriving && !frJob && Math.hypot(frPlayer.tx-HOSPITAL.door.x,frPlayer.ty-3.6)<1.2; }
+function enterHospital(){
+  hrMode='hosp';
+  houseData={items:HOSP_ITEMS.map(o=>({...o,r:0})),wall:1,floor:1};
+  hospPatients=[]; hospCured=0; hospSpawn=600; houseParty=null;
+  for(let i=0;i<3;i++) hospAddPatient();
+  hp={x:HR_DOOR.x+.5,y:HR_DOOR.y-.6,facing:-Math.PI/2,frame:0,moving:false};
+  houseMsg={text:'Hospital! Chegue perto dos dinos doentes e aperte E',until:performance.now()+3500};
+  state='house';
+}
 let houseData=null, houseSel=0, houseRot=0, houseUndo=[], houseButtons=[], hp={x:2.5,y:8.5,facing:-Math.PI/2,frame:0,moving:false}, houseMsg=null;
 const HOUSE_DEFAULT_ITEMS=[
   {id:'estante',tx:1,ty:1},{id:'tv',tx:3,ty:1},{id:'planta',tx:6,ty:1},
@@ -5369,11 +5419,11 @@ function loadHouseData(){
   }
   return d;
 }
-function saveHouseData(){ localStorage.setItem('dinogame_house3d',JSON.stringify(houseData)); }
+function saveHouseData(){ if(hrMode==='hosp') return; localStorage.setItem('dinogame_house3d',JSON.stringify(houseData)); }
 function nearHouseDoor(){ return loadCareer().house && !frDriving && !frJob && Math.hypot(frPlayer.tx-(HOUSE_SPOT.tx+1),frPlayer.ty-(HOUSE_SPOT.ty-.4))<1.6; }
-function itemFoot(o){ const f=FURNITURE.find(x=>x.id===o.id); return o.r ? [f.d,f.w] : [f.w,f.d]; }
+function itemFoot(o){ const f=furnOf(o.id); return o.r ? [f.d,f.w] : [f.w,f.d]; }
 function itemAt(x,y,solidOnly){
-  return houseData.items.findIndex(o=>{ const f=FURNITURE.find(z=>z.id===o.id); if(solidOnly&&f.rug) return false; const [fw,fd]=itemFoot(o); return x>=o.tx&&x<o.tx+fw&&y>=o.ty&&y<o.ty+fd; });
+  return houseData.items.findIndex(o=>{ const f=furnOf(o.id); if(solidOnly&&f.rug) return false; const [fw,fd]=itemFoot(o); return x>=o.tx&&x<o.tx+fw&&y>=o.ty&&y<o.ty+fd; });
 }
 function hrBlocked(x,y){ const ix=Math.floor(x), iy=Math.floor(y); return hrWall(ix,iy) || itemAt(ix,iy,true)>=0; }
 function enterHouse(){
@@ -5383,6 +5433,11 @@ function enterHouse(){
   state='house';
 }
 function exitHouse(){
+  if(hrMode==='hosp'){
+    hrMode='house'; state='freeroam';
+    frPlayer.tx=HOSPITAL.door.x; frPlayer.ty=3.3; frPlayer.facing=-Math.PI/2;
+    return;
+  }
   saveHouseData();
   state='freeroam';
   frPlayer.tx=HOUSE_SPOT.tx+1; frPlayer.ty=HOUSE_SPOT.ty-.6; frPlayer.facing=-Math.PI/2;
@@ -5394,7 +5449,7 @@ function houseTarget(){
   for(let x=tx;x<tx+fw;x++)for(let y=ty;y<ty+fd;y++){
     if(hrWall(x,y)) ok=false;
     const k=itemAt(x,y,false);
-    if(k>=0){ const g=FURNITURE.find(z=>z.id===houseData.items[k].id); if(!(g.rug||f.rug)) ok=false; else if(g.rug&&f.rug) ok=false; }
+    if(k>=0){ const g=furnOf(houseData.items[k].id); if(!(g.rug||f.rug)) ok=false; else if(g.rug&&f.rug) ok=false; }
     if(!f.rug && Math.floor(hp.x)===x && Math.floor(hp.y)===y) ok=false;
   }
   return {tx,ty,fw,fd,ok};
@@ -5476,10 +5531,14 @@ function houseUndoAction(){
 function houseClick(cx,cy){
   const hit=houseButtons.find(b=>cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h);
   if(hit){ hit.fn(); return; }
-  if(cy>64 && cy<HOUSE_DRAWER) housePlace();
+  if(cy>64 && cy<HOUSE_DRAWER && hrMode!=='hosp') housePlace();
 }
 function updateHouse(){
   if(houseParty){ updateParty(); return; }
+  if(hrMode==='hosp'){
+    hospPatients=hospPatients.filter(p=>!p.cured || performance.now()-p.cured<2500);
+    if(--hospSpawn<=0){ if(hospPatients.filter(p=>!p.cured).length<4) hospAddPatient(); hospSpawn=420+Math.floor(Math.random()*360); }
+  }
   const turn=.05, spd=.05;
   if(keys['KeyA']||keys['ArrowLeft']) hp.facing-=turn;
   if(keys['KeyD']||keys['ArrowRight']) hp.facing+=turn;
@@ -5518,19 +5577,36 @@ function drawHouse(){
   for(let y=0;y<HR_H;y++)for(let x=0;x<HR_W;x++) if(hrWall(x,y)) boxes.push({x0:x,y0:y,x1:x+1,y1:y+1,h:1.05,side:wallC,top:shadeHex(wallC,.8),wall:true,tx:x,ty:y});
   // tapetes no chão
   const rugQuad=(x0,y0,x1,y1,fill,stroke)=>{ const q=[proj(x0,y0,.01),proj(x1,y0,.01),proj(x1,y1,.01),proj(x0,y1,.01)]; if(q.some(v=>!v)) return; ctx.fillStyle=fill; quad(q); ctx.fill(); if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=lw(q[0]); ctx.stroke(); } };
-  houseData.items.forEach(o=>{ const f=FURNITURE.find(z=>z.id===o.id); if(!f.rug) return; const [fw,fd]=itemFoot(o);
+  houseData.items.forEach(o=>{ const f=furnOf(o.id); if(!f.rug) return; const [fw,fd]=itemFoot(o);
     rugQuad(o.tx+.1,o.ty+.1,o.tx+fw-.1,o.ty+fd-.1,'#B18CFF',INK); rugQuad(o.tx+.45,o.ty+.45,o.tx+fw-.45,o.ty+fd-.45,'#D4BFFF',null); });
   // contorno do lugar onde o móvel vai
   const t=houseTarget(), tf=FURNITURE[houseSel];
-  rugQuad(t.tx+.05,t.ty+.05,t.tx+t.fw-.05,t.ty+t.fd-.05, t.ok?'rgba(126,217,87,.4)':'rgba(255,107,107,.4)', t.ok?'#4DB85C':'#D94848');
-  houseData.items.forEach(o=>{ const f=FURNITURE.find(z=>z.id===o.id); if(f.rug) return; const [fw,fd]=itemFoot(o);
+  if(hrMode!=='hosp') rugQuad(t.tx+.05,t.ty+.05,t.tx+t.fw-.05,t.ty+t.fd-.05, t.ok?'rgba(126,217,87,.4)':'rgba(255,107,107,.4)', t.ok?'#4DB85C':'#D94848');
+  houseData.items.forEach(o=>{ const f=furnOf(o.id); if(f.rug) return; const [fw,fd]=itemFoot(o);
     boxes.push({sprite:true,cx:o.tx+fw/2,cy:o.ty+fd/2,rot:fd>fw||(fw===fd&&o.r),f}); });
   if(houseParty) houseParty.guests.forEach(g=>boxes.push({guest:true,cx:g.x,cy:g.y,g}));
-  if(!tf.rug && t.ok && !houseParty) boxes.push({sprite:true,cx:t.tx+t.fw/2,cy:t.ty+t.fd/2,rot:t.fd>t.fw||(t.fw===t.fd&&houseRot),f:tf,ghost:true});
-  boxes.forEach(b=>b.dist = (b.sprite||b.guest) ? (b.cx-camX)**2+(b.cy-camY)**2 : ((b.x0+b.x1)/2-camX)**2+((b.y0+b.y1)/2-camY)**2);
+  if(hrMode==='hosp') hospPatients.forEach(p=>{ const b=p.bed; boxes.push({patient:true,cx:p.x,cy:p.y,p,dist2:(b.tx+.5-camX)**2+(b.ty+1-camY)**2-.01}); });
+  if(!tf.rug && t.ok && !houseParty && hrMode!=='hosp') boxes.push({sprite:true,cx:t.tx+t.fw/2,cy:t.ty+t.fd/2,rot:t.fd>t.fw||(t.fw===t.fd&&houseRot),f:tf,ghost:true});
+  boxes.forEach(b=>b.dist = b.patient ? b.dist2 : (b.sprite||b.guest) ? (b.cx-camX)**2+(b.cy-camY)**2 : ((b.x0+b.x1)/2-camX)**2+((b.y0+b.y1)/2-camY)**2);
   boxes.sort((a,b)=>b.dist-a.dist);
   const inset=(p0,p1,p1t,p0t,u0,v0,u1,v1)=>{ const L=(a,b,k)=>({x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k}); const P=(u,v)=>L(L(p0t,p1t,u),L(p0,p1,u),v); return [P(u0,v0),P(u1,v0),P(u1,v1),P(u0,v1)]; };
   boxes.forEach(b=>{
+    if(b.patient){
+      const P=b.p, hc=proj(b.cx,b.cy,.56); if(!hc) return;
+      const r=hc.sc*.14; ctx.lineWidth=Math.max(1.5,lw(hc));
+      ctx.fillStyle=P.c; ctx.strokeStyle=INK; ctx.beginPath(); ctx.arc(hc.x,hc.y,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      if(P.cured){ ctx.fillStyle='#FFFFFF'; ctx.beginPath(); ctx.arc(hc.x-r*.35,hc.y-r*.15,r*.24,0,Math.PI*2); ctx.arc(hc.x+r*.35,hc.y-r*.15,r*.24,0,Math.PI*2); ctx.fill(); ctx.fillStyle=INK; ctx.beginPath(); ctx.arc(hc.x-r*.33,hc.y-r*.13,r*.12,0,Math.PI*2); ctx.arc(hc.x+r*.37,hc.y-r*.13,r*.12,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(hc.x,hc.y+r*.2,r*.35,.2,Math.PI-.2); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(hc.x-r*.55,hc.y-r*.15); ctx.lineTo(hc.x-r*.15,hc.y-r*.15); ctx.moveTo(hc.x+r*.15,hc.y-r*.15); ctx.lineTo(hc.x+r*.55,hc.y-r*.15); ctx.stroke();
+        ctx.fillStyle='rgba(255,107,107,.6)'; ctx.beginPath(); ctx.arc(hc.x-r*.55,hc.y+r*.25,r*.18,0,Math.PI*2); ctx.arc(hc.x+r*.55,hc.y+r*.25,r*.18,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle=INK; ctx.beginPath(); ctx.arc(hc.x,hc.y+r*.5,r*.25,Math.PI+.3,-.3); ctx.stroke(); }
+      const bob=Math.sin(performance.now()/300+P.ph)*.04, bc=proj(b.cx,b.cy,.98+bob); if(!bc) return;
+      const br=Math.max(9,bc.sc*.13);
+      ctx.fillStyle='#FFFFFF'; ctx.strokeStyle=INK; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(bc.x,bc.y,br,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      if(P.cured){ ctx.fillStyle='#FF8FC7'; ctx.beginPath(); ctx.moveTo(bc.x,bc.y+br*.55); ctx.bezierCurveTo(bc.x-br*.9,bc.y-br*.05,bc.x-br*.45,bc.y-br*.75,bc.x,bc.y-br*.3); ctx.bezierCurveTo(bc.x+br*.45,bc.y-br*.75,bc.x+br*.9,bc.y-br*.05,bc.x,bc.y+br*.55); ctx.fill(); ctx.lineWidth=2; ctx.stroke(); }
+      else { ctx.fillStyle='#FF6B6B'; ctx.fillRect(bc.x-br*.18,bc.y-br*.6,br*.36,br*1.2); ctx.fillRect(bc.x-br*.6,bc.y-br*.18,br*1.2,br*.36); }
+      return;
+    }
     if(b.guest){
       const bounce=Math.abs(Math.sin(performance.now()/180+b.g.ph))*0.12;
       const pf=proj(b.cx,b.cy,0), ph=proj(b.cx,b.cy,0.62+bounce); if(!pf||!ph) return;
@@ -5600,6 +5676,23 @@ function drawHouse(){
   ctx.save(); ctx.textBaseline='middle';
   const btn=(x,y,w,h,label,fn,bg='#FFFFFF')=>{ hudFont(900,14); hudPill(x,y,w,h,bg); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(label,x+w/2,y+h/2+1); houseButtons.push({x,y,w,h,fn}); };
   btn(12,12,80,40,'Sair',()=>exitHouse(),'#FF8FC7');
+  if(hrMode==='hosp'){
+    hudFont(700,18,'d'); const ht='Hospital', htw=ctx.measureText(ht).width+52;
+    hudPill(102,12,htw,40,'#FFFFFF'); ctx.fillStyle='#FF6B6B'; ctx.fillRect(116,24,6,16); ctx.fillRect(111,29,16,6);
+    ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(ht,136,33);
+    hudFont(900,15); const cs=`Curados: ${hospCured}`, cw2=ctx.measureText(cs).width+28;
+    hudPill(102+htw+10,12,cw2,40,'#8FE3C8'); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(cs,102+htw+10+cw2/2,33);
+    const np=hospNearPatient(), nearDoor=Math.hypot(hp.x-(HR_DOOR.x+.5),hp.y-HR_DOOR.y)<1.4;
+    if(np||nearDoor){ hudFont(900,15); const pt=np?'Aperte E para cuidar do dino':'Aperte E para sair', pw=ctx.measureText(pt).width+52;
+      hudPill(W/2-pw/2,60,pw,36,'#FFE0F0'); frKeycap(W/2-pw/2+8,64,'E'); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(pt,W/2+14,79); }
+    if(houseMsg && performance.now()<houseMsg.until){
+      hudFont(900,14); const mw=ctx.measureText(houseMsg.text).width+30;
+      hudPill(W/2-mw/2,104,mw,34,'#7ED957'); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(houseMsg.text,W/2,122);
+    }
+    hudFont(800,12); const kt='W/S andar · A/D virar · E cuidar · Esc sair', kw=ctx.measureText(kt).width+24;
+    hudPill(12,H-40,kw,28,'#FFFFFF'); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(kt,24,H-25);
+    ctx.restore(); return;
+  }
   hudFont(700,18,'d'); const title=playerName?`Casa de ${playerName}`:'Sua casa'; const tw=ctx.measureText(title).width+28;
   hudPill(102,12,tw,40,'#FFF8E7'); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(title,116,33);
   btn(102+tw+10,12,74,40,houseParty?'Parar':'Festa',()=>{ if(houseParty){ houseParty=null; } else startParty(); },'#FF8FC7');
@@ -7334,9 +7427,9 @@ function drawFreeRoam(){
     hudPill(W/2-tw/2+40,12,tw,40,bg); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(txt,W/2+40,33);
   }
 
-  // HUD — porta da casa
-  if(nearHouseDoor()){
-    hudFont(900,15); const t2='Aperte E para entrar em casa', pw3=ctx.measureText(t2).width+52;
+  // HUD — porta da casa / hospital
+  if(nearHouseDoor()||nearHospitalDoor()){
+    hudFont(900,15); const t2=nearHouseDoor()?'Aperte E para entrar em casa':'Aperte E para entrar no hospital', pw3=ctx.measureText(t2).width+52;
     hudPill(W/2-pw3/2+40,62,pw3,38,'#FFE0F0'); frKeycap(W/2-pw3/2+48,67,'E');
     ctx.fillStyle=INK; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(t2,W/2+52,82);
   }
