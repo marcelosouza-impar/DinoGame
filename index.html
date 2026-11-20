@@ -1062,11 +1062,12 @@ window.addEventListener('keydown', e => {
   if(e.code==='KeyM'){ toggleMute(); return; }
   if(state==='flight'||state==='dive'||state==='soccer'||state==='tag'||state==='bowl'){
     if(e.code==='Escape'){ flight=null; dive=null; soccer=null; tagGame=null; bowl=null; renderAdventures(); return; }
-    if(state==='bowl' && e.code==='Space'){ e.preventDefault(); bowlThrow(); }
+    if(state==='bowl' && (e.code==='Space'||e.code==='Enter')){ e.preventDefault(); if(!bowl.two || (e.code==='Space')===(bowl.cp===0)) bowlThrow(); }
     if(state==='tag' && e.code==='Space') e.preventDefault();
     if(state==='flight' && ['Space','KeyW','ArrowUp'].includes(e.code)){ e.preventDefault(); flightFlap(); }
     if(state==='soccer'){
-      if(e.code==='KeyF'||e.code==='Space'||e.code==='Enter'){ e.preventDefault(); socKick(soccer.a); }
+      if(e.code==='KeyF'||e.code==='Space'||(!soccer.two&&e.code==='Enter')){ e.preventDefault(); socKick(soccer.a); }
+      else if(soccer.two&&e.code==='Enter'){ e.preventDefault(); socKick(soccer.b); }
     }
     if(state==='dive' && e.code==='Space') e.preventDefault();
     return;
@@ -5751,6 +5752,7 @@ function renderAdventures(kind){
       ${play?card('#FFD23F','M13 4a2 2 0 1 0 0 .1M8 21l3-7 3 2v5M5 12l4-3 4 1 3 3','Pega-pega','Corra no parque e pegue os 5 dinos em 60 s.',`recorde ${a.tagBest||0} pegos`,'startTag()'):''}
       ${play?card('#B18CFF','M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 9h.01M13 8h.01M12 12h.01','Boliche','Derrube os pinos em 5 rodadas.',`recorde ${a.bowlBest||0} pinos`,'startBowl()'):''}
     </div>
+    ${play?`<button class="btn sec" style="${twoPlayer?'background:var(--sun)':''}" onclick="twoPlayer=!twoPlayer;renderAdventures()">${twoPlayer?'✓ ':''}2 jogadores · tela dividida</button>`:''}
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
   </div>`;
   ov.style.display='flex';
@@ -5966,6 +5968,12 @@ function p3Fence(V,x0,y0,x1,y1,cols){ // placas em volta
   for(let x=x0;x<x1;x+=2){ seg(x,y0,Math.min(x+2,x1),y0,x/2); seg(x,y1,Math.min(x+2,x1),y1,x/2+1); }
   for(let y=y0;y<y1;y+=2){ seg(x0,y,x0,Math.min(y+2,y1),y/2+2); seg(x1,y,x1,Math.min(y+2,y1),y/2+3); }
 }
+function p3Split(two,f1,f2){
+  if(!two){ f1(); return; }
+  [f1,f2].forEach((f,i)=>{ ctx.save(); ctx.beginPath(); ctx.rect(i*W/2,0,W/2,H); ctx.clip(); ctx.translate(i?W/4:-W/4,0); f(); ctx.restore(); });
+  ctx.fillStyle='#2B2A4C'; ctx.fillRect(W/2-3,0,6,H);
+}
+function p3Tags(l,r){ hudFont(900,14); ctx.textBaseline='middle'; [[l,'#5BC0FF',12],[r,'#FF9F6B',W/2+12]].forEach(([t,c,x])=>{ const w=ctx.measureText(t).width+24; hudPill(x,66,w,30,c); ctx.fillStyle='#2B2A4C'; ctx.textAlign='left'; ctx.fillText(t,x+12,81); }); }
 function p3Turn(keysL,keysR,o,rate){ if(keysL) o.f-=rate; if(keysR) o.f+=rate; }
 function p3Hint(text){ hudFont(800,12); const hw=ctx.measureText(text).width+24; hudPill(W/2-hw/2,H-34,hw,26); ctx.fillStyle='#2B2A4C'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,W/2,H-20); }
 function p3Big(text){ hudFont(700,34,'d'); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineWidth=6; ctx.strokeStyle='#FFFFFF'; ctx.strokeText(text,W/2,130); ctx.fillStyle='#2B2A4C'; ctx.fillText(text,W/2,130); }
@@ -5975,7 +5983,7 @@ const SOC_L=28, SOC_WD=16, SOC_GY0=6.2, SOC_GY1=9.8, SOC_GH=1.5;
 function startSoccer(){
   document.getElementById('overlay').style.display='none';
   const p1c=selectedChar, p2c=p1c==='dino'?'caveman':'dino';
-  soccer={a:{x:9,y:8,f:0,char:p1c,spd:0},b:{x:19,y:8,f:Math.PI,char:p2c,spd:0},ball:{x:14,y:8,z:0,vx:0,vy:0,vz:0},score:[0,0],pause:70,msg:'Ataque o gol amarelo!',t:0};
+  soccer={a:{x:9,y:8,f:0,char:p1c,spd:0},b:{x:19,y:8,f:Math.PI,char:p2c,spd:0},ball:{x:14,y:8,z:0,vx:0,vy:0,vz:0},score:[0,0],pause:70,msg:twoPlayer?'J1 ataca o amarelo · J2 ataca o branco':'Ataque o gol amarelo!',t:0,two:twoPlayer};
   state='soccer';
 }
 function socReset(){ const S=soccer; Object.assign(S.a,{x:9,y:8,f:0}); Object.assign(S.b,{x:19,y:8,f:Math.PI}); S.ball={x:14,y:8,z:0,vx:0,vy:0,vz:0}; S.pause=80; }
@@ -5991,8 +5999,13 @@ function updateSoccer(){
   const S=soccer; S.t++;
   if(S.pause>0){ S.pause--; return; }
   const P=S.a, C=S.b, b=S.ball;
-  p3Turn(keys['KeyA']||keys['ArrowLeft'],keys['KeyD']||keys['ArrowRight'],P,.065);
-  socMove(P,(keys['KeyW']||keys['ArrowUp'])?.105:(keys['KeyS']||keys['ArrowDown'])?-.06:0);
+  const one=!S.two;
+  p3Turn(keys['KeyA']||(one&&keys['ArrowLeft']),keys['KeyD']||(one&&keys['ArrowRight']),P,.065);
+  socMove(P,(keys['KeyW']||(one&&keys['ArrowUp']))?.105:(keys['KeyS']||(one&&keys['ArrowDown']))?-.06:0);
+  if(S.two){
+    p3Turn(keys['ArrowLeft'],keys['ArrowRight'],C,.065);
+    socMove(C,keys['ArrowUp']?.105:keys['ArrowDown']?-.06:0);
+  } else {
   // computador: vai para trás da bola e chuta para o gol x=0
   const gx=-.5, gy=SOC_WD/2; let dx=b.x-gx, dy=b.y-gy; const dn=Math.hypot(dx,dy)||1;
   const tx=b.x+dx/dn*.75, ty=b.y+dy/dn*.75;
@@ -6000,6 +6013,7 @@ function updateSoccer(){
   C.f+=Math.max(-.09,Math.min(.09,da));
   socMove(C, Math.hypot(tx-C.x,ty-C.y)>.2 ? .085 : 0);
   if(Math.hypot(b.x-C.x,b.y-C.y)<1 && S.t%24===0) socKick(C,Math.atan2(gy+(Math.random()-.5)*4-C.y,gx-C.x));
+  }
   // jogadores não se atravessam
   const ex=C.x-P.x, ey=C.y-P.y, ed=Math.hypot(ex,ey); if(ed<.7&&ed>0){ const k=(.7-ed)/2/ed; C.x+=ex*k; C.y+=ey*k; P.x-=ex*k; P.y-=ey*k; }
   // bola
@@ -6014,11 +6028,13 @@ function updateSoccer(){
   if(S.score[0]>=3||S.score[1]>=3){
     const win=S.score[0]>=3; const a=loadAdv(); if(win){ a.soccerWins++; saveAdv(a); }
     const r=S; soccer=null;
-    advResult(win?'Você ganhou!':'Você perdeu!',[`Placar ${r.score[0]} x ${r.score[1]}`],win?25:5,'startSoccer()');
+    const nm=pl=>pl.char==='dino'?'Dino':'Caveman';
+    advResult(r.two?(win?`J1 (${nm(r.a)}) ganhou!`:`J2 (${nm(r.b)}) ganhou!`):win?'Você ganhou!':'Você perdeu!',[`Placar ${r.score[0]} x ${r.score[1]}`],win?25:5,'startSoccer()');
   }
 }
 function drawSoccer(){
-  const S=soccer; if(!S) return; const INK='#2B2A4C', P=S.a, b=S.ball;
+  const S=soccer; if(!S) return; const INK='#2B2A4C', b=S.ball;
+  const scene=(P,goalCol)=>{
   const V=p3View(P.x,P.y,P.f,3.4,1.5);
   p3Sky(V.HOR,'#5CC96B');
   // arquibancada colorida ao fundo
@@ -6045,7 +6061,7 @@ function drawSoccer(){
   const gA=()=>drawGoal(0,-1,'#FFFFFF'), gB=()=>drawGoal(SOC_L,1,'#FFD23F');
   const dA=Math.hypot(0-V.cx,SOC_WD/2-V.cy), dB=Math.hypot(SOC_L-V.cx,SOC_WD/2-V.cy);
   const spr=[{d:dA,fn:gA},{d:dB,fn:gB}];
-  [P,S.b].forEach(pl=>spr.push({d:Math.hypot(pl.x-V.cx,pl.y-V.cy),fn:()=>p3Char(V,pl.char,pl.x,pl.y,pl.f,pl.spd>0)}));
+  [S.a,S.b].forEach(pl=>spr.push({d:Math.hypot(pl.x-V.cx,pl.y-V.cy),fn:()=>p3Char(V,pl.char,pl.x,pl.y,pl.f,pl.spd>0)}));
   spr.push({d:Math.hypot(b.x-V.cx,b.y-V.cy)-.01,fn:()=>{
     V.poly([0,1,2,3,4,5,6,7].map(k=>[b.x+Math.cos(k*Math.PI/4)*.17,b.y+Math.sin(k*Math.PI/4)*.17,.01]),'rgba(43,42,76,.22)');
     const pc=V.proj(b.x,b.y,b.z+.17); if(!pc) return; const r=pc.sc*.17;
@@ -6053,11 +6069,15 @@ function drawSoccer(){
     const rot=(b.x+b.y)*2; ctx.fillStyle=INK; ctx.beginPath(); ctx.arc(pc.x+Math.cos(rot)*r*.35,pc.y+Math.sin(rot)*r*.35,r*.3,0,Math.PI*2); ctx.fill();
   }});
   spr.sort((p,q)=>q.d-p.d).forEach(s=>s.fn());
+  };
+  p3Split(S.two,()=>scene(S.a),()=>scene(S.b));
+  const P=S.a;
   // HUD
   ctx.save(); ctx.textBaseline='middle';
+  if(S.two) p3Tags('J1 → gol amarelo','J2 → gol branco');
   hudFont(700,30,'d'); const sc=`${S.score[0]}  x  ${S.score[1]}`, sw=ctx.measureText(sc).width+50;
   hudPill(W/2-sw/2,14,sw,48,'#FFF8E7'); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(sc,W/2,40);
-  hudFont(900,13); ctx.textAlign='right'; ctx.fillText((P.char==='dino'?'Dino':'Caveman')+' (você)',W/2-sw/2-10,40); ctx.textAlign='left'; ctx.fillText(S.b.char==='dino'?'Dino':'Caveman',W/2+sw/2+10,40);
+  hudFont(900,13); ctx.textAlign='right'; ctx.fillText((P.char==='dino'?'Dino':'Caveman')+(S.two?' (J1)':' (você)'),W/2-sw/2-10,40); ctx.textAlign='left'; ctx.fillText((S.b.char==='dino'?'Dino':'Caveman')+(S.two?' (J2)':''),W/2+sw/2+10,40);
   // mini campo
   const mx=W-142, my=H-118, mw=126, mh=72;
   ctx.fillStyle='#7ED957'; ctx.strokeStyle=INK; ctx.lineWidth=3; roundRect(ctx,mx,my,mw,mh,10,true,true);
@@ -6065,7 +6085,7 @@ function drawSoccer(){
   const dot=(x,y,c,r)=>{ ctx.fillStyle=c; ctx.beginPath(); ctx.arc(mx+x/SOC_L*mw,my+y/SOC_WD*mh,r,0,Math.PI*2); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=1.5; ctx.stroke(); };
   dot(S.b.x,S.b.y,'#FF9F6B',5); dot(P.x,P.y,'#5BC0FF',5); dot(b.x,b.y,'#FFFFFF',3.5);
   if(S.pause>0 && S.msg) p3Big(S.msg);
-  p3Hint('W/S andar · A/D virar · Espaço chutar · Esc sair');
+  p3Hint(S.two?'J1: W A S D + Espaço chutar   ·   J2: setas + Enter chutar   ·   Esc sair':'W/S andar · A/D virar · Espaço chutar · Esc sair');
   ctx.restore();
 }
 
@@ -6075,7 +6095,8 @@ const TAG_SKINS=[{primary:'#FF8FC7',belly:'#FFE0F0',spike:'#FFD23F',eye:'#2B2A4C
 function startTag(){
   document.getElementById('overlay').style.display='none';
   const npcs=TAG_SKINS.map((sk,i)=>{ const a=i/5*Math.PI*2; return {x:12+Math.cos(a)*8,y:12+Math.sin(a)*8,f:a,sk,caught:false,wt:0,spd:0}; });
-  tagGame={p:{x:12,y:12,f:-Math.PI/2,spd:0},npcs,t:60*60,caught:0,pause:60,msg:'Pegue todos os dinos!'};
+  tagGame={p:{x:11,y:12,f:-Math.PI/2,spd:0,n:0,char:selectedChar},npcs,t:60*60,caught:0,pause:60,msg:twoPlayer?'Quem pegar mais dinos ganha!':'Pegue todos os dinos!',two:twoPlayer};
+  if(twoPlayer) tagGame.p2={x:13,y:12,f:Math.PI/2,spd:0,n:0,char:selectedChar==='dino'?'caveman':'dino'};
   state='tag';
 }
 function tagPush(o,r){
@@ -6084,14 +6105,16 @@ function tagPush(o,r){
 }
 function updateTag(){
   const G=tagGame; if(G.pause>0){ G.pause--; return; }
-  const P=G.p;
-  p3Turn(keys['KeyA']||keys['ArrowLeft'],keys['KeyD']||keys['ArrowRight'],P,.065);
-  const mv=(keys['KeyW']||keys['ArrowUp'])?.11:(keys['KeyS']||keys['ArrowDown'])?-.06:0; P.spd=Math.abs(mv);
-  P.x+=Math.cos(P.f)*mv; P.y+=Math.sin(P.f)*mv; tagPush(P,.75);
+  const P=G.p, one=!G.two;
+  const walk=(o,l,r,u,d)=>{ p3Turn(l,r,o,.065); const mv=u?.11:d?-.06:0; o.spd=Math.abs(mv); o.x+=Math.cos(o.f)*mv; o.y+=Math.sin(o.f)*mv; tagPush(o,.75); };
+  walk(P,keys['KeyA']||(one&&keys['ArrowLeft']),keys['KeyD']||(one&&keys['ArrowRight']),keys['KeyW']||(one&&keys['ArrowUp']),keys['KeyS']||(one&&keys['ArrowDown']));
+  if(G.p2) walk(G.p2,keys['ArrowLeft'],keys['ArrowRight'],keys['ArrowUp'],keys['ArrowDown']);
+  const hunters=G.p2?[P,G.p2]:[P];
   G.npcs.forEach(n=>{
     if(n.caught){ n.spd=0; return; }
-    const dx=n.x-P.x, dy=n.y-P.y, d=Math.hypot(dx,dy);
-    if(d<.75){ n.caught=true; G.caught++; G.msg='Peguei!'; G.msgT=60; return; }
+    const hn=hunters.reduce((a,h)=>Math.hypot(n.x-h.x,n.y-h.y)<Math.hypot(n.x-a.x,n.y-a.y)?h:a);
+    const dx=n.x-hn.x, dy=n.y-hn.y, d=Math.hypot(dx,dy);
+    if(d<.75){ n.caught=true; G.caught++; hn.n++; G.msg=G.two?(hn===P?'J1 pegou!':'J2 pegou!'):'Peguei!'; G.msgT=60; return; }
     let want;
     if(d<6){ want=Math.atan2(dy,dx)+Math.sin(G.t/40+n.x)*.5; n.spd=.088; }
     else { if(--n.wt<=0){ n.wt=60+Math.random()*90; n.wander=Math.random()*Math.PI*2; } want=n.wander; n.spd=.035; }
@@ -6104,11 +6127,13 @@ function updateTag(){
   if(G.caught>=G.npcs.length || G.t<=0){
     const all=G.caught>=G.npcs.length, a=loadAdv(); a.tagBest=Math.max(a.tagBest||0,G.caught); saveAdv(a);
     const bonus=all?10+Math.floor(G.t/60/3):0, got=G.caught; tagGame=null;
+    if(G.two){ const a1=G.p.n, a2=G.p2.n; advResult(a1>a2?'J1 ganhou!':a2>a1?'J2 ganhou!':'Empate!',[`J1 pegou ${a1} · J2 pegou ${a2}`],got*4+bonus,'startTag()'); return; }
     advResult(all?'Pegou todos!':'Acabou o tempo!',[`Você pegou ${got} de 5 dinos`],got*4+bonus,'startTag()');
   }
 }
 function drawTag(){
   const G=tagGame; if(!G) return; const INK='#2B2A4C', P=G.p;
+  const scene=(P)=>{
   const V=p3View(P.x,P.y,P.f,3.4,1.5);
   p3Sky(V.HOR,'#5CC96B');
   V.poly([[0,0,0],[TAG_SZ,0,0],[TAG_SZ,TAG_SZ,0],[0,TAG_SZ,0]],'#8EDF68');
@@ -6126,17 +6151,21 @@ function drawTag(){
     p3Char(V,'dino',n.x,n.y,n.f,n.spd>0,n.sk);
     if(n.caught){ const s=V.proj(n.x,n.y,1.25); if(s){ const r=Math.max(8,s.sc*.14); ctx.fillStyle='#FFD23F'; ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, rr=i%2?r*.45:r; ctx.lineTo(s.x+Math.cos(a)*rr,s.y+Math.sin(a)*rr); } ctx.closePath(); ctx.fill(); ctx.stroke(); } }
   }}));
-  spr.push({d:3.4,fn:()=>p3Char(V,selectedChar,P.x,P.y,P.f,P.spd>0)});
+  [G.p,G.p2].forEach(h=>{ if(h) spr.push({d:Math.hypot(h.x-V.cx,h.y-V.cy),fn:()=>p3Char(V,h.char,h.x,h.y,h.f,h.spd>0)}); });
   spr.sort((p,q)=>q.d-p.d).forEach(s=>s.fn());
+  };
+  p3Split(G.two,()=>scene(G.p),()=>scene(G.p2));
   ctx.save(); ctx.textBaseline='middle';
+  if(G.two) p3Tags(`J1: ${G.p.n}`,`J2: ${G.p2.n}`);
   hudFont(900,16); const st=`Pegos: ${G.caught}/5 · ${Math.ceil(G.t/60)} s`, sw=ctx.measureText(st).width+30;
   hudPill(W/2-sw/2,14,sw,42,'#FFF8E7'); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(st,W/2,36);
   const mx=W-110, my=H-118, m=96;
   ctx.fillStyle='#8EDF68'; ctx.strokeStyle=INK; ctx.lineWidth=3; roundRect(ctx,mx,my,m,m,12,true,true);
   G.npcs.forEach(n=>{ if(n.caught) return; ctx.fillStyle=n.sk.primary; ctx.beginPath(); ctx.arc(mx+n.x/TAG_SZ*m,my+n.y/TAG_SZ*m,4.5,0,Math.PI*2); ctx.fill(); ctx.lineWidth=1.5; ctx.stroke(); });
   ctx.fillStyle='#FFFFFF'; ctx.beginPath(); ctx.arc(mx+P.x/TAG_SZ*m,my+P.y/TAG_SZ*m,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  if(G.p2){ ctx.fillStyle='#2B2A4C'; ctx.beginPath(); ctx.arc(mx+G.p2.x/TAG_SZ*m,my+G.p2.y/TAG_SZ*m,5,0,Math.PI*2); ctx.fill(); }
   if((G.pause>0||G.msgT>0) && G.msg) p3Big(G.msg);
-  p3Hint('W/S andar · A/D virar · encoste nos dinos para pegar · Esc sair');
+  p3Hint(G.two?'J1: W A S D   ·   J2: setas   ·   encoste nos dinos para pegar · Esc sair':'W/S andar · A/D virar · encoste nos dinos para pegar · Esc sair');
   ctx.restore();
 }
 
@@ -6145,7 +6174,7 @@ const BOWL_PIN_Y=18;
 function bowlPins(){ const p=[]; for(let r=0;r<4;r++) for(let i=0;i<=r;i++) p.push({x:(i-r/2)*.34,y:BOWL_PIN_Y+r*.3,down:false,vx:0,vy:0,tilt:0,ta:0}); return p; }
 function startBowl(){
   document.getElementById('overlay').style.display='none';
-  bowl={round:1,throwN:1,pins:bowlPins(),ball:null,aimX:0,t:0,total:0,strikes:0,wait:0,msg:'Espaço para jogar a bola!',msgT:90,before:10};
+  bowl={round:1,throwN:1,pins:bowlPins(),ball:null,aimX:0,t:0,total:0,strikes:0,wait:0,msg:twoPlayer?'Vez do J1 (Espaço)':'Espaço para jogar a bola!',msgT:90,before:10,two:twoPlayer,cp:0,sc:[0,0]};
   state='bowl';
 }
 function bowlThrow(){
@@ -6157,8 +6186,9 @@ function bowlThrow(){
 function updateBowl(){
   const B=bowl; B.t++; if(B.msgT>0) B.msgT--;
   if(!B.ball && B.wait<=0){
-    if(keys['KeyA']||keys['ArrowLeft']) B.aimX=Math.min(.8,B.aimX+.025);
-    if(keys['KeyD']||keys['ArrowRight']) B.aimX=Math.max(-.8,B.aimX-.025);
+    const L=B.two?(B.cp?keys['ArrowLeft']:keys['KeyA']):(keys['KeyA']||keys['ArrowLeft']), R=B.two?(B.cp?keys['ArrowRight']:keys['KeyD']):(keys['KeyD']||keys['ArrowRight']);
+    if(L) B.aimX=Math.min(.8,B.aimX+.025);
+    if(R) B.aimX=Math.max(-.8,B.aimX-.025);
   }
   const b=B.ball;
   if(b){
@@ -6174,7 +6204,7 @@ function updateBowl(){
   });
   if(B.wait>0 && --B.wait===0){
     const standing=B.pins.filter(p=>!p.down).length, hit=B.before-standing;
-    B.total+=hit;
+    B.total+=hit; B.sc[B.cp]+=hit;
     let next=false;
     if(standing===0 && B.throwN===1){ B.msg='STRIKE!'; B.strikes++; next=true; }
     else if(standing===0){ B.msg='Spare!'; next=true; }
@@ -6182,13 +6212,16 @@ function updateBowl(){
     else { B.msg=hit?`${hit} pinos! Mais uma`:'Ops! Mais uma'; B.throwN=2; B.pins=B.pins.filter(p=>!p.down); }
     B.msgT=80;
     if(next){
+      if(B.two && B.cp===0){ B.cp=1; B.throwN=1; B.pins=bowlPins(); B.aimX=0; B.msg+=' · Vez do J2 (Enter)'; return; }
+      if(B.two) B.cp=0;
       if(B.round>=5){
         const a=loadAdv(); a.bowlBest=Math.max(a.bowlBest||0,B.total); saveAdv(a);
         const r=B; bowl=null;
+        if(r.two){ advResult(r.sc[0]>r.sc[1]?'J1 ganhou!':r.sc[1]>r.sc[0]?'J2 ganhou!':'Empate!',[`J1: ${r.sc[0]} pinos · J2: ${r.sc[1]} pinos`],Math.floor(r.total/3)+r.strikes*3,'startBowl()'); return; }
         advResult('Fim do boliche!',[`${r.total} pinos derrubados · ${r.strikes} strike${r.strikes===1?'':'s'}`],Math.floor(r.total/3)+r.strikes*3,'startBowl()');
         return;
       }
-      B.round++; B.throwN=1; B.pins=bowlPins();
+      B.round++; B.throwN=1; B.pins=bowlPins(); B.aimX=0; if(B.two) B.msg+=' · Vez do J1 (Espaço)';
     }
   }
 }
@@ -6228,15 +6261,16 @@ function drawBowl(){
     const rot=b?b.rot:0; ctx.fillStyle=INK; [[0,-.35],[.25,-.15],[-.2,-.1]].forEach(([u,v])=>{ const yy=v*Math.cos(rot)*r; if(Math.cos(rot)>0){ ctx.beginPath(); ctx.arc(pc.x+u*r,pc.y+yy,r*.11,0,Math.PI*2); ctx.fill(); } });
   }});
   spr.sort((p,q)=>q.d-p.d).forEach(s=>s.fn());
-  if(!b){ const pc=V.proj(B.aimX+.35,-.3,0); if(pc){ const s=pc.sc/120; drawCharAt(selectedChar,{x:pc.x-24*s,y:pc.y,facing:1,onGround:true},s); } }
+  if(!b){ const pc=V.proj(B.aimX+.35,-.3,0); if(pc){ const s=pc.sc/120; drawCharAt(B.two&&B.cp?(selectedChar==='dino'?'caveman':'dino'):selectedChar,{x:pc.x-24*s,y:pc.y,facing:1,onGround:true},s); } }
   ctx.save(); ctx.textBaseline='middle';
-  hudFont(900,16); const st=`Rodada ${B.round}/5 · jogada ${B.throwN} · ${B.total} pinos`, sw=ctx.measureText(st).width+30;
+  if(B.two) p3Tags(`J1: ${B.sc[0]} pinos${B.cp===0?' ◀ vez':''}`,`J2: ${B.sc[1]} pinos${B.cp===1?' ◀ vez':''}`);
+  hudFont(900,16); const st=B.two?`Rodada ${B.round}/5 · jogada ${B.throwN} · vez do J${B.cp+1}`:`Rodada ${B.round}/5 · jogada ${B.throwN} · ${B.total} pinos`, sw=ctx.measureText(st).width+30;
   hudPill(W/2-sw/2,14,sw,42,'#FFF8E7'); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(st,W/2,36);
   // pinos em pé
   const ox=W-80, oy=H-110; ctx.fillStyle='#FFFFFF'; ctx.strokeStyle=INK; ctx.lineWidth=3; roundRect(ctx,ox-58,oy-14,116,84,14,true,true);
   const stand=bowlPins(); stand.forEach((sp,i)=>{ const up=B.pins.some(p=>!p.down && Math.abs(p.x-sp.x)<.01 && Math.abs(p.y-sp.y)<.01); ctx.fillStyle=up?'#FF6B6B':'#E6E4F0'; ctx.beginPath(); ctx.arc(ox-sp.x*62,oy+60-(sp.y-BOWL_PIN_Y)*58,6,0,Math.PI*2); ctx.fill(); ctx.lineWidth=1.5; ctx.stroke(); });
   if(B.msgT>0 && B.msg) p3Big(B.msg);
-  p3Hint('A/D mover · Espaço jogar a bola (quando a seta apontar bem) · Esc sair');
+  p3Hint(B.two?'J1: A/D + Espaço   ·   J2: ← → + Enter   ·   Esc sair':'A/D mover · Espaço jogar a bola (quando a seta apontar bem) · Esc sair');
   ctx.restore();
 }
 
