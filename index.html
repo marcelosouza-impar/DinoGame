@@ -1009,15 +1009,8 @@ function generatePhase(p){
     });
   }
 
-  // spike traps
+  // spike traps removidos
   phaseTraps = [];
-  const trapCount = secret ? 0 : 3 + phase;
-  for(let i = 0; i < trapCount; i++){
-    const tx = 500 + Math.random() * (len - 1000);
-    // avoid portal area
-    if(Math.abs(tx - portalX) < 300){ continue; }
-    phaseTraps.push({x: tx, y: GROUND, w: 28, h: 18});
-  }
 
   // power-up items
   powerupItems = []; inventory = []; activeEffects = {speed:0, shield:0, fire:0};
