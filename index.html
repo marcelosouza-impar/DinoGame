@@ -1337,7 +1337,7 @@ function generatePhase(p){
   });
 
   // boss + alavanca na última fase
-  phaseChaser = (p >= 2 && p <= MAX_PHASES && !secret && !cp)
+  phaseChaser = (p >= 2 && p <= MAX_PHASES && !secret && !cp && Math.random() < 1/3)
     ? {x:0, y:GROUND, vy:0, onGround:true, active:false, alive:true, spawnAt:900, hp:3, hitCd:0, hitFlash:0, facing:1}
     : null;
   phaseBoss = null; phaseLever = null; boulderRoll = null;
