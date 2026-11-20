@@ -1051,7 +1051,7 @@ function generatePhase(p){
       x: 620 + i*Math.floor((len-820)/enemyCount) + Math.random()*70,
       y: flying ? GROUND-110-Math.random()*50 : GROUND,
       type:t, w:54, h:flying?38:54,
-      vx: -(1.4 + Math.random()*(0.5+p*0.25)) * speedMult,
+      vx: -(0.8 + Math.random()*(0.3+p*0.12)) * speedMult,
       flying, frame:0, frameTimer:0, alive:true,
       bobOffset:Math.random()*Math.PI*2,
     });
