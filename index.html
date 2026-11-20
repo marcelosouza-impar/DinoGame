@@ -363,7 +363,7 @@ let difficulty = 'normal'; // 'facil' | 'normal' | 'dificil'
 let phaseFramesLeft = 0;
 let paused = false;
 let cutsceneTimer = 0;
-let currentLang = 'pt';
+let currentLang = localStorage.getItem('dinogame_lang') || 'pt';
 let scorePopTimer = 0, lastScoreVal = 0;
 let hpBarAnim = 3;
 let currentHighScore = parseInt(localStorage.getItem('dinogame_highscore') || '0');
@@ -1506,6 +1506,13 @@ function coinChip(){
   return `<div class="chip"><span class="chip-dot" style="background:var(--sun)">$</span>${totalCoins}</div>`;
 }
 
+function setLanguage(lang){
+  currentLang = lang;
+  localStorage.setItem('dinogame_lang', lang);
+  setHudButtonTitles();
+  renderSettings();
+}
+
 function renderMainMenu(){
   setHudButtonTitles();
   frJob = null;
@@ -1563,6 +1570,10 @@ function renderSettings(){
   ov.innerHTML = `<div class="ocard">
     <h2>Configurações</h2>
     <div class="divider"></div>
+    <p class="sub" style="font-weight:900;color:var(--ink)">${tr('language')}</p>
+    <div class="lang-row">
+      ${[['pt','Português'],['en','English'],['es','Español']].map(([k,n])=>`<button class="lang-btn" style="${currentLang===k?'background:var(--sun)':''}" onclick="setLanguage('${k}')">${n}</button>`).join('')}
+    </div>
     <p class="sub" style="font-weight:900;color:var(--ink)">Música</p>
     <button class="lang-btn" id="settingsMusic" onclick="toggleMute();renderSettings()">${svgIcon(ICONS.music,18)}&nbsp;${bgmMuted?'Desligada':'Ligada'}</button>
     <div class="divider"></div>
