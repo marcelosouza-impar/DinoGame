@@ -414,6 +414,115 @@ let achieveNotifQueue = [], achieveNotifTimer = 0;
 // boss
 let phaseBoss = null;
 let phaseChaser = null;
+let twoPlayer = false;
+const p2 = {x:60,y:0,vx:0,vy:0,w:48,h:56,onGround:true,jumpCount:0,facing:1,attacking:false,attackTimer:0,attackDir:1,ducking:false,invincible:0,frame:0,frameTimer:0,char:'caveman'};
+function resetP2(){
+  Object.assign(p2,{x:Math.max(30,player.x-50),y:GROUND,vx:0,vy:0,onGround:true,jumpCount:0,facing:1,attacking:false,attackTimer:0,ducking:false,invincible:60,char:selectedChar==='dino'?'caveman':'dino'});
+}
+function p2Jump(){
+  if(p2.onGround){ p2.vy=jumpForce(); p2.onGround=false; p2.jumpCount=1; sfxJump(); }
+  else if(p2.jumpCount===1){ p2.vy=jumpForce()*0.82; p2.jumpCount=2; sfxJump(); }
+}
+function updateP2(){
+  const P=p2;
+  const mr=keys['ArrowRight'], ml=keys['ArrowLeft'];
+  const spd=moveSpeed()*(activeEffects.speed>0?1.6:1);
+  P.vx = mr ? spd : ml ? -spd : 0;
+  if(mr) P.facing=1; else if(ml) P.facing=-1;
+  P.ducking=!!keys['ArrowDown'];
+  P.h=P.ducking?30:56;
+  P.vy+=GRAVITY; P.x+=P.vx; P.y+=P.vy;
+  P.x=Math.max(10,Math.min(W-60,P.x));
+  let onPlat=false;
+  if(P.vy>=0) phasePlatforms.forEach(plat=>{
+    const px=plat.x-scrollX;
+    if(px>W+200||px+plat.w<-100) return;
+    if(P.y-P.vy<=plat.y && P.y>=plat.y && P.x+P.w-10>px && P.x+10<px+plat.w){ P.y=plat.y; P.vy=0; onPlat=true; }
+  });
+  if(P.y>=GROUND){ P.y=GROUND; P.vy=0; P.onGround=true; P.jumpCount=0; }
+  else if(onPlat){ P.onGround=true; P.jumpCount=0; } else P.onGround=false;
+  P.frameTimer++; if(P.frameTimer>6){ P.frame=(P.frame+1)%4; P.frameTimer=0; }
+  if(P.invincible>0) P.invincible--;
+  if(activeEffects.shield>0) P.invincible=Math.max(P.invincible,2);
+
+  // ataque
+  if(P.attacking){
+    P.attackTimer--; if(P.attackTimer<=0) P.attacking=false;
+    let ax,ay,aw,ah,active=false;
+    if(P.char==='caveman' && P.attackTimer<=18 && P.attackTimer>=6){ ax=P.attackDir>0?P.x+P.w-4:P.x-38; ay=P.y-54; aw=40; ah=44; active=true; }
+    if(P.char==='dino' && P.attackTimer<=22 && P.attackTimer>=4){ aw=activeEffects.fire>0?138:96; ax=P.attackDir>0?P.x+P.w:P.x-aw; ay=P.y-68; ah=activeEffects.fire>0?46:36; active=true; }
+    if(active){
+      phaseEnemies.forEach(enemy=>{
+        if(!enemy.alive) return;
+        const ex=enemy.x-scrollX, emx=Math.floor(enemy.w*.25), emy=Math.floor(enemy.h*.18);
+        if(rectsOverlap(ax,ay,aw,ah, ex+emx, enemy.y-enemy.h+emy, enemy.w-emx*2, enemy.h-emy)){
+          discoverCreature(enemy.type); enemy.alive=false; score+=50;
+          spawnParticles(ex+enemy.w/2, enemy.y-enemy.h/2, '#FFD23F', 14); updateUI();
+        }
+      });
+      hitChaser(ax,ay,aw,ah);
+    }
+  }
+
+  // coletas e perigos
+  const h2=P.ducking?22:36, hx=P.x+15, hy=P.y-h2, hw=P.w-30, hh=h2;
+  phaseEggs.forEach(egg=>{
+    if(egg.collected) return;
+    const ex=egg.x-scrollX, ey=egg.y+Math.sin(egg.bob)*5;
+    if(rectsOverlap(hx,hy,hw,hh, ex-egg.r*.55, ey-egg.r, egg.r*1.1, egg.r*1.8)) collectEgg(egg, ex, ey, false);
+  });
+  phaseCoins.forEach(coin=>{
+    if(coin.collected) return;
+    const cx=coin.x-scrollX;
+    if(Math.abs(cx-(P.x+P.w/2))<24 && Math.abs(coin.y-P.y)<50){ coin.collected=true; totalCoins++; score+=25; saveProgress(); updateUI(); spawnParticles(cx,coin.y,'#fbbf24',8); sfxEgg(); }
+  });
+  powerupItems.forEach(item=>{
+    if(item.collected || inventory.length>=2) return;
+    const ix=item.x-scrollX, iy=item.y+Math.sin(item.bob)*5;
+    if(Math.abs(ix-(P.x+P.w/2))<60 && Math.abs(iy-(P.y-24))<80) collectPowerup(item, ix, iy, false);
+  });
+  if(P.invincible>0) return;
+  const hit=()=>{ P.invincible=70; hurt(); };
+  for(const obs of phaseObstacles){
+    const ox=obs.x-scrollX; if(ox<-120||ox>W+120) continue;
+    if(rectsOverlap(hx,hy,hw,hh, ox+8, obs.y-obs.h+6, obs.w-16, obs.h-6)){ hit(); return; }
+  }
+  for(const enemy of phaseEnemies){
+    if(!enemy.alive) continue;
+    const ex=enemy.x-scrollX, emx=Math.floor(enemy.w*.3), emy=Math.floor(enemy.h*.2);
+    if(rectsOverlap(hx,hy,hw,hh, ex+emx, enemy.y-enemy.h+emy, enemy.w-emx*2, enemy.h-emy)){
+      if(P.vy>1 && P.y<=enemy.y-enemy.h*.4){
+        discoverCreature(enemy.type); enemy.alive=false; P.vy=JUMP_FORCE*.6; score+=50;
+        spawnParticles(ex+enemy.w/2, enemy.y-enemy.h/2,'#ff6b6b',12); updateUI();
+      } else { hit(); return; }
+    }
+  }
+  if(phaseChaser && phaseChaser.active && phaseChaser.alive && !(phaseChaser.emerge>0)){
+    const sx=phaseChaser.x-scrollX;
+    if(rectsOverlap(hx,hy,hw,hh, sx+12, phaseChaser.y-58, 40, 58)){
+      if(activeEffects.shield>0){ phaseChaser.x-=phaseChaser.facing*90; } else { chaserCatch(); }
+    }
+  }
+}
+function drawP2(){
+  const keep={x:player.x,y:player.y,vx:player.vx,vy:player.vy,onGround:player.onGround,facing:player.facing,attacking:player.attacking,attackTimer:player.attackTimer,attackDir:player.attackDir,ducking:player.ducking};
+  Object.assign(player,{x:p2.x,y:p2.y,vx:p2.vx,vy:p2.vy,onGround:p2.onGround,facing:p2.facing,attacking:p2.attacking,attackTimer:p2.attackTimer,attackDir:p2.attackDir,ducking:p2.ducking});
+  const blink = p2.invincible>0 && Math.floor(p2.invincible/6)%2===1;
+  if(!blink){
+    if(p2.char==='dino'){
+      if(p2.attacking){ const sc=selectedChar; selectedChar='dino'; drawFireBreath(); selectedChar=sc; }
+      drawDinoOn(ctx,p2.x,p2.y,p2.frame,p2.ducking,1,{vx:p2.vx,vy:p2.vy,onGround:p2.onGround,idleMs:0,npc:true});
+    } else drawCavemanOn(ctx,p2.x,p2.y,p2.frame,p2.ducking,1);
+  }
+  Object.assign(player,keep);
+  // etiquetas J1 / J2
+  ctx.save(); hudFont(900,12); ctx.textAlign='center'; ctx.textBaseline='middle';
+  [[p2.x+24,p2.y-(p2.ducking?50:96),'J2','#5BC0FF'],[player.x+24,player.y-(player.ducking?50:96)-(playerName?24:0),'J1','#FFD23F']].forEach(([lx,ly,t,col])=>{
+    ctx.fillStyle=col; ctx.strokeStyle='#2B2A4C'; ctx.lineWidth=2; roundRect(ctx,lx-16,ly-10,32,20,10,true,true);
+    ctx.fillStyle='#2B2A4C'; ctx.fillText(t,lx,ly+1);
+  });
+  ctx.restore();
+}
 const PINK_DINO = {primary:'#FF8FC7', belly:'#FFE0F0', spike:'#FFD23F', eye:'#2B2A4C', hat:true};
 // diary
 let phaseDiary = JSON.parse(localStorage.getItem('dinogame_diary') || '[]');
@@ -982,6 +1091,9 @@ window.addEventListener('keydown', e => {
   if(['KeyP','Escape'].includes(e.code)){ togglePause(); return; }
   if(paused) return;
   if(state === 'playing'){
+    if(twoPlayer && e.code==='ArrowUp'){ p2Jump(); return; }
+    if(twoPlayer && e.code==='Enter' && !p2.attacking){ p2.attacking=true; p2.attackTimer=p2.char==='caveman'?22:26; p2.attackDir=p2.facing; if(p2.char==='dino') sfxFire(); return; }
+    if(twoPlayer && e.code==='ArrowDown') return;
     if(['ArrowUp','KeyW','Space'].includes(e.code)) tryJump();
     if(['ArrowDown','KeyS'].includes(e.code)) player.ducking = true;
     if(['KeyZ','KeyX','KeyF'].includes(e.code) && !player.attacking){
@@ -1016,7 +1128,7 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
-  if(['ArrowDown','KeyS'].includes(e.code)) player.ducking = false;
+  if((twoPlayer?['KeyS']:['ArrowDown','KeyS']).includes(e.code)) player.ducking = false;
 });
 
 // ─── MOUSE INPUT ──────────────────────────────────────────────────────────────
@@ -1641,6 +1753,8 @@ function showCharSelect(){
       <button class="diff-btn dificil" onclick="selectDifficulty('dificil')">${tr('hard')}</button>
     </div>
     <div class="divider"></div>
+    <button class="btn sec" id="twoPBtn" style="${twoPlayer?'background:var(--sun)':''}" onclick="twoPlayer=!twoPlayer;this.style.background=twoPlayer?'var(--sun)':'';document.getElementById('twoPHint').style.display=twoPlayer?'':'none'">2 jogadores</button>
+    <p class="sub" id="twoPHint" style="display:${twoPlayer?'':'none'}">J1: A D andar · W pular · S abaixar · F atacar<br>J2: ← → andar · ↑ pular · ↓ abaixar · Enter atacar</p>
     <button class="btn sec" onclick="renderWardrobe()">${tr('wardrobe')}</button>
     <button class="btn" onclick="startGame()">${tr('start')}</button>
     <button class="btn sec" onclick="backToMenu()">← ${tr('back')}</button>
@@ -2100,6 +2214,7 @@ function renderAlbum(){
 }
 
 function beginPhase(){
+  setTimeout(()=>{ if(twoPlayer) resetP2(); },0);
   scrollX=0;
   player.x=100; player.y=GROUND;
   player.vx=0; player.vy=0;
@@ -2129,6 +2244,7 @@ function restartPhase(){
 }
 
 function resumeFromCheckpoint(){
+  if(twoPlayer) setTimeout(resetP2,0);
   if(phaseChaser && phaseChaser.alive){ phaseChaser.active=false; phaseChaser.spawnAt=frameCount+600; }
   scrollX = Math.max(0, Math.min(currentLen-W, checkpointX - W*0.28));
   player.x = W*0.28; player.y = GROUND;
@@ -2322,8 +2438,8 @@ function update(){
   if(activeEffects.shield > 0) player.invincible = Math.max(player.invincible, 2);
 
   // horizontal movement
-  const mr = keys['ArrowRight']||keys['KeyD'];
-  const ml = keys['ArrowLeft'] ||keys['KeyA'];
+  const mr = (!twoPlayer&&keys['ArrowRight'])||keys['KeyD'];
+  const ml = (!twoPlayer&&keys['ArrowLeft']) ||keys['KeyA'];
   const speedMult = activeEffects.speed > 0 ? 1.6 : 1.0;
   const baseMove = moveSpeed();
   player.vx = mr ? baseMove * speedMult : ml ? -baseMove * speedMult : 0;
@@ -2730,6 +2846,8 @@ function update(){
       }
     }
   }
+
+  if(twoPlayer && state==='playing') updateP2();
 
   // achievement: coin 100
   if(totalCoins>=100) unlockAchievement('coin100');
@@ -3375,6 +3493,7 @@ function draw(){
     }
   }
   drawPetSpeech();
+  if(twoPlayer) drawP2();
   // nome do jogador acima do boneco
   if(playerName){
     ctx.save();
