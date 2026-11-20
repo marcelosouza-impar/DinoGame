@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>DinoGame · Criar fase</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Nunito:wght@700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.pill,.slot{transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
+.pill:hover,.slot:hover{transform:translateY(-3px) scale(1.03)}
+.coin{transform-box:fill-box;transform-origin:center;animation:spin 1.2s ease-in-out infinite}
+@keyframes spin{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.25)}}
+
+.rig,.rig g,.shadow{transform-box:fill-box}
+.rig{transform-origin:50% 100%;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+.tail{transform-origin:100% 40%}
+.headP,.headF{transform-origin:30% 90%;transition:opacity .15s,transform .25s cubic-bezier(.34,1.56,.64,1)}
+.legN,.legF{transform-origin:50% 10%}
+.torso{transform-origin:50% 100%}
+.lid,.lidF{transform-origin:50% 0%;transform:scaleY(0)}
+.shadow{transform-origin:50% 50%}
+.pupP,.pupF{transform-box:fill-box}
+@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.015,1.035)}}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(5deg)}}
+@keyframes blink{0%,92%,100%{transform:scaleY(0)}95%{transform:scaleY(1)}}
+@keyframes nod{0%,100%{transform:rotate(0)}50%{transform:rotate(-2deg) translateY(-1px)}}
+.m-idle .torso{animation:breathe 2.4s ease-in-out infinite}
+.m-idle .tail{animation:sway 2.4s ease-in-out infinite}
+.m-idle .lid,.m-wait .lidF{animation:blink 3.6s infinite}
+.m-idle .headP{animation:nod 2.4s ease-in-out infinite}
+@keyframes jump{0%{transform:translateY(0) scale(1,1)}14%{transform:translateY(0) scale(1.14,.84)}28%{transform:translateY(-34px) scale(.88,1.16)}50%{transform:translateY(-70px) scale(1,1)}72%{transform:translateY(-28px) scale(.94,1.08)}86%{transform:translateY(0) scale(1.16,.82)}100%{transform:translateY(0) scale(1,1)}}
+@keyframes tuck{0%,14%{transform:rotate(0)}40%,60%{transform:rotate(-28deg) translateY(-6px)}80%{transform:rotate(12deg)}100%{transform:rotate(0)}}
+@keyframes tailUp{0%,14%{transform:rotate(0)}40%,60%{transform:rotate(-16deg)}86%{transform:rotate(8deg)}100%{transform:rotate(0)}}
+@keyframes shadowJ{0%,14%,100%{transform:scale(1);opacity:.16}50%{transform:scale(.5);opacity:.07}86%{transform:scale(1.12);opacity:.2}}
+@keyframes headJ{0%,14%{transform:rotate(0)}30%{transform:rotate(-6deg)}50%{transform:rotate(-2deg)}86%{transform:rotate(6deg)}100%{transform:rotate(0)}}
+.m-jump .rig{animation:jump .9s cubic-bezier(.3,0,.3,1) both}
+.m-jump .legN,.m-jump .legF{animation:tuck .9s ease-in-out both}
+.m-jump .tail{animation:tailUp .9s ease-in-out both}
+.m-jump .shadow{animation:shadowJ .9s ease-in-out both}
+.m-jump .headP{animation:headJ .9s ease-in-out both}
+.m-duck .rig{transform:scale(1.12,.74)}
+.m-duck .headP{transform:translate(8px,22px) rotate(10deg) scale(.89,1.3)}
+.m-duck .spk{transform:scaleY(.6);transform-origin:50% 100%}
+@keyframes shuffle{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+.m-duck .legN{animation:shuffle .5s ease-in-out infinite}
+.m-duck .legF{animation:shuffle .5s ease-in-out infinite reverse}
+.m-duck .tail{transform:rotate(10deg)}
+@keyframes pop{0%{transform:scale(.6) rotate(-8deg)}60%{transform:scale(1.08) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes dart{0%,30%{transform:translate(0,0)}35%,60%{transform:translate(-3px,1px)}65%,85%{transform:translate(3px,1px)}90%,100%{transform:translate(0,0)}}
+@keyframes hop{0%,60%,100%{transform:translateY(0) scale(1,1)}68%{transform:translateY(0) scale(1.06,.94)}78%{transform:translateY(-12px) scale(.97,1.04)}90%{transform:translateY(0) scale(1.04,.96)}}
+@keyframes wag{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(14deg)}}
+@keyframes tap{0%,50%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}}
+@keyframes mouth{0%,60%,100%{transform:scaleY(1)}75%{transform:scaleY(1.5)}}
+.m-wait .headF{animation:pop .4s cubic-bezier(.34,1.56,.64,1) both}
+.m-wait .pupF{animation:dart 2.2s ease-in-out infinite}
+.m-wait .rig{animation:hop 1.6s ease-in-out infinite}
+.m-wait .tail{animation:wag .35s ease-in-out infinite}
+.m-wait .legN{animation:tap .5s ease-in-out infinite}
+.m-wait .mouthF{transform-box:fill-box;transform-origin:50% 0;animation:mouth 1.6s ease-in-out infinite}
+
+</style>
+</helmet>
+<div style="width: 800px; height: 450px; position: relative; overflow: hidden; font-family: 'Nunito', sans-serif; color: #2B2A4C">
+  <svg aria-hidden="true" width="800" height="450" viewBox="0 0 800 450" style="position: absolute; inset: 0">
+<rect x="0" y="0" width="800" height="450" fill="#8ED8FF"></rect>
+<g fill="#FFFFFF"><circle cx="560" cy="100" r="16"></circle><circle cx="582" cy="92" r="22"></circle><circle cx="606" cy="102" r="15"></circle><rect x="550" y="102" width="66" height="14" rx="7"></rect></g>
+<ellipse cx="200" cy="320" rx="260" ry="80" fill="#B6E9A0"></ellipse><ellipse cx="640" cy="330" rx="260" ry="90" fill="#A6E38C"></ellipse>
+<path d="M24 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M72 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M120 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M168 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M216 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M264 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M312 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M360 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M408 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M456 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M504 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M552 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M600 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M648 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M696 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M744 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path><path d="M792 70 V300" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="4 6"></path>
+<rect x="-10" y="300" width="820" height="160" fill="#C98B5B"></rect><rect x="-10" y="296" width="820" height="18" rx="9" fill="#7ED957" stroke="#2B2A4C" stroke-width="4"></rect>
+<g ><rect x="72" y="252" width="48" height="48" rx="10.0" fill="#B8B5CC" stroke="#2B2A4C" stroke-width="3"></rect><path d="M86.0 262.0 L92.0 274.0 L86.0 282.0" fill="none" stroke="#8C89A6" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="106.0" cy="286.0" r="4.0" fill="#8C89A6"></circle></g>
+<g ><rect x="120" y="252" width="48" height="48" rx="10.0" fill="#B8B5CC" stroke="#2B2A4C" stroke-width="3"></rect><path d="M134.0 262.0 L140.0 274.0 L134.0 282.0" fill="none" stroke="#8C89A6" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="154.0" cy="286.0" r="4.0" fill="#8C89A6"></circle></g>
+<g ><rect x="168" y="252" width="48" height="48" rx="10.0" fill="#D9965B" stroke="#2B2A4C" stroke-width="3"></rect><path d="M176.0 268.0 H208.0 M176.0 284.0 H208.0" stroke="#A8693A" stroke-width="3.0" stroke-linecap="round"></path><circle cx="198.0" cy="276.0" r="3.0" fill="#A8693A"></circle></g>
+<g ><rect x="168" y="204" width="48" height="48" rx="10.0" fill="#D9965B" stroke="#2B2A4C" stroke-width="3"></rect><path d="M176.0 220.0 H208.0 M176.0 236.0 H208.0" stroke="#A8693A" stroke-width="3.0" stroke-linecap="round"></path><circle cx="198.0" cy="228.0" r="3.0" fill="#A8693A"></circle></g>
+<g ><rect x="264" y="156" width="48" height="48" rx="10.0" fill="#C98B5B" stroke="#2B2A4C" stroke-width="3"></rect><path d="M265.5 172.0 C272.0 178.0 278.0 170.0 284.0 176.0 C292.0 180.0 298.0 170.0 310.5 174.0 V166.0 Q310.5 157.5 302.0 157.5 H274.0 Q265.5 157.5 265.5 166.0 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="3" stroke-linejoin="round"></path><circle cx="278.0" cy="190.0" r="2.5" fill="#A8693A"></circle><circle cx="296.0" cy="194.0" r="2.5" fill="#A8693A"></circle></g>
+<g ><rect x="312" y="156" width="48" height="48" rx="10.0" fill="#C98B5B" stroke="#2B2A4C" stroke-width="3"></rect><path d="M313.5 172.0 C320.0 178.0 326.0 170.0 332.0 176.0 C340.0 180.0 346.0 170.0 358.5 174.0 V166.0 Q358.5 157.5 350.0 157.5 H322.0 Q313.5 157.5 313.5 166.0 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="3" stroke-linejoin="round"></path><circle cx="326.0" cy="190.0" r="2.5" fill="#A8693A"></circle><circle cx="344.0" cy="194.0" r="2.5" fill="#A8693A"></circle></g>
+<g ><rect x="504" y="252" width="48" height="48" rx="10.0" fill="#FF8A80" stroke="#2B2A4C" stroke-width="3"></rect><path d="M507.0 268.0 H549.0 M507.0 284.0 H549.0 M528.0 255.0 V268.0 M518.0 268.0 V284.0 M538.0 268.0 V284.0 M528.0 284.0 V297.0" stroke="#D9584E" stroke-width="2.5" stroke-linecap="round"></path></g>
+<g ><rect x="504" y="204" width="48" height="48" rx="10.0" fill="#FF8A80" stroke="#2B2A4C" stroke-width="3"></rect><path d="M507.0 220.0 H549.0 M507.0 236.0 H549.0 M528.0 207.0 V220.0 M518.0 220.0 V236.0 M538.0 220.0 V236.0 M528.0 236.0 V249.0" stroke="#D9584E" stroke-width="2.5" stroke-linecap="round"></path></g>
+<g ><rect x="504" y="156" width="48" height="48" rx="10.0" fill="#FF8A80" stroke="#2B2A4C" stroke-width="3"></rect><path d="M507.0 172.0 H549.0 M507.0 188.0 H549.0 M528.0 159.0 V172.0 M518.0 172.0 V188.0 M538.0 172.0 V188.0 M528.0 188.0 V201.0" stroke="#D9584E" stroke-width="2.5" stroke-linecap="round"></path></g>
+<g ><rect x="552" y="252" width="48" height="48" rx="10.0" fill="#FF8A80" stroke="#2B2A4C" stroke-width="3"></rect><path d="M555.0 268.0 H597.0 M555.0 284.0 H597.0 M576.0 255.0 V268.0 M566.0 268.0 V284.0 M586.0 268.0 V284.0 M576.0 284.0 V297.0" stroke="#D9584E" stroke-width="2.5" stroke-linecap="round"></path></g>
+<g ><rect x="600" y="132" width="48" height="48" rx="10.0" fill="#BDEBFF" stroke="#2B2A4C" stroke-width="3"></rect><path d="M610.0 162.0 L628.0 142.0 M618.0 170.0 L636.0 150.0" stroke="#FFFFFF" stroke-width="4.0" stroke-linecap="round"></path></g>
+<g ><rect x="648" y="132" width="48" height="48" rx="10.0" fill="#BDEBFF" stroke="#2B2A4C" stroke-width="3"></rect><path d="M658.0 162.0 L676.0 142.0 M666.0 170.0 L684.0 150.0" stroke="#FFFFFF" stroke-width="4.0" stroke-linecap="round"></path></g>
+<g class="coin"><circle cx="288" cy="136" r="9" fill="#FFD23F" stroke="#2B2A4C" stroke-width="3"></circle><circle cx="288" cy="136" r="4.5" fill="none" stroke="#E0A800" stroke-width="2"></circle></g>
+<g class="coin"><circle cx="336" cy="136" r="9" fill="#FFD23F" stroke="#2B2A4C" stroke-width="3"></circle><circle cx="336" cy="136" r="4.5" fill="none" stroke="#E0A800" stroke-width="2"></circle></g>
+<g class="coin"><circle cx="624" cy="112" r="9" fill="#FFD23F" stroke="#2B2A4C" stroke-width="3"></circle><circle cx="624" cy="112" r="4.5" fill="none" stroke="#E0A800" stroke-width="2"></circle></g>
+<g class="coin"><circle cx="672" cy="112" r="9" fill="#FFD23F" stroke="#2B2A4C" stroke-width="3"></circle><circle cx="672" cy="112" r="4.5" fill="none" stroke="#E0A800" stroke-width="2"></circle></g>
+<g class="coin"><circle cx="192" cy="184" r="9" fill="#FFD23F" stroke="#2B2A4C" stroke-width="3"></circle><circle cx="192" cy="184" r="4.5" fill="none" stroke="#E0A800" stroke-width="2"></circle></g>
+<g><rect x="736" y="190" width="8" height="108" rx="4" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="3"></rect><path d="M744 194 H780 L770 208 L780 222 H744 Z" fill="#B18CFF" stroke="#2B2A4C" stroke-width="3" stroke-linejoin="round"></path></g>
+<g opacity=".55"><g ><rect x="408" y="204" width="48" height="48" rx="10.0" fill="#FF8A80" stroke="#2B2A4C" stroke-width="3"></rect><path d="M411.0 220.0 H453.0 M411.0 236.0 H453.0 M432.0 207.0 V220.0 M422.0 220.0 V236.0 M442.0 220.0 V236.0 M432.0 236.0 V249.0" stroke="#D9584E" stroke-width="2.5" stroke-linecap="round"></path></g></g><rect x="406" y="202" width="52" height="52" rx="12" fill="none" stroke="#2B2A4C" stroke-width="3" stroke-dasharray="7 5"></rect>
+<g transform="translate(440 236)"><path d="M0 0 L0 22 L6 17 L10 26 L15 24 L11 15 L19 15 Z" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="3" stroke-linejoin="round"></path></g>
+  </svg>
+  <div style="position: absolute; left: 352px; top: 222px; width: 70px; height: 83px">
+<svg class="m-idle" viewBox="0 -80 220 260" width="100%" height="100%" aria-hidden="true" style="overflow: visible">
+<ellipse class="shadow" cx="104" cy="170" rx="58" ry="7" fill="#2B2A4C" opacity=".16"></ellipse>
+<g class="rig" style="transform: ">
+ <g class="tail" style="transform: "><path d="M68 98 C50 114 26 120 7 107 C2 103 4 98 9 98 C24 100 40 90 56 76 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path><path d="M14 99 C24 100 34 97 42 93" fill="none" stroke="#5CC96B" stroke-width="4" stroke-linecap="round"></path></g>
+ <g class="spk"><path d="M62 82 L60 64 L76 72 Z M80 68 L80 48 L96 60 Z M100 62 L104 42 L117 58 Z" fill="#FFD23F" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path></g>
+ <g class="legF" style="transform: "><path d="M114 132 C112 146 112 154 114 160 L136 160 C138 156 136 148 132 132 Z" fill="#5CC96B" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path></g>
+ <g class="torso">
+  <path d="M52 108 C50 80 76 62 108 64 C138 66 156 86 154 114 C152 142 130 158 102 158 C72 158 54 136 52 108 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M96 90 C124 88 142 106 140 128 C138 146 118 152 102 148 C88 144 82 98 96 90 Z" fill="#DDF8C2"></path>
+  <path d="M104 106 C112 106 122 108 130 112 M102 122 C112 122 122 124 132 128 M104 138 C112 138 120 139 126 141" fill="none" stroke="#B9E89A" stroke-width="3" stroke-linecap="round"></path>
+  <circle cx="72" cy="88" r="5" fill="#5CC96B"></circle><circle cx="86" cy="80" r="3.5" fill="#5CC96B"></circle><circle cx="66" cy="104" r="3" fill="#5CC96B"></circle>
+ </g>
+ <g class="legN" style="transform: ">
+  <path d="M64 124 C62 102 98 98 101 124 C102 138 97 146 93 150 L70 150 C66 144 64 136 64 124 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M58 150 C58 144 64 142 72 142 L94 142 C102 142 106 148 104 156 C102 161 98 162 94 162 L62 162 C59 162 58 158 58 150 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M86 162 L86 156 M96 162 L96 156" stroke="#2B2A4C" stroke-width="3" stroke-linecap="round"></path>
+ </g>
+ <g class="arm"><path d="M138 104 C150 104 158 110 156 118 C155 122 150 123 147 120 C145 116 141 114 136 114" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path></g>
+ <g class="headP" style="opacity: 1; transform: ">
+  <path d="M120 40 L114 22 L130 28 Z M134 24 L134 4 L150 16 Z" fill="#FFD23F" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M114 62 C110 30 136 10 166 12 C196 14 214 32 212 56 C210 78 192 88 168 88 C148 88 132 84 124 78 C118 74 115 68 114 62 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <ellipse cx="160" cy="40" rx="14" ry="16" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="4"></ellipse>
+  <g class="pupP"><circle cx="165" cy="42" r="8" fill="#2B2A4C"></circle><circle cx="168" cy="38" r="3" fill="#FFFFFF"></circle></g>
+  <ellipse class="lid" cx="160" cy="40" rx="15" ry="17" fill="#7ED957" stroke="#2B2A4C" stroke-width="4"></ellipse>
+  <path d="M146 20 C152 16 162 16 170 20" fill="none" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"></path>
+  <ellipse cx="200" cy="44" rx="2.5" ry="3.5" fill="#2B2A4C"></ellipse>
+  <ellipse cx="182" cy="66" rx="8" ry="5" fill="#FF9FA0" opacity=".85"></ellipse>
+  <path d="M166 70 C178 80 194 78 206 66" fill="none" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"></path>
+  <path d="M178 76 L180 82 L185 77" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="2.5" stroke-linejoin="round"></path>
+ </g>
+ <g class="headF" style="opacity: 0">
+  <path d="M136 22 L134 2 L150 12 Z M156 12 L160 -8 L172 8 Z M178 16 L188 -2 L192 18 Z" fill="#FFD23F" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M120 48 C120 20 140 8 164 8 C188 8 208 20 208 48 C208 74 190 88 164 88 C138 88 120 74 120 48 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <ellipse cx="164" cy="70" rx="22" ry="14" fill="#DDF8C2"></ellipse>
+  <ellipse cx="146" cy="42" rx="12" ry="14" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="4"></ellipse>
+  <ellipse cx="182" cy="42" rx="12" ry="14" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="4"></ellipse>
+  <g class="pupF"><circle cx="146" cy="45" r="7" fill="#2B2A4C"></circle><circle cx="182" cy="45" r="7" fill="#2B2A4C"></circle><circle cx="148.5" cy="41.5" r="2.6" fill="#FFFFFF"></circle><circle cx="184.5" cy="41.5" r="2.6" fill="#FFFFFF"></circle></g>
+  <g class="lidF"><ellipse cx="146" cy="42" rx="13" ry="15" fill="#7ED957" stroke="#2B2A4C" stroke-width="4"></ellipse><ellipse cx="182" cy="42" rx="13" ry="15" fill="#7ED957" stroke="#2B2A4C" stroke-width="4"></ellipse></g>
+  <path d="M136 24 C140 20 148 20 152 23 M176 23 C180 20 188 20 192 24" fill="none" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"></path>
+  <ellipse cx="132" cy="62" rx="7" ry="4.5" fill="#FF9FA0" opacity=".85"></ellipse><ellipse cx="196" cy="62" rx="7" ry="4.5" fill="#FF9FA0" opacity=".85"></ellipse>
+  <path class="mouthF" d="M154 66 C158 74 170 74 174 66 Z" fill="#E35D6A" stroke="#2B2A4C" stroke-width="4" stroke-linejoin="round"></path>
+ </g>
+</g>
+</svg>
+  </div>
+
+  <div style="position: absolute; top: 12px; left: 14px; right: 14px; display: flex; align-items: center; gap: 10px">
+    <button class="pill" aria-label="Voltar ao menu" style="width: 44px; height: 44px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+    <button class="pill" style="height: 44px; padding: 0 14px 0 16px; display: flex; align-items: center; gap: 8px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 4px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 19px; color: #2B2A4C; cursor: pointer">
+      Minha fase
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M4 20l4-1 11-11-3-3L5 16z"></path></svg>
+    </button>
+    <div role="group" aria-label="Ferramenta" style="display: flex; height: 44px; padding: 3px; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 4px 0 #2B2A4C">
+      <button aria-pressed="true" style="height: 32px; padding: 0 12px; display: flex; align-items: center; gap: 6px; background: #7ED957; border: 2px solid #2B2A4C; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 13px; color: #2B2A4C; cursor: pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 5v14M5 12h14"></path></svg>Colocar</button>
+      <button aria-pressed="false" style="height: 32px; padding: 0 12px; display: flex; align-items: center; gap: 6px; background: transparent; border: 2px solid transparent; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 13px; color: #2B2A4C; cursor: pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M20 20H9L4 15l9-9 7 7-7 7"></path></svg>Apagar</button>
+    </div>
+    <div style="flex: 1"></div>
+    <button class="pill" aria-label="Desfazer" style="width: 44px; height: 44px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg></button>
+    <button class="pill" aria-label="Refazer" style="width: 44px; height: 44px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"></path><path d="M20 9H10a6 6 0 0 0 0 12h3"></path></svg></button>
+    <button class="pill" style="height: 52px; padding: 0 22px; display: flex; align-items: center; gap: 10px; background: #FFD23F; border: 4px solid #2B2A4C; border-radius: 999px; box-shadow: 0 6px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 22px; color: #2B2A4C; cursor: pointer">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="#2B2A4C"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"></path></svg>
+      Testar
+    </button>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 134px; box-sizing: border-box; padding: 10px 16px 12px; background: #FFF8E7; border-top: 4px solid #2B2A4C; border-radius: 26px 26px 0 0; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <button aria-pressed="true" style="height: 30px; padding: 0 14px; background: #2B2A4C; color: #FFFFFF; border: 2px solid #2B2A4C; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 13px; cursor: pointer">Blocos</button>
+      <button aria-pressed="false" style="height: 30px; padding: 0 14px; background: #FFFFFF; color: #2B2A4C; border: 2px solid #2B2A4C; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 13px; cursor: pointer">Itens</button>
+      <button aria-pressed="false" style="height: 30px; padding: 0 14px; background: #FFFFFF; color: #2B2A4C; border: 2px solid #2B2A4C; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 13px; cursor: pointer">Inimigos</button>
+      <div style="flex: 1"></div>
+      <span style="font-weight: 900; font-size: 13px">12 blocos</span>
+      <div role="img" aria-label="Posição na fase" style="position: relative; width: 240px; height: 26px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; overflow: hidden; box-sizing: border-box">
+        <svg aria-hidden="true" width="234" height="20" viewBox="0 0 234 20" style="position: absolute; left: 0; top: 0"><rect x="10" y="9" width="5" height="6" rx="2" fill="#B8B5CC"></rect><rect x="18" y="9" width="5" height="10" rx="2" fill="#D9965B"></rect><rect x="30" y="9" width="5" height="8" rx="2" fill="#7ED957"></rect><rect x="60" y="9" width="5" height="12" rx="2" fill="#FF8A80"></rect><rect x="70" y="9" width="5" height="8" rx="2" fill="#BDEBFF"></rect><rect x="120" y="9" width="5" height="8" rx="2" fill="#B8B5CC"></rect><rect x="150" y="9" width="5" height="10" rx="2" fill="#FF8A80"></rect><rect x="200" y="9" width="5" height="6" rx="2" fill="#7ED957"></rect><rect x="222" y="4" width="4" height="12" rx="2" fill="#B18CFF"></rect></svg>
+        <div style="position: absolute; left: 6px; top: 1px; width: 40px; height: 18px; box-sizing: border-box; border: 3px solid #2B2A4C; border-radius: 999px; background: rgba(255,210,63,.45)"></div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: flex-end; gap: 14px; padding-left: 8px">
+<button class="slot" aria-pressed="false" style="position: relative; width: 72px; height: 66px; padding: 6px 0 4px; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 18px; box-shadow: 0 4px 0 #2B2A4C; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 12px; color: #2B2A4C">
+        <span style="position: absolute; top: -8px; left: -8px; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 12px">1</span>
+        <svg aria-hidden="true" width="32" height="32" viewBox="0 0 48 48"><g ><rect x="1.5" y="1.5" width="45" height="45" rx="9.4" fill="#D9965B" stroke="#2B2A4C" stroke-width="3"></rect><path d="M9.0 16.5 H39.0 M9.0 31.5 H39.0" stroke="#A8693A" stroke-width="2.8" stroke-linecap="round"></path><circle cx="29.625" cy="24.0" r="2.8" fill="#A8693A"></circle></g></svg>
+        Madeira
+      </button>
+<button class="slot" aria-pressed="false" style="position: relative; width: 72px; height: 66px; padding: 6px 0 4px; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 18px; box-shadow: 0 4px 0 #2B2A4C; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 12px; color: #2B2A4C">
+        <span style="position: absolute; top: -8px; left: -8px; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 12px">2</span>
+        <svg aria-hidden="true" width="32" height="32" viewBox="0 0 48 48"><g ><rect x="1.5" y="1.5" width="45" height="45" rx="9.4" fill="#B8B5CC" stroke="#2B2A4C" stroke-width="3"></rect><path d="M14.625 10.875 L20.25 22.125 L14.625 29.625" fill="none" stroke="#8C89A6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="33.375" cy="33.375" r="3.8" fill="#8C89A6"></circle></g></svg>
+        Pedra
+      </button>
+<button class="slot" aria-pressed="false" style="position: relative; width: 72px; height: 66px; padding: 6px 0 4px; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 18px; box-shadow: 0 4px 0 #2B2A4C; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 12px; color: #2B2A4C">
+        <span style="position: absolute; top: -8px; left: -8px; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 12px">3</span>
+        <svg aria-hidden="true" width="32" height="32" viewBox="0 0 48 48"><g ><rect x="1.5" y="1.5" width="45" height="45" rx="9.4" fill="#C98B5B" stroke="#2B2A4C" stroke-width="3"></rect><path d="M3.0 16.5 C9.0 22.125 14.625 14.625 20.25 20.25 C27.75 24.0 33.375 14.625 45.09375 18.375 V10.875 Q45.09375 3.0 37.125 3.0 H10.875 Q3.0 3.0 3.0 10.875 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="3" stroke-linejoin="round"></path><circle cx="14.625" cy="33.375" r="2.3" fill="#A8693A"></circle><circle cx="31.5" cy="37.125" r="2.3" fill="#A8693A"></circle></g></svg>
+        Grama
+      </button>
+<button class="slot" aria-pressed="true" style="position: relative; width: 72px; height: 66px; padding: 6px 0 4px; box-sizing: border-box; background: #FFD23F; border: 3px solid #2B2A4C; border-radius: 18px; transform: translateY(-6px); box-shadow: 0 7px 0 #2B2A4C; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 12px; color: #2B2A4C">
+        <span style="position: absolute; top: -8px; left: -8px; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 12px">4</span>
+        <svg aria-hidden="true" width="32" height="32" viewBox="0 0 48 48"><g ><rect x="1.5" y="1.5" width="45" height="45" rx="9.4" fill="#FF8A80" stroke="#2B2A4C" stroke-width="3"></rect><path d="M4.3125 16.5 H43.6875 M4.3125 31.5 H43.6875 M24.0 4.3125 V16.5 M14.625 16.5 V31.5 M33.375 16.5 V31.5 M24.0 31.5 V43.6875" stroke="#D9584E" stroke-width="2.3" stroke-linecap="round"></path></g></svg>
+        Tijolo
+      </button>
+<button class="slot" aria-pressed="false" style="position: relative; width: 72px; height: 66px; padding: 6px 0 4px; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 18px; box-shadow: 0 4px 0 #2B2A4C; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 12px; color: #2B2A4C">
+        <span style="position: absolute; top: -8px; left: -8px; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 12px">5</span>
+        <svg aria-hidden="true" width="32" height="32" viewBox="0 0 48 48"><g ><rect x="1.5" y="1.5" width="45" height="45" rx="9.4" fill="#BDEBFF" stroke="#2B2A4C" stroke-width="3"></rect><path d="M10.875 29.625 L27.75 10.875 M18.375 37.125 L35.25 18.375" stroke="#FFFFFF" stroke-width="3.8" stroke-linecap="round"></path></g></svg>
+        Gelo
+      </button>
+
+      <div style="flex: 1"></div>
+      <button class="pill" style="height: 48px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 16px; box-shadow: 0 4px 0 #2B2A4C; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 13px; color: #2B2A4C; cursor: pointer">
+        <span style="width: 26px; height: 26px; border-radius: 8px; background: #7ED957; border: 2px solid #2B2A4C"></span>
+        Tema: Floresta
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":800,"height":450}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

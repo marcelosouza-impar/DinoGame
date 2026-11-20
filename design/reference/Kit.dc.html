@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>DinoGame · Kit visual</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Nunito:wght@700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.pill{transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
+.pill:hover{transform:translateY(-3px) scale(1.03)}
+.pill:active{transform:translateY(3px)}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 48px 56px; background: #FFF8E7; font-family: 'Nunito', sans-serif; color: #2B2A4C; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 56px">
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 30px">Cores</h2>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px">
+      <sc-for list="{{colors}}" as="c" hint-placeholder-count="8">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="height: 64px; border-radius: 20px; background: {{c.hex}}; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C"></div>
+          <div style="font-weight: 900; font-size: 15px">{{c.name}}</div>
+          <div style="font-weight: 700; font-size: 13px; color: #4A4968">{{c.hex}} · {{c.role}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 30px">Tipografia</h2>
+    <div style="font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 48px; line-height: 1">Fredoka 48 · Título</div>
+    <div style="font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 30px">Fredoka 30 · Botão principal</div>
+    <div style="font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 22px">Fredoka 22 · Botão secundário, cabeçalho</div>
+    <div style="font-weight: 900; font-size: 16px">Nunito 900 · 16 · Textos de interface, contadores</div>
+    <div style="font-weight: 800; font-size: 13px">Nunito 800 · 13 · Legendas e rótulos (mínimo 12 px no canvas de 800×450)</div>
+    <div style="margin-top: 6px; padding: 12px 16px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 18px; font-weight: 800; font-size: 14px; line-height: 1.5">Press Start 2P fica só onde for “pixel de propósito”: números do placar ou easter eggs. Nunca em texto corrido.</div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 30px">Botões</h2>
+    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap">
+      <button class="pill" style="height: 64px; padding: 0 36px; background: #FFD23F; border: 4px solid #2B2A4C; border-radius: 999px; box-shadow: 0 7px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 28px; color: #2B2A4C; cursor: pointer">Jogar</button>
+      <button class="pill" style="height: 52px; padding: 0 26px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 5px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 21px; color: #2B2A4C; cursor: pointer">Secundário</button>
+      <button disabled style="height: 46px; padding: 0 22px; background: #E6F6FF; border: 3px dashed #2B2A4C; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; color: #2B2A4C">Bloqueado</button>
+      <button class="pill" aria-label="Voltar" style="width: 52px; height: 52px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; font-weight: 800; font-size: 13px; line-height: 1.5; color: #4A4968">
+      <div><b style="color: #2B2A4C">1 primário por tela.</b> Amarelo, maior, sempre a ação que a criança quer.</div>
+      <div><b style="color: #2B2A4C">Hierarquia por tamanho</b> 64 / 52 / 46 px, não por cor diferente em cada botão.</div>
+      <div><b style="color: #2B2A4C">Toque ≥ 44 px.</b> Hoje há botões com fonte de 5 px e alvos menores que um dedo.</div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 16px">
+    <h2 style="margin: 0; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 30px">Cartões e estados</h2>
+    <div style="display: flex; gap: 16px">
+      <div style="width: 132px; padding: 12px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 24px; box-shadow: 0 5px 0 #2B2A4C; display: flex; flex-direction: column; gap: 8px; align-items: center">
+        <div style="width: 100%; height: 70px; border-radius: 16px; background: #E6F6FF"></div>
+        <div style="font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 18px">Normal</div>
+      </div>
+      <div style="width: 132px; padding: 12px; background: #FFD23F; border: 4px solid #2B2A4C; border-radius: 24px; box-shadow: 0 8px 0 #2B2A4C; transform: translateY(-6px) rotate(-2deg); display: flex; flex-direction: column; gap: 8px; align-items: center">
+        <div style="width: 100%; height: 70px; border-radius: 16px; background: #FFF3C4"></div>
+        <div style="font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 18px">Selecionado</div>
+      </div>
+      <div style="width: 132px; padding: 12px; background: #EDEBF5; border: 3px dashed #6B6A8A; border-radius: 24px; display: flex; flex-direction: column; gap: 8px; align-items: center">
+        <div style="width: 100%; height: 70px; border-radius: 16px; background: #DDDAEB; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A4968" stroke-width="2.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="3"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></div>
+        <div style="font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 18px; color: #4A4968">Bloqueado</div>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; font-weight: 800; font-size: 13px; line-height: 1.5; color: #4A4968">
+      <div><b style="color: #2B2A4C">Raio 18–24 px</b> em cartões, 999 px em botões. Nada abaixo de 12 px.</div>
+      <div><b style="color: #2B2A4C">Contorno 3–4 px #2B2A4C</b> e sombra sólida para baixo: o “adesivo” que dá o ar de cartoon.</div>
+      <div><b style="color: #2B2A4C">Movimento:</b> hover sobe 3 px com mola (cubic-bezier .34,1.56,.64,1), clique afunda 3 px.</div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      colors: [
+        { name: 'Céu', hex: '#8ED8FF', role: 'fundo' },
+        { name: 'Grama', hex: '#7ED957', role: 'herói, sucesso' },
+        { name: 'Sol', hex: '#FFD23F', role: 'ação principal' },
+        { name: 'Creme', hex: '#FFF8E7', role: 'painéis' },
+        { name: 'Tinta', hex: '#2B2A4C', role: 'contorno, texto' },
+        { name: 'Coral', hex: '#FF6B6B', role: 'vida, perigo' },
+        { name: 'Laranja', hex: '#FF9F6B', role: 'ataque, conquistas' },
+        { name: 'Uva', hex: '#B18CFF', role: 'cosméticos' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

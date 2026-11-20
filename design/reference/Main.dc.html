@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>DinoGame · Menu principal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Nunito:wght@700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.pill{transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .15s}
+.pill:hover{transform:translateY(-3px) scale(1.03)}
+.pill:active{transform:translateY(3px)}
+.ico{transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+.ico:hover{transform:translateY(-4px) rotate(-6deg)}
+.rig,.rig g,.shadow{transform-box:fill-box}
+.rig{transform-origin:50% 100%;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+.tail{transform-origin:100% 40%}
+.headP,.headF{transform-origin:30% 90%;transition:opacity .15s,transform .25s cubic-bezier(.34,1.56,.64,1)}
+.legN,.legF{transform-origin:50% 10%}
+.torso{transform-origin:50% 100%}
+.lid,.lidF{transform-origin:50% 0%;transform:scaleY(0)}
+.shadow{transform-origin:50% 50%}
+.pupP,.pupF{transform-box:fill-box}
+@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.015,1.035)}}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(5deg)}}
+@keyframes blink{0%,92%,100%{transform:scaleY(0)}95%{transform:scaleY(1)}}
+@keyframes nod{0%,100%{transform:rotate(0)}50%{transform:rotate(-2deg) translateY(-1px)}}
+.m-idle .torso{animation:breathe 2.4s ease-in-out infinite}
+.m-idle .tail{animation:sway 2.4s ease-in-out infinite}
+.m-idle .lid,.m-wait .lidF{animation:blink 3.6s infinite}
+.m-idle .headP{animation:nod 2.4s ease-in-out infinite}
+@keyframes jump{0%{transform:translateY(0) scale(1,1)}14%{transform:translateY(0) scale(1.14,.84)}28%{transform:translateY(-34px) scale(.88,1.16)}50%{transform:translateY(-70px) scale(1,1)}72%{transform:translateY(-28px) scale(.94,1.08)}86%{transform:translateY(0) scale(1.16,.82)}100%{transform:translateY(0) scale(1,1)}}
+@keyframes tuck{0%,14%{transform:rotate(0)}40%,60%{transform:rotate(-28deg) translateY(-6px)}80%{transform:rotate(12deg)}100%{transform:rotate(0)}}
+@keyframes tailUp{0%,14%{transform:rotate(0)}40%,60%{transform:rotate(-16deg)}86%{transform:rotate(8deg)}100%{transform:rotate(0)}}
+@keyframes shadowJ{0%,14%,100%{transform:scale(1);opacity:.16}50%{transform:scale(.5);opacity:.07}86%{transform:scale(1.12);opacity:.2}}
+@keyframes headJ{0%,14%{transform:rotate(0)}30%{transform:rotate(-6deg)}50%{transform:rotate(-2deg)}86%{transform:rotate(6deg)}100%{transform:rotate(0)}}
+.m-jump .rig{animation:jump .9s cubic-bezier(.3,0,.3,1) both}
+.m-jump .legN,.m-jump .legF{animation:tuck .9s ease-in-out both}
+.m-jump .tail{animation:tailUp .9s ease-in-out both}
+.m-jump .shadow{animation:shadowJ .9s ease-in-out both}
+.m-jump .headP{animation:headJ .9s ease-in-out both}
+.m-duck .rig{transform:scale(1.12,.74)}
+.m-duck .headP{transform:translate(8px,22px) rotate(10deg) scale(.89,1.3)}
+.m-duck .spk{transform:scaleY(.6);transform-origin:50% 100%}
+@keyframes shuffle{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+.m-duck .legN{animation:shuffle .5s ease-in-out infinite}
+.m-duck .legF{animation:shuffle .5s ease-in-out infinite reverse}
+.m-duck .tail{transform:rotate(10deg)}
+@keyframes pop{0%{transform:scale(.6) rotate(-8deg)}60%{transform:scale(1.08) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes dart{0%,30%{transform:translate(0,0)}35%,60%{transform:translate(-3px,1px)}65%,85%{transform:translate(3px,1px)}90%,100%{transform:translate(0,0)}}
+@keyframes hop{0%,60%,100%{transform:translateY(0) scale(1,1)}68%{transform:translateY(0) scale(1.06,.94)}78%{transform:translateY(-12px) scale(.97,1.04)}90%{transform:translateY(0) scale(1.04,.96)}}
+@keyframes wag{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(14deg)}}
+@keyframes tap{0%,50%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}}
+@keyframes mouth{0%,60%,100%{transform:scaleY(1)}75%{transform:scaleY(1.5)}}
+.m-wait .headF{animation:pop .4s cubic-bezier(.34,1.56,.64,1) both}
+.m-wait .pupF{animation:dart 2.2s ease-in-out infinite}
+.m-wait .rig{animation:hop 1.6s ease-in-out infinite}
+.m-wait .tail{animation:wag .35s ease-in-out infinite}
+.m-wait .legN{animation:tap .5s ease-in-out infinite}
+.m-wait .mouthF{transform-box:fill-box;transform-origin:50% 0;animation:mouth 1.6s ease-in-out infinite}
+
+</style>
+</helmet>
+<div style="width: 800px; height: 450px; position: relative; overflow: hidden; background: #8ED8FF; font-family: 'Nunito', sans-serif; color: #2B2A4C">
+  <svg aria-hidden="true" width="800" height="450" viewBox="0 0 800 450" style="position: absolute; inset: 0">
+    <circle cx="690" cy="70" r="38" fill="#FFE27A"></circle>
+    <g fill="#FFFFFF"><circle cx="120" cy="80" r="22"></circle><circle cx="148" cy="70" r="28"></circle><circle cx="178" cy="84" r="20"></circle><rect x="110" y="84" width="80" height="20" rx="10"></rect></g>
+    <g fill="#FFFFFF" opacity=".85"><circle cx="520" cy="120" r="16"></circle><circle cx="540" cy="110" r="22"></circle><circle cx="562" cy="122" r="15"></circle><rect x="512" y="122" width="62" height="14" rx="7"></rect></g>
+    <ellipse cx="160" cy="470" rx="320" ry="130" fill="#5CC96B"></ellipse>
+    <ellipse cx="660" cy="490" rx="330" ry="140" fill="#7ED957"></ellipse>
+    <ellipse cx="400" cy="520" rx="460" ry="120" fill="#4DB85C"></ellipse>
+  </svg>
+  <div style="position: absolute; left: 44px; top: 196px; width: 160px; height: 189px">
+<svg class="m-idle" viewBox="0 -80 220 260" width="100%" height="100%" aria-hidden="true" style="overflow: visible">
+<ellipse class="shadow" cx="104" cy="170" rx="58" ry="7" fill="#2B2A4C" opacity=".16"></ellipse>
+<g class="rig" style="transform: ">
+ <g class="tail" style="transform: "><path d="M68 98 C50 114 26 120 7 107 C2 103 4 98 9 98 C24 100 40 90 56 76 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path><path d="M14 99 C24 100 34 97 42 93" fill="none" stroke="#5CC96B" stroke-width="4" stroke-linecap="round"></path></g>
+ <g class="spk"><path d="M62 82 L60 64 L76 72 Z M80 68 L80 48 L96 60 Z M100 62 L104 42 L117 58 Z" fill="#FFD23F" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path></g>
+ <g class="legF" style="transform: "><path d="M114 132 C112 146 112 154 114 160 L136 160 C138 156 136 148 132 132 Z" fill="#5CC96B" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path></g>
+ <g class="torso">
+  <path d="M52 108 C50 80 76 62 108 64 C138 66 156 86 154 114 C152 142 130 158 102 158 C72 158 54 136 52 108 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M96 90 C124 88 142 106 140 128 C138 146 118 152 102 148 C88 144 82 98 96 90 Z" fill="#DDF8C2"></path>
+  <path d="M104 106 C112 106 122 108 130 112 M102 122 C112 122 122 124 132 128 M104 138 C112 138 120 139 126 141" fill="none" stroke="#B9E89A" stroke-width="3" stroke-linecap="round"></path>
+  <circle cx="72" cy="88" r="5" fill="#5CC96B"></circle><circle cx="86" cy="80" r="3.5" fill="#5CC96B"></circle><circle cx="66" cy="104" r="3" fill="#5CC96B"></circle>
+ </g>
+ <g class="legN" style="transform: ">
+  <path d="M64 124 C62 102 98 98 101 124 C102 138 97 146 93 150 L70 150 C66 144 64 136 64 124 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M58 150 C58 144 64 142 72 142 L94 142 C102 142 106 148 104 156 C102 161 98 162 94 162 L62 162 C59 162 58 158 58 150 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M86 162 L86 156 M96 162 L96 156" stroke="#2B2A4C" stroke-width="3" stroke-linecap="round"></path>
+ </g>
+ <g class="arm"><path d="M138 104 C150 104 158 110 156 118 C155 122 150 123 147 120 C145 116 141 114 136 114" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path></g>
+ <g class="headP" style="opacity: 1; transform: ">
+  <path d="M120 40 L114 22 L130 28 Z M134 24 L134 4 L150 16 Z" fill="#FFD23F" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M114 62 C110 30 136 10 166 12 C196 14 214 32 212 56 C210 78 192 88 168 88 C148 88 132 84 124 78 C118 74 115 68 114 62 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <ellipse cx="160" cy="40" rx="14" ry="16" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="4"></ellipse>
+  <g class="pupP"><circle cx="165" cy="42" r="8" fill="#2B2A4C"></circle><circle cx="168" cy="38" r="3" fill="#FFFFFF"></circle></g>
+  <ellipse class="lid" cx="160" cy="40" rx="15" ry="17" fill="#7ED957" stroke="#2B2A4C" stroke-width="4"></ellipse>
+  <path d="M146 20 C152 16 162 16 170 20" fill="none" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"></path>
+  <ellipse cx="200" cy="44" rx="2.5" ry="3.5" fill="#2B2A4C"></ellipse>
+  <ellipse cx="182" cy="66" rx="8" ry="5" fill="#FF9FA0" opacity=".85"></ellipse>
+  <path d="M166 70 C178 80 194 78 206 66" fill="none" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"></path>
+  <path d="M178 76 L180 82 L185 77" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="2.5" stroke-linejoin="round"></path>
+ </g>
+ <g class="headF" style="opacity: 0">
+  <path d="M136 22 L134 2 L150 12 Z M156 12 L160 -8 L172 8 Z M178 16 L188 -2 L192 18 Z" fill="#FFD23F" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <path d="M120 48 C120 20 140 8 164 8 C188 8 208 20 208 48 C208 74 190 88 164 88 C138 88 120 74 120 48 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
+  <ellipse cx="164" cy="70" rx="22" ry="14" fill="#DDF8C2"></ellipse>
+  <ellipse cx="146" cy="42" rx="12" ry="14" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="4"></ellipse>
+  <ellipse cx="182" cy="42" rx="12" ry="14" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="4"></ellipse>
+  <g class="pupF"><circle cx="146" cy="45" r="7" fill="#2B2A4C"></circle><circle cx="182" cy="45" r="7" fill="#2B2A4C"></circle><circle cx="148.5" cy="41.5" r="2.6" fill="#FFFFFF"></circle><circle cx="184.5" cy="41.5" r="2.6" fill="#FFFFFF"></circle></g>
+  <g class="lidF"><ellipse cx="146" cy="42" rx="13" ry="15" fill="#7ED957" stroke="#2B2A4C" stroke-width="4"></ellipse><ellipse cx="182" cy="42" rx="13" ry="15" fill="#7ED957" stroke="#2B2A4C" stroke-width="4"></ellipse></g>
+  <path d="M136 24 C140 20 148 20 152 23 M176 23 C180 20 188 20 192 24" fill="none" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"></path>
+  <ellipse cx="132" cy="62" rx="7" ry="4.5" fill="#FF9FA0" opacity=".85"></ellipse><ellipse cx="196" cy="62" rx="7" ry="4.5" fill="#FF9FA0" opacity=".85"></ellipse>
+  <path class="mouthF" d="M154 66 C158 74 170 74 174 66 Z" fill="#E35D6A" stroke="#2B2A4C" stroke-width="4" stroke-linejoin="round"></path>
+ </g>
+</g>
+</svg>
+  </div>
+
+  <div style="position: absolute; top: 16px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center">
+    <button class="pill" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 6px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 4px 0 #2B2A4C; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 15px; color: #2B2A4C; cursor: pointer">
+      <span style="width: 30px; height: 30px; border-radius: 50%; background: #7ED957; border: 2px solid #2B2A4C; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg></span>
+      Seu nome
+    </button>
+    <div style="display: flex; gap: 10px; align-items: center">
+      <div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 6px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 4px 0 #2B2A4C; font-weight: 900; font-size: 17px">
+        <span style="width: 30px; height: 30px; border-radius: 50%; background: #FFD23F; border: 2px solid #2B2A4C; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15px">$</span>
+        0
+      </div>
+      <button class="pill" aria-label="Idioma e som" style="width: 50px; height: 50px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 60px; top: 92px; display: flex; flex-direction: column; gap: 6px; transform: rotate(-4deg)">
+    <div style="font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 76px; line-height: .9; color: {{accent}}; -webkit-text-stroke: 4px #2B2A4C; paint-order: stroke fill; text-shadow: 0 6px 0 #2B2A4C">Dino</div>
+    <div style="font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 76px; line-height: .9; color: #FFD23F; -webkit-text-stroke: 4px #2B2A4C; paint-order: stroke fill; text-shadow: 0 6px 0 #2B2A4C; margin-left: 44px">Game</div>
+  </div>
+
+  <div style="position: absolute; right: 48px; top: 100px; width: 280px; display: flex; flex-direction: column; gap: 14px; align-items: stretch">
+    <button class="pill" style="height: 68px; display: flex; align-items: center; justify-content: center; gap: 12px; background: #FFD23F; border: 4px solid #2B2A4C; border-radius: 999px; box-shadow: 0 7px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 30px; color: #2B2A4C; cursor: pointer">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#2B2A4C"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"></path></svg>
+      Jogar
+    </button>
+    <button class="pill" style="height: 52px; display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 5px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 21px; color: #2B2A4C; cursor: pointer">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V9l5-3v15"></path><path d="M14 21V4l5 3v14"></path></svg>
+      Jogo Livre
+    </button>
+    <button class="pill" disabled style="height: 46px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #E6F6FF; border: 3px dashed #2B2A4C; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; color: #2B2A4C; cursor: not-allowed">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="3"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+      Criar Fase · 700 moedas
+    </button>
+  </div>
+
+  <div style="position: absolute; right: 30px; bottom: 18px; display: flex; gap: 14px">
+    <sc-for list="{{shortcuts}}" as="s" hint-placeholder-count="6">
+      <button class="ico" style="display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; padding: 0; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 12px; color: #2B2A4C">
+        <span style="width: 52px; height: 52px; border-radius: 18px; background: {{s.bg}}; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center">
+          <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{s.d}}"></path></svg>
+        </span>
+        <span style="background: #FFFFFF; border-radius: 999px; padding: 1px 8px">{{s.label}}</span>
+      </button>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#7ED957","options":["#7ED957","#FF7A7A","#5BC0FF","#B18CFF"]},"$preview":{"width":800,"height":450}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#7ED957',
+      shortcuts: [
+        { label: 'Como jogar', bg: '#FFFFFF', d: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17.5v.01' },
+        { label: 'Online', bg: '#5BC0FF', d: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.6 3.5 5.6 3.5 9s-1 6.4-3.5 9c-2.5-2.6-3.5-5.6-3.5-9s1-6.4 3.5-9z' },
+        { label: 'Recordes', bg: '#FFD23F', d: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3M12 13v4M9 20h6' },
+        { label: 'Conquistas', bg: '#FF9F6B', d: 'M12 3l2.8 5.8 6.2.9-4.5 4.3 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.7l6.2-.9z' },
+        { label: 'Diário', bg: '#B18CFF', d: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5M9 8h6' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

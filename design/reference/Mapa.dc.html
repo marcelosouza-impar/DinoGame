@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>DinoGame · Mapa das fases</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Nunito:wght@700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.pill{transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
+.pill:hover{transform:translateY(-3px) scale(1.04)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.bob{animation:bob 1.4s ease-in-out infinite}
+</style>
+</helmet>
+<div style="width: 800px; height: 450px; position: relative; overflow: hidden; background: #8ED8FF; font-family: 'Nunito', sans-serif; color: #2B2A4C">
+  <svg aria-hidden="true" width="800" height="450" viewBox="0 0 800 450" style="position: absolute; inset: 0">
+    <g fill="#FFFFFF" opacity=".9"><circle cx="90" cy="110" r="16"></circle><circle cx="112" cy="100" r="22"></circle><circle cx="136" cy="112" r="15"></circle><rect x="80" y="112" width="64" height="14" rx="7"></rect></g>
+    <g fill="#FFFFFF" opacity=".9"><circle cx="660" cy="100" r="14"></circle><circle cx="680" cy="92" r="20"></circle><circle cx="702" cy="102" r="13"></circle><rect x="650" y="102" width="62" height="12" rx="6"></rect></g>
+    <path d="M40 340 Q60 170 220 160 Q420 120 560 170 Q760 200 760 340 Q740 420 400 425 Q60 430 40 340 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5"></path>
+    <path d="M70 350 Q90 210 230 200 Q420 170 550 210 Q720 240 730 345 Q700 400 400 405 Q90 408 70 350 Z" fill="#9BE66F"></path>
+    <path d="M150 330 C210 250 280 360 360 290 S 500 220 560 300 S 640 330 660 250" fill="none" stroke="#FFF3C4" stroke-width="18" stroke-linecap="round"></path>
+    <path d="M150 330 C210 250 280 360 360 290 S 500 220 560 300 S 640 330 660 250" fill="none" stroke="#E8C66A" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 14"></path>
+    <g fill="#4DB85C" stroke="#2B2A4C" stroke-width="3"><circle cx="250" cy="230" r="16"></circle><circle cx="470" cy="360" r="18"></circle><circle cx="620" cy="380" r="14"></circle><circle cx="110" cy="280" r="14"></circle></g>
+  </svg>
+
+  <div style="position: absolute; top: 16px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center">
+    <button class="pill" aria-label="Voltar" style="width: 50px; height: 50px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+    <div style="height: 48px; padding: 0 26px; display: flex; align-items: center; background: #FFD23F; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 4px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 24px">Mundo 1 · Floresta</div>
+    <div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 6px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 4px 0 #2B2A4C; font-weight: 900; font-size: 17px">
+      <span style="width: 30px; height: 30px; border-radius: 50%; background: #FFD23F; border: 2px solid #2B2A4C; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15px">$</span>
+      0
+    </div>
+  </div>
+
+  <div class="bob" style="position: absolute; left: 97px; top: 248px; display: flex; flex-direction: column; align-items: center; gap: 4px">
+    <div style="background: #2B2A4C; color: #FFFFFF; font-weight: 900; font-size: 12px; padding: 4px 10px; border-radius: 999px">Você está aqui</div>
+    <svg aria-hidden="true" width="14" height="8" viewBox="0 0 14 8"><path d="M0 0h14L7 8z" fill="#2B2A4C"></path></svg>
+  </div>
+  <button class="pill" style="position: absolute; left: 116px; top: 296px; width: 72px; height: 72px; border-radius: 50%; background: #FFD23F; border: 4px solid #2B2A4C; box-shadow: 0 6px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 32px; color: #2B2A4C; cursor: pointer" aria-label="Fase 1, disponível">1</button>
+
+  <sc-for list="{{locked}}" as="n" hint-placeholder-count="3">
+    <button disabled aria-label="{{n.aria}}" style="position: absolute; left: {{n.x}}px; top: {{n.y}}px; width: 58px; height: 58px; border-radius: 50%; background: #FFFFFF; border: 4px solid #2B2A4C; box-shadow: 0 5px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: not-allowed">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B6A8A" stroke-width="2.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="3"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+    </button>
+  </sc-for>
+
+  <div style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 10px; padding: 8px 14px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 26px; box-shadow: 0 5px 0 #2B2A4C">
+    <sc-for list="{{dock}}" as="d" hint-placeholder-count="4">
+      <button class="pill" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px 0 6px; background: {{d.bg}}; border: 3px solid #2B2A4C; border-radius: 999px; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 14px; color: #2B2A4C; cursor: pointer">
+        <span style="width: 30px; height: 30px; border-radius: 50%; background: #FFFFFF; border: 2px solid #2B2A4C; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{d.d}}"></path></svg></span>
+        {{d.label}}
+      </button>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":800,"height":450}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      locked: [
+        { x: 331, y: 262, aria: 'Fase 2, bloqueada' },
+        { x: 531, y: 270, aria: 'Fase 3, bloqueada' },
+        { x: 631, y: 222, aria: 'Fase 4, bloqueada' }
+      ],
+      dock: [
+        { label: 'Loja', bg: '#FFD23F', d: 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2' },
+        { label: 'Guarda-roupa', bg: '#B18CFF', d: 'M8 4l4 3 4-3 4 4-3 3v9H7v-9L4 8z' },
+        { label: 'Álbum', bg: '#5BC0FF', d: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5' },
+        { label: 'Base', bg: '#FF9F6B', d: 'M3 11l9-7 9 7v9H3zM10 20v-5h4v5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

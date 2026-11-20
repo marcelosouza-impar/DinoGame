@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>DinoGame · HUD in-game</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Nunito:wght@700;800;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.pad{transition:transform .1s}
+.pad:active{transform:scale(.92)}
+</style>
+</helmet>
+<div style="width: 800px; height: 450px; position: relative; overflow: hidden; background: #8ED8FF; font-family: 'Nunito', sans-serif; color: #2B2A4C">
+  <svg aria-hidden="true" width="800" height="450" viewBox="0 0 800 450" style="position: absolute; inset: 0">
+    <g fill="#B8E6FF"><ellipse cx="120" cy="330" rx="140" ry="90"></ellipse><ellipse cx="420" cy="340" rx="180" ry="100"></ellipse><ellipse cx="720" cy="320" rx="150" ry="100"></ellipse></g>
+    <g fill="#FFFFFF"><circle cx="300" cy="120" r="18"></circle><circle cx="324" cy="110" r="24"></circle><circle cx="350" cy="122" r="16"></circle><rect x="290" y="122" width="70" height="16" rx="8"></rect></g>
+    <rect x="-10" y="350" width="820" height="120" rx="0" fill="#C98B5B"></rect>
+    <rect x="-10" y="340" width="820" height="26" rx="13" fill="#7ED957" stroke="#2B2A4C" stroke-width="4"></rect>
+    <g fill="#B37548"><circle cx="80" cy="400" r="8"></circle><circle cx="260" cy="420" r="6"></circle><circle cx="470" cy="398" r="9"></circle><circle cx="690" cy="418" r="7"></circle></g>
+    <rect x="430" y="250" width="120" height="34" rx="14" fill="#FFB86B" stroke="#2B2A4C" stroke-width="4"></rect>
+    <g stroke="#2B2A4C" stroke-width="3" fill="#FFD23F"><circle cx="462" cy="222" r="11"></circle><circle cx="490" cy="222" r="11"></circle><circle cx="518" cy="222" r="11"></circle></g>
+    <g transform="translate(250 268) scale(.75)">
+      <path d="M10 70 Q-8 60 4 40 Q16 64 34 62 Z" fill="#7ED957" stroke="#2B2A4C" stroke-width="5" stroke-linejoin="round"></path>
+      <ellipse cx="58" cy="62" rx="36" ry="30" fill="#7ED957" stroke="#2B2A4C" stroke-width="5"></ellipse>
+      <circle cx="88" cy="26" r="26" fill="#7ED957" stroke="#2B2A4C" stroke-width="5"></circle>
+      <circle cx="96" cy="22" r="9" fill="#FFFFFF" stroke="#2B2A4C" stroke-width="3"></circle>
+      <circle cx="99" cy="22" r="4" fill="#2B2A4C"></circle>
+      <rect x="40" y="84" width="14" height="14" rx="6" fill="#7ED957" stroke="#2B2A4C" stroke-width="5"></rect>
+      <rect x="66" y="84" width="14" height="14" rx="6" fill="#7ED957" stroke="#2B2A4C" stroke-width="5"></rect>
+    </g>
+  </svg>
+
+  <div style="position: absolute; top: 14px; left: 16px; display: flex; gap: 10px; align-items: center">
+    <div style="display: flex; gap: 4px; height: 44px; align-items: center; padding: 0 10px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 4px 0 #2B2A4C" role="img" aria-label="Vidas: 2 de 3">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#FF6B6B" stroke="#2B2A4C" stroke-width="2.4" stroke-linejoin="round"></path></svg>
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#FF6B6B" stroke="#2B2A4C" stroke-width="2.4" stroke-linejoin="round"></path></svg>
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="#E4E2EE" stroke="#2B2A4C" stroke-width="2.4" stroke-linejoin="round"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 6px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; box-shadow: 0 4px 0 #2B2A4C; font-weight: 900; font-size: 18px">
+      <span style="width: 30px; height: 30px; border-radius: 50%; background: #FFD23F; border: 2px solid #2B2A4C; display: flex; align-items: center; justify-content: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15px">$</span>
+      12
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 200px; display: flex; align-items: center; gap: 8px" role="img" aria-label="Progresso da fase: 40%">
+    <div style="flex: 1; height: 16px; background: #FFFFFF; border: 3px solid #2B2A4C; border-radius: 999px; overflow: hidden">
+      <div style="width: {{progress}}%; height: 100%; background: #7ED957; border-right: 3px solid #2B2A4C; border-radius: 999px"></div>
+    </div>
+    <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"></path><path d="M5 4h12l-3 4 3 4H5" fill="#FF6B6B"></path></svg>
+  </div>
+
+  <div style="position: absolute; top: 14px; right: 16px; display: flex; gap: 10px">
+    <button aria-label="Música" style="width: 48px; height: 48px; border-radius: 50%; background: #FFFFFF; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="17" cy="16" r="3"></circle></svg></button>
+    <button aria-label="Pausar" style="width: 48px; height: 48px; border-radius: 50%; background: #FFD23F; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="#2B2A4C"><rect x="5" y="4" width="5" height="16" rx="2"></rect><rect x="14" y="4" width="5" height="16" rx="2"></rect></svg></button>
+  </div>
+
+  <sc-if value="{{showMobile}}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; left: 18px; bottom: 18px; display: flex; gap: 12px">
+      <button class="pad" aria-label="Esquerda" style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.85); border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+      <button class="pad" aria-label="Direita" style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.85); border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></button>
+    </div>
+    <div style="position: absolute; right: 18px; bottom: 18px; display: flex; gap: 14px; align-items: flex-end">
+      <button class="pad" aria-label="Atacar" style="width: 60px; height: 60px; border-radius: 50%; background: #FF9F6B; border: 3px solid #2B2A4C; box-shadow: 0 4px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15px; color: #2B2A4C">Fogo</button>
+      <button class="pad" aria-label="Pular" style="width: 82px; height: 82px; margin-bottom: 18px; border-radius: 50%; background: #FFD23F; border: 4px solid #2B2A4C; box-shadow: 0 6px 0 #2B2A4C; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 18px; color: #2B2A4C">Pular</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"progress":{"editor":"range","default":40,"min":0,"max":100,"step":5,"unit":"%"},"showMobile":{"editor":"boolean","default":true},"$preview":{"width":800,"height":450}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      progress: this.props.progress ?? 40,
+      showMobile: this.props.showMobile ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>

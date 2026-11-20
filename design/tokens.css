@@ -1,0 +1,31 @@
+/* DinoGame · tokens visuais (direção "Bubble Day") */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap');
+:root{
+  /* cores */
+  --sky:#8ED8FF; --grass:#7ED957; --grass-dark:#5CC96B; --sun:#FFD23F; --cream:#FFF8E7;
+  --ink:#2B2A4C; --ink-soft:#4A4968; --coral:#FF6B6B; --orange:#FF9F6B; --grape:#B18CFF;
+  --blue:#5BC0FF; --dirt:#C98B5B; --sidewalk:#FFE9B8; --road:#7A7798; --white:#FFFFFF;
+  /* tipografia */
+  --font-display:'Fredoka',system-ui,sans-serif;   /* títulos e botões */
+  --font-ui:'Nunito',system-ui,sans-serif;         /* textos, rótulos, contadores */
+  --fs-title:48px; --fs-btn-1:28px; --fs-btn-2:21px; --fs-ui:16px; --fs-label:13px; --fs-min:12px;
+  /* forma */
+  --stroke:3px; --stroke-strong:4px; --radius-card:22px; --radius-pill:999px;
+  --shadow-1:0 4px 0 var(--ink); --shadow-2:0 5px 0 var(--ink); --shadow-3:0 7px 0 var(--ink);
+  /* toque */
+  --hit-min:44px;
+  /* movimento */
+  --spring:cubic-bezier(.34,1.56,.64,1); --t-fast:.15s;
+}
+/* componentes base */
+.btn-primary{height:64px;padding:0 36px;background:var(--sun);border:var(--stroke-strong) solid var(--ink);border-radius:var(--radius-pill);box-shadow:var(--shadow-3);font:700 var(--fs-btn-1) var(--font-display);color:var(--ink);cursor:pointer;transition:transform var(--t-fast) var(--spring)}
+.btn-secondary{height:52px;padding:0 26px;background:var(--white);border:var(--stroke) solid var(--ink);border-radius:var(--radius-pill);box-shadow:var(--shadow-2);font:600 var(--fs-btn-2) var(--font-display);color:var(--ink);cursor:pointer;transition:transform var(--t-fast) var(--spring)}
+.btn-locked{height:46px;padding:0 22px;background:#E6F6FF;border:var(--stroke) dashed var(--ink);border-radius:var(--radius-pill);font:800 15px var(--font-ui);color:var(--ink);cursor:not-allowed}
+.btn-icon{width:48px;height:48px;border-radius:50%;background:var(--white);border:var(--stroke) solid var(--ink);box-shadow:var(--shadow-1);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:transform var(--t-fast) var(--spring)}
+.btn-primary:hover,.btn-secondary:hover,.btn-icon:hover{transform:translateY(-3px) scale(1.03)}
+.btn-primary:active,.btn-secondary:active,.btn-icon:active{transform:translateY(3px)}
+.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px 0 6px;background:var(--white);border:var(--stroke) solid var(--ink);border-radius:var(--radius-pill);box-shadow:var(--shadow-1);font:900 17px var(--font-ui);color:var(--ink)}
+.card{background:var(--white);border:var(--stroke) solid var(--ink);border-radius:var(--radius-card);box-shadow:var(--shadow-2)}
+.card.is-selected{background:var(--sun);border-width:var(--stroke-strong);box-shadow:0 8px 0 var(--ink);transform:translateY(-6px) rotate(-2deg)}
+.card.is-locked{background:#EDEBF5;border:var(--stroke) dashed #6B6A8A;box-shadow:none}
+.keycap{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 6px;background:var(--white);border:var(--stroke) solid var(--ink);border-radius:9px;box-shadow:0 3px 0 var(--ink);font:700 14px var(--font-display);color:var(--ink)}
