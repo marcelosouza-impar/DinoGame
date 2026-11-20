@@ -277,6 +277,9 @@ let phaseBoss = null;
 let phaseDiary = JSON.parse(localStorage.getItem('dinogame_diary') || '[]');
 // per-phase damage flag
 let phaseNoDamage = true;
+// lever & boulder
+let phaseLever = null;
+let boulderRoll = null;
 const EDITOR_BTYPES = [
   {name:'Madeira', w:100, h:20, draw:(c,x,y,w,h)=>{ c.fillStyle='#854d0e'; c.fillRect(x,y,w,h); c.fillStyle='#a0633a'; for(let i=0;i<h;i+=6){c.fillRect(x,y+i,w,2);} c.strokeStyle='#5a2d0a'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
   {name:'Pedra',   w:44, h:44, draw:(c,x,y,w,h)=>{ c.fillStyle='#6b7280'; c.fillRect(x,y,w,h); c.fillStyle='#9ca3af'; c.fillRect(x+2,y+2,w-4,8); c.fillRect(x+2,y+14,w/2-4,8); c.fillRect(x+w/2+2,y+14,w/2-4,8); c.strokeStyle='#374151'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
@@ -1130,8 +1133,8 @@ function generatePhase(p){
     });
   }
 
-  // boss na última fase
-  phaseBoss = null;
+  // boss + alavanca na última fase
+  phaseBoss = null; phaseLever = null; boulderRoll = null;
   if(p === 4 && !secret && !cp){
     phaseBoss = {
       x: len - 600, y: GROUND,
@@ -1139,6 +1142,7 @@ function generatePhase(p){
       vx:-0.7, frame:0, frameTimer:0, alive:true,
       hitFlash:0,
     };
+    phaseLever = {x: len - 1100, y: GROUND, activated: false};
   }
 }
 
@@ -2262,6 +2266,34 @@ function update(){
   // stomp combo timer
   if(stompComboTimer>0){ stompComboTimer--; if(stompComboTimer===0) stompCombo=0; }
 
+  // alavanca
+  if(phaseLever && !phaseLever.activated){
+    const lx = phaseLever.x - scrollX;
+    if(rectsOverlap(player.x+8, player.y-52, player.w-16, 52, lx-22, GROUND-55, 44, 55)){
+      phaseLever.activated = true;
+      boulderRoll = {x: phaseLever.x + 350, y: GROUND - 40, r: 42, vx: -9, angle: 0, active: true};
+      spawnParticles(lx, GROUND-30, '#fbbf24', 14);
+    }
+  }
+
+  // pedra rolando
+  if(boulderRoll && boulderRoll.active){
+    boulderRoll.x += boulderRoll.vx;
+    boulderRoll.angle += Math.abs(boulderRoll.vx) / boulderRoll.r;
+    if(phaseBoss && phaseBoss.alive){
+      const bsx = phaseBoss.x - scrollX;
+      const brx = boulderRoll.x - scrollX;
+      if(Math.abs(brx - (bsx + phaseBoss.w/2)) < phaseBoss.w/2 + boulderRoll.r - 10){
+        phaseBoss.hp = 0; phaseBoss.alive = false; boulderRoll.active = false;
+        totalCoins += 30; score += 1000; updateUI();
+        spawnParticles(bsx + phaseBoss.w/2, phaseBoss.y-phaseBoss.h/2, '#fbbf24', 40);
+        spawnParticles(bsx + phaseBoss.w/2, phaseBoss.y-phaseBoss.h/2, '#ef4444', 30);
+        unlockAchievement('boss_kill'); saveProgress();
+      }
+    }
+    if(boulderRoll.x < scrollX - 200) boulderRoll.active = false;
+  }
+
   // boss update
   if(phaseBoss && phaseBoss.alive){
     const bx=phaseBoss.x-scrollX;
@@ -2387,6 +2419,45 @@ function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
 let floatTexts=[];
 function floatText(text,x,y,color='#ffe66d'){
   floatTexts.push({text,x,y,color,life:60,vy:-1.2});
+}
+
+function drawLever(x, y, activated){
+  // base
+  ctx.fillStyle='#78350f'; roundRect(ctx,x-18,y-8,36,8,3,true,false);
+  // haste
+  ctx.fillStyle='#92400e'; ctx.fillRect(x-5,y-48,10,40);
+  // cabo — inclina ao ativar
+  const ang = activated ? Math.PI/4 : -Math.PI/4;
+  ctx.save(); ctx.translate(x, y-48);
+  ctx.rotate(ang);
+  ctx.fillStyle='#dc2626'; roundRect(ctx,-6,-30,12,32,6,true,false);
+  ctx.fillStyle='#fca5a5'; ctx.beginPath(); ctx.arc(0,-30,9,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#7f1d1d'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.restore();
+  // sinal
+  if(!activated){
+    ctx.font='4px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillText('ATIVAR',x+1,y-61+1);
+    ctx.fillStyle='#ffe66d'; ctx.fillText('ATIVAR',x,y-62);
+    ctx.fillStyle='#4ecdc4'; ctx.fillText('→ CHEFE',x,y-72);
+  } else {
+    ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillStyle='#4ade80'; ctx.fillText('💥',x,y-62);
+  }
+  ctx.textAlign='left';
+}
+
+function drawBoulder(x, y, r, angle){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+  ctx.fillStyle='#6b7280'; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#374151'; ctx.lineWidth=2; ctx.stroke();
+  ctx.strokeStyle='#4b5563'; ctx.lineWidth=2.5;
+  [[-.6,-.2,.3,.4],[.4,-.5,-.2,.3],[-.3,.6,.5,-.1]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1*r,y1*r); ctx.lineTo(x2*r,y2*r); ctx.stroke();
+  });
+  ctx.fillStyle='rgba(209,213,219,.4)';
+  ctx.beginPath(); ctx.arc(-r*.3,-r*.3,r*.32,0,Math.PI*2); ctx.fill();
+  ctx.restore();
 }
 function spawnParticles(x,y,color,n){
   for(let i=0;i<n;i++){
@@ -2766,6 +2837,18 @@ function draw(){
     if(ex<-120||ex>W+120) return;
     drawEnemy(enemy,ex);
   });
+
+  // alavanca
+  if(phaseLever){
+    const lx=phaseLever.x-scrollX;
+    if(lx>-80&&lx<W+80) drawLever(lx, phaseLever.y, phaseLever.activated);
+  }
+
+  // pedra rolando
+  if(boulderRoll && boulderRoll.active){
+    const brx=boulderRoll.x-scrollX;
+    if(brx>-120&&brx<W+120) drawBoulder(brx, boulderRoll.y, boulderRoll.r, boulderRoll.angle);
+  }
 
   // boss
   if(phaseBoss && phaseBoss.alive){
