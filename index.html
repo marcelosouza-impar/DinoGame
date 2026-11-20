@@ -411,6 +411,8 @@ let unlockedAchievements = new Set(JSON.parse(localStorage.getItem('dinogame_ach
 let achieveNotifQueue = [], achieveNotifTimer = 0;
 // boss
 let phaseBoss = null;
+let phaseChaser = null;
+const PINK_DINO = {primary:'#FF8FC7', belly:'#FFE0F0', spike:'#FFD23F', eye:'#2B2A4C', hat:true};
 // diary
 let phaseDiary = JSON.parse(localStorage.getItem('dinogame_diary') || '[]');
 // per-phase damage flag
@@ -1335,6 +1337,9 @@ function generatePhase(p){
   });
 
   // boss + alavanca na última fase
+  phaseChaser = (p >= 2 && p <= MAX_PHASES && !secret && !cp)
+    ? {x:0, y:GROUND, vy:0, onGround:true, active:false, alive:true, spawnAt:900, hp:3, hitCd:0, hitFlash:0, facing:1}
+    : null;
   phaseBoss = null; phaseLever = null; boulderRoll = null;
   if((p === 4 || p === MAX_PHASES) && !secret && !cp){
     const bossHp = p === MAX_PHASES ? 12 : 8;
@@ -2025,6 +2030,7 @@ function restartPhase(){
 }
 
 function resumeFromCheckpoint(){
+  if(phaseChaser && phaseChaser.alive){ phaseChaser.active=false; phaseChaser.spawnAt=frameCount+600; }
   scrollX = Math.max(0, Math.min(currentLen-W, checkpointX - W*0.28));
   player.x = W*0.28; player.y = GROUND;
   player.vx=0; player.vy=0; player.hp=3; player.invincible=90;
@@ -2282,6 +2288,7 @@ function update(){
           spawnParticles(ex+enemy.w/2, enemy.y-enemy.h/2, '#ffb300', 14); updateUI();
         }
       });
+      hitChaser(clubX, clubY, 40, 44);
     }
     if(player.attackTimer<=22 && player.attackTimer>=4 && selectedChar==='dino'){
       const fw = activeEffects.fire > 0 ? 138 : 96;
@@ -2297,6 +2304,7 @@ function update(){
           spawnParticles(ex+enemy.w/2, enemy.y-enemy.h/2, '#fb923c', 16); updateUI();
         }
       });
+      hitChaser(fireX, fireY, fireW, fireH);
     }
   }
 
@@ -2580,6 +2588,36 @@ function update(){
     }
   }
 
+  // Dino Rosa de cartola: aparece atrás, persegue e mata com um toque
+  if(phaseChaser && phaseChaser.alive){
+    const ch=phaseChaser;
+    if(!ch.active && frameCount>=ch.spawnAt){
+      ch.active=true; ch.x=scrollX-140; ch.y=GROUND; ch.vy=0; ch.onGround=true;
+      floatTexts.push({x:scrollX+player.x+24, y:player.y-110, vy:-0.3, life:140, text:'Cuidado! Dino Rosa!', color:'#FF8FC7'});
+      petSpeech.text='Corre! Dino Rosa!'; petSpeech.timer=150;
+    }
+    if(ch.active){
+      const px=scrollX+player.x+player.w/2, cx=ch.x+28;
+      const dir=Math.sign(px-cx)||1;
+      ch.facing=dir;
+      if(Math.abs(px-cx)>6) ch.x+=dir*moveSpeed()*0.72;
+      if(ch.onGround && player.y<GROUND-40 && Math.abs(px-cx)<160){ ch.vy=JUMP_FORCE*0.85; ch.onGround=false; }
+      ch.vy+=GRAVITY; ch.y+=ch.vy;
+      if(ch.y>=GROUND){ ch.y=GROUND; ch.vy=0; ch.onGround=true; }
+      if(ch.hitCd>0) ch.hitCd--;
+      if(ch.hitFlash>0) ch.hitFlash--;
+      const sx=ch.x-scrollX;
+      if(rectsOverlap(pHX,pHY,pHW,pHH, sx+12, ch.y-58, 40, 58)){
+        if(activeEffects.shield>0 || player.invincible>0){
+          ch.x-=dir*90; ch.vy=-6; ch.onGround=false;
+        } else {
+          chaserCatch();
+          return;
+        }
+      }
+    }
+  }
+
   // achievement: coin 100
   if(totalCoins>=100) unlockAchievement('coin100');
   // notif timer
@@ -2650,6 +2688,28 @@ function collectPowerup(item, ix, iy, byPet=false){
   petSpeech.timer = 120;
   spawnParticles(ix, iy, item.type==='speed'?'#fb923c':item.type==='shield'?'#60a5fa':'#ef4444', 10);
   sfxEgg();
+}
+
+function hitChaser(ax,ay,aw,ah){
+  const ch=phaseChaser;
+  if(!ch || !ch.active || !ch.alive || ch.hitCd>0) return;
+  const sx=ch.x-scrollX;
+  if(!rectsOverlap(ax,ay,aw,ah, sx+8, ch.y-62, 48, 62)) return;
+  ch.hp--; ch.hitCd=24; ch.hitFlash=18; ch.x-=ch.facing*60;
+  spawnParticles(sx+30, ch.y-34, '#FF8FC7', 14);
+  if(ch.hp<=0){
+    ch.alive=false; score+=500; totalCoins+=5; updateUI(); saveProgress();
+    spawnParticles(sx+30, ch.y-34, '#FFD23F', 26);
+    floatTexts.push({x:ch.x+30, y:ch.y-90, vy:-0.4, life:90, text:'Dino Rosa derrotado! +500', color:'#FFD23F'});
+  }
+}
+
+function chaserCatch(){
+  phaseNoDamage=false; stompCombo=0;
+  player.hp=3; lives--; flashTimer=22;
+  spawnParticles(player.x+player.w/2,player.y-22,'#FF8FC7',22);
+  updateUI();
+  if(lives<=0){ sfxDie(); showOverlay('gameover'); } else { sfxHurt(); showOverlay('dead'); }
 }
 
 function hurt(){
@@ -3099,6 +3159,24 @@ function draw(){
     if(ex<-120||ex>W+120) return;
     drawEnemy(enemy,ex);
   });
+
+  // Dino Rosa de cartola
+  if(phaseChaser && phaseChaser.active && phaseChaser.alive){
+    const ch=phaseChaser, sx=ch.x-scrollX;
+    if(sx>-90 && sx<W+90){
+      ctx.save();
+      if(ch.facing<0){ ctx.translate(sx+56,0); ctx.scale(-1,1); ctx.translate(-sx,0); }
+      if(ch.hitFlash>0 && Math.floor(ch.hitFlash/3)%2===0) ctx.globalAlpha=.5;
+      drawDinoOn(ctx,sx,ch.y,0,false,1.15,{vx:3,vy:ch.vy,onGround:ch.onGround,idleMs:0,npc:true},PINK_DINO);
+      ctx.restore();
+    } else if(sx<=-90){
+      // aviso na borda quando ele ainda está fora da tela
+      hudFont(900,12); ctx.textAlign='left'; ctx.textBaseline='middle';
+      const lbl='◀ Dino Rosa!', lw2=ctx.measureText(lbl).width+18;
+      ctx.fillStyle='#FF8FC7'; ctx.strokeStyle=OL; ctx.lineWidth=2.5; roundRect(ctx,8,GROUND-70,lw2,24,12,true,true);
+      ctx.fillStyle=OL; ctx.fillText(lbl,17,GROUND-57); ctx.textBaseline='alphabetic';
+    }
+  }
 
   // alavanca
   if(phaseLever){
@@ -4285,7 +4363,7 @@ const dinoAnim = {wasGround:true, landAt:-1e9, waitAt:0};
 function drawDinoOn(c,x,y,frame,ducking,s,anim,skinChar='dino'){
   if(!DINO_P){ DINO_P={}; for(const k in DINO_D) DINO_P[k]=new Path2D(DINO_D[k]); }
   const P=DINO_P, INK=DINO_INK;
-  const sk=skinPalette(skinChar);
+  const sk=typeof skinChar==='object' ? skinChar : skinPalette(skinChar);
   const body=sk.primary, shade=shadeHex(sk.primary,.82), belly=sk.belly, bellyLine=shadeHex(sk.belly,.86), spike=sk.spike;
   const now=performance.now(), T=now/1000, TAU=Math.PI*2;
   const moving = anim ? Math.abs(anim.vx)>0.1 : false;
@@ -4297,7 +4375,7 @@ function drawDinoOn(c,x,y,frame,ducking,s,anim,skinChar='dino'){
   let hTx=0, hTy=0, hSx=1, hSy=1, wait=false, pop=1, pupDx=0, pupDy=0;
   const blink=(T%3.6)>3.48;
 
-  if(anim){
+  if(anim && !anim.npc){
     if(anim.onGround && !dinoAnim.wasGround) dinoAnim.landAt=now;
     dinoAnim.wasGround=anim.onGround;
   }
@@ -4310,7 +4388,7 @@ function drawDinoOn(c,x,y,frame,ducking,s,anim,skinChar='dino'){
                         : .5+.22*Math.min(1,anim.vy/8);
     const k=poseAt(JUMP_KEYS,t);
     rsx=k.sx; rsy=k.sy; legN=legF=k.legs; tail=k.tail; headDeg=k.head;
-  } else if(anim && now-dinoAnim.landAt<80){
+  } else if(anim && !anim.npc && now-dinoAnim.landAt<80){
     const k=poseAt(JUMP_KEYS,.86+.14*(now-dinoAnim.landAt)/80);
     rsx=k.sx; rsy=k.sy; legN=legF=k.legs; tail=k.tail; headDeg=k.head;
   } else if(anim && anim.idleMs>4000 && !moving){
@@ -4327,7 +4405,7 @@ function drawDinoOn(c,x,y,frame,ducking,s,anim,skinChar='dino'){
   } else if(moving){
     const sw=Math.sin(frameCount*.25)*16; legN=sw; legF=-sw;
   }
-  if(anim && !wait) dinoAnim.waitAt=0;
+  if(anim && !anim.npc && !wait) dinoAnim.waitAt=0;
 
   const part=(ox,oy,deg,sx,sy,dx,dy,fn)=>{
     c.save(); c.translate(ox+dx,oy+dy); c.rotate(deg*Math.PI/180); c.scale(sx,sy); c.translate(-ox,-oy); fn(); c.restore();
@@ -4381,6 +4459,14 @@ function drawDinoOn(c,x,y,frame,ducking,s,anim,skinChar='dino'){
         c.lineWidth=4; c.strokeStyle=INK; c.stroke(P.smile);
         c.fillStyle='#FFFFFF'; c.fill(P.tooth); c.lineWidth=2.5; c.stroke(P.tooth);
         c.save(); c.translate(160,40); c.scale(1/DINO_K,1/DINO_K); if(skinChar==='dino') drawAccessory(c,'dino',-42,70,false); c.restore();
+        if(sk.hat){
+          c.save(); c.translate(160,8); c.rotate(-.12);
+          c.fillStyle='#4A4968'; c.strokeStyle=INK; c.lineWidth=5;
+          c.beginPath(); c.roundRect(-24,-52,48,54,8); c.fill(); c.stroke();
+          c.fillStyle='#FF6B6B'; c.fillRect(-22,-16,44,12); c.strokeRect(-22,-16,44,12);
+          c.fillStyle='#4A4968'; c.beginPath(); c.ellipse(0,2,40,9,0,0,Math.PI*2); c.fill(); c.stroke();
+          c.restore();
+        }
       });
     } else {
       part(143,80,0,pop,pop,0,0,()=>{
