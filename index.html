@@ -5494,6 +5494,9 @@ let frPlayer={tx:8.5,ty:8.5,vx:0,vy:0,frame:0,frameT:0};
 let frNPCs=[],frCoins=[],frCoinCount=0,frTotalCoins=0;
 let frCars=[],frDriving=null;
 let frJob=null;
+let frClock=0, frWeather={rain:false,next:2400};
+function frNight(){ const ph=(frClock%7200)/7200; const day=0.5+0.5*Math.cos(ph*Math.PI*2); return Math.max(0,Math.min(1,(0.45-day)/0.35)); }
+function mixHex(a,b,t){ return lerpColor(a,b,Math.max(0,Math.min(1,t))); }
 const TRAIN_Y=8.5;
 const ST_NAMES=['Centro','Floresta','Praia','Lago','Colina','Vale','Pedras','Ninho'];
 const ST_GAP=10;
@@ -5569,7 +5572,7 @@ function startJob(type){
     frCars.push(taxi); frDriving=taxi;
     frPlayer.tx=taxi.tx; frPlayer.ty=taxi.ty; frPlayer.facing=0;
     frJob={type:'taxi',earned:0,frames:0,stage:'free',offerAt:240,offerUntil:0,pass:null,dest:null,start:0,msg:null};
-    jobMsg('Passeie pela cidade e espere uma corrida',true);
+    jobMsg('Bom trabalho, taxista!',true);
   } else {
     frJob={type:'train',earned:0,frames:0,train:{x:1.2,dir:1,speed:0},boarding:0,riders:[],waiting:{},refill:{},lastStop:null,msg:null};
     frPlayer.tx=1.2; frPlayer.ty=TRAIN_Y; frPlayer.facing=0;
@@ -5674,6 +5677,7 @@ function startPasseio(){
 function startFreeRoam(){
   stopMenuAnimation();
   frJob = null;
+  frClock = 0; frWeather = {rain:false, next:1800+Math.floor(Math.random()*1800)};
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('overlay').style.display='none';
   frPlayer={tx:14.5,ty:3.0,vx:0,vy:0,frame:0,frameT:0,facing:Math.PI/2};
@@ -5703,6 +5707,8 @@ function startFreeRoam(){
 }
 
 function updateFreeRoam(){
+  frClock++;
+  if(frClock>=frWeather.next){ frWeather.rain = !frWeather.rain && Math.random()<0.6; frWeather.next = frClock+1800+Math.floor(Math.random()*1800); }
   if(frJob && frJob.type==='train'){
     frJob.frames++; updateTrainJob();
   } else if(frDriving){
@@ -5792,16 +5798,24 @@ function drawFreeRoam(){
   const tileAt=(x,y)=>(y<0||y>=FR_SZ||(!wrapX&&(x<0||x>=FR_SZ)))?-1:FR_MAP[y][wrapX?wx(x):x];
   const cat=t=>t===0?'r':t===1?'s':t===2?'g':t===9?'o':t<0?'x':'b';
 
-  // CÉU
-  ctx.fillStyle='#8ED8FF'; ctx.fillRect(0,0,W,HOR+2);
-  ctx.fillStyle='#FFE27A'; ctx.beginPath(); ctx.arc(640,62,30,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#FFFFFF';
+  // CÉU (dia, noite e chuva)
+  const night=frNight(), rain=frWeather.rain;
+  const skyDay = rain ? '#A9BCCD' : '#8ED8FF';
+  ctx.fillStyle=mixHex(skyDay,'#3F4C99',night); ctx.fillRect(0,0,W,HOR+2);
+  if(night>0.05){
+    ctx.fillStyle=`rgba(255,255,255,${0.8*night})`;
+    for(let i=0;i<40;i++){ ctx.beginPath(); ctx.arc((i*97)%W,(i*53)%(HOR-20)+6,1.2+(i%3)*.5,0,Math.PI*2); ctx.fill(); }
+    ctx.fillStyle=`rgba(255,248,220,${night})`; ctx.beginPath(); ctx.arc(150,60,22,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=mixHex(skyDay,'#3F4C99',night); ctx.beginPath(); ctx.arc(160,54,18,0,Math.PI*2); ctx.fill();
+  }
+  if(!rain && night<0.95){ ctx.fillStyle=`rgba(255,226,122,${1-night})`; ctx.beginPath(); ctx.arc(640,62,30,0,Math.PI*2); ctx.fill(); }
+  ctx.fillStyle = rain ? mixHex('#D9DEE6','#7A86B8',night) : mixHex('#FFFFFF','#A9B4E0',night);
   [[180,70,1],[520,108,.75]].forEach(([cx,cy,k])=>{
     [[0,0,16],[22,-8,22],[46,2,15]].forEach(([dx,dy,r])=>{ctx.beginPath();ctx.arc(cx+dx*k,cy+dy*k,r*k,0,Math.PI*2);ctx.fill();});
     roundRect(ctx,cx-10*k,cy,66*k,14*k,7*k,true,false);
   });
-  ctx.fillStyle='#9BE66F'; ctx.beginPath(); ctx.ellipse(260,HOR+6,170,30,0,Math.PI,0); ctx.fill();
-  ctx.fillStyle='#7ED957'; ctx.beginPath(); ctx.ellipse(540,HOR+8,200,36,0,Math.PI,0); ctx.fill();
+  ctx.fillStyle=mixHex('#9BE66F','#3E6B5A',night); ctx.beginPath(); ctx.ellipse(260,HOR+6,170,30,0,Math.PI,0); ctx.fill();
+  ctx.fillStyle=mixHex('#7ED957','#335C4C',night); ctx.beginPath(); ctx.ellipse(540,HOR+8,200,36,0,Math.PI,0); ctx.fill();
   // base do chão além do alcance de desenho
   const farX=Math.floor(frPlayer.tx+Math.cos(camA)*16), farY=Math.floor(frPlayer.ty+Math.sin(camA)*16);
   const farT=tileAt(farX,farY);
@@ -5874,7 +5888,7 @@ function drawFreeRoam(){
             const v0=(f+.32)/b.fl, v1=(f+.78)/b.fl;
             [[.16,.42],[.58,.84]].forEach(([u0,u1])=>{
               const q=[pt(u0,v0),pt(u1,v0),pt(u1,v1),pt(u0,v1)];
-              ctx.fillStyle='#D6F1FF'; quad(q); ctx.fill();
+              ctx.fillStyle= night>0.4 && ((tx*7+ty*3+f+u0*10)|0)%3!==0 ? '#FFE27A' : '#D6F1FF'; quad(q); ctx.fill();
               ctx.strokeStyle=INK; ctx.lineWidth=Math.max(.6,lw(p0)*.7); ctx.stroke();
             });
           }
@@ -6008,6 +6022,32 @@ function drawFreeRoam(){
     }
   }
 
+  // NOITE, CHUVA E FARÓIS
+  if(night>0.02 || rain){
+    ctx.fillStyle=`rgba(30,36,90,${0.38*night + (rain?0.10:0)})`; ctx.fillRect(0,0,W,H);
+  }
+  if(night>0.3 && (frDriving || (frJob && frJob.type==='train'))){
+    const g=ctx.createLinearGradient(0,H-40,0,HOR);
+    g.addColorStop(0,`rgba(255,236,150,${0.45*night})`); g.addColorStop(1,'rgba(255,236,150,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.moveTo(W/2-90,H-40); ctx.lineTo(W/2-30,HOR+10); ctx.lineTo(W/2+30,HOR+10); ctx.lineTo(W/2+90,H-40); ctx.closePath(); ctx.fill();
+  }
+  if(rain){
+    const t=frClock;
+    ctx.strokeStyle='rgba(235,245,255,.65)'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath();
+    for(let i=0;i<110;i++){
+      const x=((i*73+t*5)%(W+40))-20, y=((i*131+t*17)%(H+40))-20;
+      ctx.moveTo(x,y); ctx.lineTo(x-4,y+14);
+    }
+    ctx.stroke();
+    ctx.strokeStyle='rgba(235,245,255,.5)'; ctx.lineWidth=1.5;
+    for(let i=0;i<12;i++){
+      const x=(i*151+t*3)%W, y=HOR+40+((i*97)%(H-HOR-60)), r=((t+i*9)%20)/2;
+      ctx.beginPath(); ctx.ellipse(x,y,r*1.6,r*.5,0,0,Math.PI*2); ctx.stroke();
+    }
+  }
+
   // JOGADOR
   if(frJob && frJob.type==='train'){
     const bx=W/2-115, by=H-150;
@@ -6043,6 +6083,11 @@ function drawFreeRoam(){
   hudPill(zx,14,zw,32,frJob?(frJob.type==='taxi'?'#FFD23F':'#FF6B6B'):'#5BC0FF');
   ctx.save(); ctx.translate(zx+10,18); ctx.scale(20/24,20/24); ctx.fillStyle='#FFFFFF'; ctx.fill(FR_PIN,'evenodd'); ctx.strokeStyle=INK; ctx.lineWidth=2.6; ctx.stroke(FR_PIN); ctx.restore();
   ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(zone,zx+10+20+6,31);
+  const wlabel=(night>0.5?'Noite':'Dia')+(rain?' · Chuva':'');
+  hudFont(900,13);
+  const wwx=zx+zw+10, www=ctx.measureText(wlabel).width+24;
+  hudPill(wwx,16,www,28, night>0.5 ? '#B8C2F0' : rain ? '#D9DEE6' : '#FFF3C4');
+  ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(wlabel,wwx+12,31);
 
   // HUD — objetivo do trabalho
   if(frJob && frJob.type==='taxi' && frJob.stage==='free'){
