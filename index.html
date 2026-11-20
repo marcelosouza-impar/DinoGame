@@ -1552,7 +1552,8 @@ function renderMainMenu(){
     {label:'Recordes',   bg:'#FFD23F', d:ICONS.trophy, fn:'showLeaderboard()'},
     {label:'Conquistas', bg:'#FF9F6B', d:ICONS.star,   fn:'renderAchievements()', badge:unlockedAchievements.size},
     {label:'Diário',     bg:'#B18CFF', d:ICONS.book,   fn:'renderDiary()'},
-    {label:'Aventuras',  bg:'#FF8FC7', d:ICONS.star,   fn:'renderAdventures()'}
+    {label:'Aventuras',  bg:'#FF8FC7', d:ICONS.star,   fn:"renderAdventures('adv')"},
+    {label:'Brincadeiras', bg:'#7ED957', d:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7l4 3-1.5 5h-5L8 10z', fn:"renderAdventures('play')"}
   ].map(s=>`<button class="ico" onclick="${s.fn}"><span class="ico-box" style="background:${s.bg}">${svgIcon(s.d,26)}${s.badge?`<span class="badge">${s.badge}</span>`:''}</span><span class="ico-lbl">${s.label}</span></button>`).join('');
   ov.innerHTML = `<div class="scene" id="menuCard">
     <svg class="scene-bg" viewBox="0 0 800 450" aria-hidden="true">
@@ -5729,7 +5730,10 @@ function drawHouse(){
 // ─── AVENTURAS ───────────────────────────────────────────────────────────────
 function loadAdv(){ try{ return Object.assign({flight:0,dive:0,hideWins:0,soccerWins:0},JSON.parse(localStorage.getItem('dinogame_adv')||'{}')); }catch(e){ return {flight:0,dive:0,hideWins:0,soccerWins:0}; } }
 function saveAdv(a){ localStorage.setItem('dinogame_adv',JSON.stringify(a)); }
-function renderAdventures(){
+let advKind='adv';
+function renderAdventures(kind){
+  if(kind) advKind=kind;
+  const play=advKind==='play';
   state='menu'; frJob=null;
   const a=loadAdv();
   const ov=document.getElementById('overlay');
@@ -5737,13 +5741,13 @@ function renderAdventures(){
     <span style="display:inline-flex;width:46px;height:46px;border-radius:14px;background:var(--white);border:3px solid var(--ink);align-items:center;justify-content:center">${svgIcon(icon,28)}</span>
     <b style="font-size:17px;margin-top:4px">${name}</b>${desc}<br><span class="tag" style="padding-left:8px">${rec}</span></button>`;
   ov.innerHTML=`<div class="ocard wide">
-    <h2>Aventuras</h2>
-    <p class="sub">Escolha uma aventura. Moedas ganhas vão para o seu total.</p>
+    <h2>${play?'Brincadeiras':'Aventuras'}</h2>
+    <p class="sub">${play?'Escolha uma brincadeira.':'Escolha uma aventura.'} Moedas ganhas vão para o seu total.</p>
     <div class="two-col">
-      ${card('#FF8FC7','M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM9 10h.01M15 10h.01M9 15c2 1.5 4 1.5 6 0','Esconde-esconde','Esconda-se do Dino Rosa na cidade por 60 s.',`${a.hideWins} vitórias`,'startHide()')}
-      ${card('var(--blue)','M3 13c4-6 7-6 9-2 2-4 5-4 9 2-4-2-6-1-9 3-3-4-5-5-9-3z','Voo de Ptero','Bata as asas e passe pelos anéis no céu.',`recorde ${a.flight} anéis`,'startFlight()')}
-      ${card('#A7DEFF','M3 14c3-3 6-3 9 0s6 3 9 0M3 19c3-3 6-3 9 0s6 3 9 0M12 3v7','Mergulho','Pegue conchas e pérolas e fuja do tubarão.',`recorde ${a.dive} moedas`,'startDive()')}
-      ${card('var(--grass)','M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7l4 3-1.5 5h-5L8 10z','Futebol','Dino contra Caveman: quem fizer 3 gols ganha.',`${a.soccerWins} vitórias`,'startSoccer()')}
+      ${play?card('#FF8FC7','M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM9 10h.01M15 10h.01M9 15c2 1.5 4 1.5 6 0','Esconde-esconde','Esconda-se do Dino Rosa na cidade por 60 s.',`${a.hideWins} vitórias`,'startHide()'):''}
+      ${play?'':card('var(--blue)','M3 13c4-6 7-6 9-2 2-4 5-4 9 2-4-2-6-1-9 3-3-4-5-5-9-3z','Voo de Ptero','Bata as asas e passe pelos anéis no céu.',`recorde ${a.flight} anéis`,'startFlight()')}
+      ${play?'':card('#A7DEFF','M3 14c3-3 6-3 9 0s6 3 9 0M3 19c3-3 6-3 9 0s6 3 9 0M12 3v7','Mergulho','Pegue conchas e pérolas e fuja do tubarão.',`recorde ${a.dive} moedas`,'startDive()')}
+      ${play?card('var(--grass)','M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7l4 3-1.5 5h-5L8 10z','Futebol','Dino contra Caveman: quem fizer 3 gols ganha.',`${a.soccerWins} vitórias`,'startSoccer()'):''}
     </div>
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
   </div>`;
@@ -5758,7 +5762,7 @@ function advResult(title,lines,coins,again){
     ${lines.map(l=>`<p class="sub">${l}</p>`).join('')}
     <span class="score-big">${coinTag('+'+coins)}</span>
     <button class="btn" onclick="${again}">Jogar de novo</button>
-    <button class="btn sec" onclick="renderAdventures()">← Aventuras</button>
+    <button class="btn sec" onclick="renderAdventures()">← ${advKind==='play'?'Brincadeiras':'Aventuras'}</button>
   </div>`;
   ov.style.display='flex';
 }
