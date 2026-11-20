@@ -2592,11 +2592,17 @@ function update(){
   if(phaseChaser && phaseChaser.alive){
     const ch=phaseChaser;
     if(!ch.active && frameCount>=ch.spawnAt){
-      ch.active=true; ch.x=scrollX-140; ch.y=GROUND; ch.vy=0; ch.onGround=true;
+      const behind = player.x > 220;
+      ch.active=true; ch.emerge=45; ch.y=GROUND; ch.vy=0; ch.onGround=true;
+      ch.x = scrollX + player.x + (behind ? -190 : 260);
+      spawnParticles(ch.x-scrollX+30, GROUND-4, '#C98B5B', 26);
       floatTexts.push({x:scrollX+player.x+24, y:player.y-110, vy:-0.3, life:140, text:'Cuidado! Dino Rosa!', color:'#FF8FC7'});
       petSpeech.text='Corre! Dino Rosa!'; petSpeech.timer=150;
     }
-    if(ch.active){
+    if(ch.active && ch.emerge>0){
+      ch.emerge--;
+      if(ch.emerge%6===0) spawnParticles(ch.x-scrollX+30, GROUND-4, '#B37548', 6);
+    } else if(ch.active){
       const px=scrollX+player.x+player.w/2, cx=ch.x+28;
       const dir=Math.sign(px-cx)||1;
       ch.facing=dir;
@@ -3167,7 +3173,15 @@ function draw(){
       ctx.save();
       if(ch.facing<0){ ctx.translate(sx+56,0); ctx.scale(-1,1); ctx.translate(-sx,0); }
       if(ch.hitFlash>0 && Math.floor(ch.hitFlash/3)%2===0) ctx.globalAlpha=.5;
-      drawDinoOn(ctx,sx,ch.y,0,false,1.15,{vx:3,vy:ch.vy,onGround:ch.onGround,idleMs:0,npc:true},PINK_DINO);
+      const rise = ch.emerge>0 ? (ch.emerge/45)*190 : 0;
+      if(rise>0){
+        ctx.save(); ctx.globalAlpha=1;
+        ctx.fillStyle='#4A3A2A'; ctx.strokeStyle=OL; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.ellipse(sx+30,GROUND+2,44,9,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+        ctx.beginPath(); ctx.rect(-2000,-2000,4000,2000+GROUND+2); ctx.clip();
+      }
+      drawDinoOn(ctx,sx,ch.y+rise,0,false,1.15,{vx:rise>0?0:3,vy:ch.vy,onGround:ch.onGround,idleMs:0,npc:true},PINK_DINO);
       ctx.restore();
     } else if(sx<=-90){
       // aviso na borda quando ele ainda está fora da tela
@@ -4460,11 +4474,13 @@ function drawDinoOn(c,x,y,frame,ducking,s,anim,skinChar='dino'){
         c.fillStyle='#FFFFFF'; c.fill(P.tooth); c.lineWidth=2.5; c.stroke(P.tooth);
         c.save(); c.translate(160,40); c.scale(1/DINO_K,1/DINO_K); if(skinChar==='dino') drawAccessory(c,'dino',-42,70,false); c.restore();
         if(sk.hat){
-          c.save(); c.translate(160,8); c.rotate(-.12);
-          c.fillStyle='#4A4968'; c.strokeStyle=INK; c.lineWidth=5;
-          c.beginPath(); c.roundRect(-24,-52,48,54,8); c.fill(); c.stroke();
-          c.fillStyle='#FF6B6B'; c.fillRect(-22,-16,44,12); c.strokeRect(-22,-16,44,12);
-          c.fillStyle='#4A4968'; c.beginPath(); c.ellipse(0,2,40,9,0,0,Math.PI*2); c.fill(); c.stroke();
+          c.save(); c.translate(160,12); c.rotate(-.1);
+          c.fillStyle='#4A4968'; c.strokeStyle=INK; c.lineWidth=6;
+          c.beginPath(); c.moveTo(-58,0); c.lineTo(-66,-178); c.quadraticCurveTo(0,-196,66,-178); c.lineTo(58,0); c.closePath(); c.fill(); c.stroke();
+          c.fillStyle='rgba(255,255,255,.18)'; c.beginPath(); c.roundRect(-46,-166,16,140,8); c.fill();
+          c.fillStyle='#FF6B6B'; c.beginPath(); c.moveTo(-60,-52); c.lineTo(60,-52); c.lineTo(59,-24); c.lineTo(-59,-24); c.closePath(); c.fill(); c.stroke();
+          c.fillStyle='#FFD23F'; c.beginPath(); c.roundRect(14,-56,26,36,6); c.fill(); c.stroke();
+          c.fillStyle='#4A4968'; c.beginPath(); c.ellipse(0,2,100,20,0,0,Math.PI*2); c.fill(); c.stroke();
           c.restore();
         }
       });
