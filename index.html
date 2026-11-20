@@ -6601,6 +6601,7 @@ function trainTarget(){
   return {st:ahead[0]||stationAt(0), drop:false};
 }
 const HOSPITAL={tx:12,ty:4,door:{x:12.5,y:3.5}};
+let hospSign=null;
 function updateVetJob(){
   const car=frDriving; if(!car) return; frJob.frames++;
   if(frJob.stage==='free' && frJob.frames>=frJob.alarmAt){
@@ -6975,15 +6976,19 @@ function drawFreeRoam(){
           ctx.fillStyle=INK; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(label,sp.x,sp.y-th/2+1);
         }
       }
-      if(tx===HOSPITAL.tx && ty===HOSPITAL.ty && pat && dist<160){
-        const sp=proj(tx+.5,ty-.02,wh+0.3);
-        if(sp){
-          hudFont(900,Math.max(12,Math.min(16,sp.sc*.045)));
-          const tw=ctx.measureText('Hospital').width+40, th=26;
-          ctx.fillStyle='#FFFFFF'; ctx.strokeStyle=INK; ctx.lineWidth=2.5; roundRect(ctx,sp.x-tw/2,sp.y-th,tw,th,13,true,true);
-          ctx.fillStyle='#FF6B6B'; ctx.fillRect(sp.x-tw/2+10,sp.y-th/2-7,5,14); ctx.fillRect(sp.x-tw/2+5.5,sp.y-th/2-2.5,14,5);
-          ctx.fillStyle=INK; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('Hospital',sp.x+10,sp.y-th/2+1);
+      if(tx===HOSPITAL.tx && ty===HOSPITAL.ty && camY<ty && dist<160){
+        // porta de vidro na frente
+        const dz=Math.min(.42,wh*.45), F=(u,z)=>proj(tx+u,ty-.012,z);
+        const fr=[F(.3,0),F(.7,0),F(.7,dz+.05),F(.3,dz+.05)], dr=[F(.36,0),F(.64,0),F(.64,dz),F(.36,dz)];
+        if(!fr.some(v=>!v)&&!dr.some(v=>!v)){
+          ctx.fillStyle='#FFFFFF'; quad(fr); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=lw(fr[0]); ctx.stroke();
+          ctx.fillStyle='#8FD3FF'; quad(dr); ctx.fill(); ctx.stroke();
+          const m0=F(.5,0), m1=F(.5,dz); ctx.beginPath(); ctx.moveTo(m0.x,m0.y); ctx.lineTo(m1.x,m1.y); ctx.stroke();
+          const h1=F(.46,dz*.5), h2=F(.54,dz*.5); ctx.fillStyle=INK;
+          [h1,h2].forEach(h=>{ ctx.beginPath(); ctx.arc(h.x,h.y,Math.max(1.2,lw(fr[0])*.7),0,Math.PI*2); ctx.fill(); });
         }
+        // placa na frente, em cima da porta
+        hospSign=proj(tx+.5,ty-.03,dz+.2);
       }
       const fireHere = frJob && frJob.type==='fire' && frJob.fire && frJob.fire.tx===tx && frJob.fire.ty===ty;
       if(fireHere){
@@ -7220,6 +7225,17 @@ function drawFreeRoam(){
     drawDinoOn(ctx,W/2+14,H-78,frPlayer.frame,false,0.5);
     ctx.beginPath(); ctx.arc(W/2,H+10,70,Math.PI*1.1,Math.PI*1.9); ctx.stroke();
     ctx.strokeStyle='#7A7798'; ctx.lineWidth=9; ctx.stroke();
+  }
+
+  // placa do hospital (por cima das árvores)
+  if(hospSign){
+    const sp=hospSign; ctx.save();
+    hudFont(900,Math.max(12,Math.min(16,sp.sc*.045)));
+    const tw=ctx.measureText('Hospital').width+40, th=26;
+    ctx.fillStyle='#FFFFFF'; ctx.strokeStyle=INK; ctx.lineWidth=2.5; roundRect(ctx,sp.x-tw/2,sp.y-th,tw,th,13,true,true);
+    ctx.fillStyle='#FF6B6B'; ctx.fillRect(sp.x-tw/2+10,sp.y-th/2-7,5,14); ctx.fillRect(sp.x-tw/2+5.5,sp.y-th/2-2.5,14,5);
+    ctx.fillStyle=INK; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('Hospital',sp.x+10,sp.y-th/2+1);
+    ctx.restore(); hospSign=null;
   }
 
   // HUD — moedas e bairro
