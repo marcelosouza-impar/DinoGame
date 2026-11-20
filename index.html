@@ -966,6 +966,7 @@ window.addEventListener('keydown', e => {
   if(e.code==='KeyM'){ toggleMute(); return; }
   if(e.code==='Escape'&&state==='freeroam'){ state='menu'; renderMainMenu(); return; }
   if(e.code==='KeyC'&&state==='freeroam'&&frJob) return;
+  if(e.code==='Space'&&state==='freeroam') e.preventDefault();
   if(e.code==='KeyC'&&state==='freeroam'){
     if(frDriving){
       frDriving.occupied=false;
@@ -5519,11 +5520,11 @@ function placeName(p){
   }
   return 'na calçada';
 }
-function loadCareer(){ try{ return Object.assign({earned:0,taxiRides:0,trainStops:0}, JSON.parse(localStorage.getItem('dinogame_career')||'{}')); }catch(e){ return {earned:0,taxiRides:0,trainStops:0}; } }
+function loadCareer(){ try{ return Object.assign({earned:0,taxiRides:0,trainStops:0,fires:0}, JSON.parse(localStorage.getItem('dinogame_career')||'{}')); }catch(e){ return {earned:0,taxiRides:0,trainStops:0,fires:0}; } }
 function jobPay(n,label){
   totalCoins+=n; frJob.earned+=n; saveProgress();
   const c=loadCareer(); c.earned+=n;
-  if(frJob.type==='taxi') c.taxiRides++; else c.trainStops++;
+  if(frJob.type==='taxi') c.taxiRides++; else if(frJob.type==='fire') c.fires++; else c.trainStops++;
   localStorage.setItem('dinogame_career',JSON.stringify(c));
   frJob.msg={text:`${label} +${n} moedas`, until:performance.now()+2200, good:true};
 }
@@ -5547,9 +5548,9 @@ function renderCareer(){
   ov.innerHTML=`<div class="ocard wide">
     <h2>Carreira de trabalho</h2>
     <p class="sub">Escolha seu trabalho na cidade e ganhe moedas.</p>
-    <p class="sub">${coinTag(c.earned)} ganhas na carreira · ${c.taxiRides} corridas de táxi · ${c.trainStops} paradas de trem</p>
+    <p class="sub">${coinTag(c.earned)} ganhas na carreira · ${c.taxiRides} corridas · ${c.trainStops} paradas de trem · ${c.fires} incêndios apagados</p>
     <div class="divider"></div>
-    <div class="two-col">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%">
       <button class="map-node" style="background:var(--sun);text-align:center;padding:16px" onclick="startJob('taxi')">
         <span style="display:inline-flex;width:56px;height:56px;border-radius:18px;background:var(--white);border:3px solid var(--ink);align-items:center;justify-content:center">${svgIcon(taxiIcon,32)}</span>
         <b style="font-size:20px;margin-top:6px">Taxista</b>
@@ -5559,6 +5560,11 @@ function renderCareer(){
         <span style="display:inline-flex;width:56px;height:56px;border-radius:18px;background:var(--white);border:3px solid var(--ink);align-items:center;justify-content:center">${svgIcon(trainIcon,32)}</span>
         <b style="font-size:20px;margin-top:6px">Maquinista</b>
         Dirija o trem pela floresta e pare certinho em cada estação.
+      </button>
+      <button class="map-node" style="background:var(--orange);text-align:center;padding:16px" onclick="startJob('fire')">
+        <span style="display:inline-flex;width:56px;height:56px;border-radius:18px;background:var(--white);border:3px solid var(--ink);align-items:center;justify-content:center">${svgIcon('M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 3 3 3 0-3-1-5 0-8z',32)}</span>
+        <b style="font-size:20px;margin-top:6px">Bombeiro</b>
+        Quando tocar o alarme, corra com o caminhão e apague o fogo do prédio.
       </button>
     </div>
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
@@ -5573,6 +5579,12 @@ function startJob(type){
     frPlayer.tx=taxi.tx; frPlayer.ty=taxi.ty; frPlayer.facing=0;
     frJob={type:'taxi',earned:0,frames:0,stage:'free',offerAt:240,offerUntil:0,pass:null,dest:null,start:0,msg:null};
     jobMsg('Bom trabalho, taxista!',true);
+  } else if(type==='fire'){
+    const truck={tx:14.5,ty:3.0,color:'#FF6B6B',occupied:true,facing:0,truck:true};
+    frCars.push(truck); frDriving=truck;
+    frPlayer.tx=truck.tx; frPlayer.ty=truck.ty; frPlayer.facing=0;
+    frJob={type:'fire',earned:0,frames:0,stage:'free',alarmAt:300,fire:null,spraying:false,msg:null};
+    jobMsg('Bom trabalho, bombeiro!',true);
   } else {
     frJob={type:'train',earned:0,frames:0,train:{x:1.2,dir:1,speed:0},boarding:0,riders:[],waiting:{},refill:{},lastStop:null,msg:null};
     frPlayer.tx=1.2; frPlayer.ty=TRAIN_Y; frPlayer.facing=0;
@@ -5627,6 +5639,32 @@ function trainTarget(){
   }
   const ahead=stationsNear(t.x,ST_GAP*2).filter(st=>(st.x-t.x)*t.dir>-0.5).sort((a,b)=>Math.abs(a.x-t.x)-Math.abs(b.x-t.x));
   return {st:ahead[0]||stationAt(0), drop:false};
+}
+function updateFireJob(){
+  const truck=frDriving; if(!truck) return;
+  frJob.frames++; frJob.spraying=false;
+  if(frJob.stage==='free' && frJob.frames>=frJob.alarmAt){
+    const lots=[]; for(let y=0;y<=6;y++)for(let x=0;x<FR_SZ;x++){ const t=FR_MAP[y][x]; if(t>=3&&t<=8) lots.push({tx:x,ty:y,t}); }
+    const far=lots.filter(l=>Math.hypot(l.tx+.5-truck.tx,l.ty+.5-truck.ty)>5);
+    const lot=(far.length?far:lots)[Math.floor(Math.random()*(far.length?far:lots).length)];
+    frJob.fire={tx:lot.tx,ty:lot.ty,name:'prédio '+BLDG_NAMES[lot.t],level:25,start:frJob.frames};
+    frJob.stage='alarm';
+    jobMsg('Alarme! Incêndio no '+frJob.fire.name+'!',false);
+  } else if(frJob.stage==='alarm'){
+    const f=frJob.fire;
+    f.level=Math.min(100,f.level+0.035);
+    const near=Math.hypot(f.tx+.5-truck.tx,f.ty+.5-truck.ty)<2.4;
+    frJob.near=near;
+    if(near && keys['Space']){ frJob.spraying=true; f.level-=0.75; }
+    if(f.level<=0){
+      const secs=(frJob.frames-f.start)/60;
+      jobPay(10+(secs<30?5:0), secs<30?'Fogo apagado rapidinho!':'Fogo apagado!');
+      frJob.stage='free'; frJob.fire=null; frJob.alarmAt=frJob.frames+420+Math.floor(Math.random()*480);
+    } else if(f.level>=100){
+      jobMsg('O fogo tomou conta... chegue mais rápido!',false);
+      frJob.stage='free'; frJob.fire=null; frJob.alarmAt=frJob.frames+360+Math.floor(Math.random()*360);
+    }
+  }
 }
 function updateTaxiJob(){
   const car=frDriving; if(!car) return;
@@ -5755,6 +5793,7 @@ function updateFreeRoam(){
     n.frameT++;if(n.frameT>10){n.frame=(n.frame+1)%4;n.frameT=0;}
   });
   if(frJob && frJob.type==='taxi') updateTaxiJob();
+  if(frJob && frJob.type==='fire') updateFireJob();
 }
 
 function frGroundColor(t,tx,ty){
@@ -5903,6 +5942,23 @@ function drawFreeRoam(){
         ctx.strokeStyle=INK; ctx.lineWidth=lw(pat); ctx.stroke();
         if(fog>.02){ctx.fillStyle=`rgba(${SKY},${fog})`;quad([pat,pbt,pct,pdt]);ctx.fill();}
       }
+      const fireHere = frJob && frJob.type==='fire' && frJob.fire && frJob.fire.tx===tx && frJob.fire.ty===ty;
+      if(fireHere){
+        const lv=frJob.fire.level/100, T=performance.now()/1000;
+        for(let i=0;i<5;i++){
+          const sp=proj(tx+.5+Math.sin(i*2.1)*.25,ty+.5+Math.cos(i*1.7)*.25,wh+0.2+((T*0.5+i*.2)%1)*0.9*lv+0.2);
+          if(sp){ ctx.fillStyle=`rgba(90,90,110,${0.35*(1-((T*0.5+i*.2)%1))})`; ctx.beginPath(); ctx.arc(sp.x,sp.y,sp.sc*(0.12+0.1*lv),0,Math.PI*2); ctx.fill(); }
+        }
+        for(let i=0;i<6;i++){
+          const fx=tx+.2+(i%3)*.3, fy=ty+.2+Math.floor(i/3)*.6;
+          const fb=proj(fx,fy,wh), ft=proj(fx,fy,wh+0.25+0.35*lv+Math.sin(T*9+i)*0.05);
+          if(!fb||!ft) continue;
+          const fw=fb.sc*(0.08+0.07*lv);
+          ctx.fillStyle='#FF6B6B'; ctx.strokeStyle=INK; ctx.lineWidth=Math.max(1,lw(fb)*.7);
+          ctx.beginPath(); ctx.moveTo(fb.x-fw,fb.y); ctx.quadraticCurveTo(ft.x-fw*.4,(fb.y+ft.y)/2,ft.x,ft.y); ctx.quadraticCurveTo(ft.x+fw*.4,(fb.y+ft.y)/2,fb.x+fw,fb.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.fillStyle='#FFD23F'; ctx.beginPath(); ctx.moveTo(fb.x-fw*.5,fb.y); ctx.quadraticCurveTo(ft.x,(fb.y*2+ft.y)/3,fb.x+fw*.5,fb.y); ctx.closePath(); ctx.fill();
+        }
+      }
     }
   });
 
@@ -6008,8 +6064,9 @@ function drawFreeRoam(){
   let jobTarget=null;
   if(frJob){
     if(frJob.type==='taxi') jobTarget = frJob.stage==='drop' ? frJob.dest : frJob.pass;
+    else if(frJob.type==='fire') jobTarget = frJob.fire ? {x:frJob.fire.tx+.5,y:frJob.fire.ty+.5} : null;
     else { const tt=trainTarget(); jobTarget={x:tt.st.x,y:TRAIN_Y}; }
-    const col = frJob.type==='taxi' ? (frJob.stage==='drop'?'#7ED957':frJob.stage==='offer'?'#FFD23F':'#FF6B6B') : (trainTarget().drop?'#7ED957':'#FF6B6B');
+    const col = frJob.type==='fire' ? '#FF6B6B' : frJob.type==='taxi' ? (frJob.stage==='drop'?'#7ED957':frJob.stage==='offer'?'#FFD23F':'#FF6B6B') : (trainTarget().drop?'#7ED957':'#FF6B6B');
     const g=jobTarget&&proj(jobTarget.x,jobTarget.y,0.01), tp=jobTarget&&proj(jobTarget.x,jobTarget.y,1.05+Math.sin(performance.now()/300)*.08);
     if(g&&tp){
       ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,g.sc*.02);
@@ -6020,6 +6077,19 @@ function drawFreeRoam(){
       ctx.beginPath(); ctx.arc(tp.x,tp.y,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
       ctx.fillStyle='#FFFFFF'; ctx.beginPath(); ctx.arc(tp.x,tp.y,r*.4,0,Math.PI*2); ctx.fill();
     }
+  }
+
+  // JATO D'ÁGUA DO BOMBEIRO
+  if(frJob && frJob.type==='fire' && frJob.spraying && frJob.fire){
+    const tp=proj(frJob.fire.tx+.5,frJob.fire.ty+.5,FR_BLDG[FR_MAP[frJob.fire.ty][frJob.fire.tx]].fl*0.28);
+    const tx2=tp?tp.x:W/2, ty2=tp?tp.y:HOR;
+    const T=performance.now()/60;
+    for(let i=0;i<3;i++){
+      ctx.strokeStyle=['#5BC0FF','#A7DEFF','#FFFFFF'][i]; ctx.lineWidth=[10,6,2][i]; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(W/2+40,H-70); ctx.quadraticCurveTo((W/2+40+tx2)/2,Math.min(ty2,H-70)-80,tx2,ty2); ctx.stroke();
+    }
+    ctx.fillStyle='#FFFFFF';
+    for(let i=0;i<8;i++){ const a=(i*0.8+T)%6.28; ctx.beginPath(); ctx.arc(tx2+Math.cos(a)*14,ty2+Math.sin(a)*8,3,0,Math.PI*2); ctx.fill(); }
   }
 
   // NOITE, CHUVA E FARÓIS
@@ -6077,10 +6147,10 @@ function drawFreeRoam(){
   let w=6+26+8+ctx.measureText(ct).width+12;
   hudPill(12,12,w,36); drawCoin(12+6+13,30,12);
   hudFont(900,16); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(ct,12+6+26+8,31);
-  const zone=frJob ? (frJob.type==='taxi'?'Táxi':'Trem') : frZoneName(frPlayer.ty);
+  const zone=frJob ? ({taxi:'Táxi',train:'Trem',fire:'Bombeiro'}[frJob.type]) : frZoneName(frPlayer.ty);
   hudFont(700,16,'d');
   const zx=12+w+10, zw=12+20+6+ctx.measureText(zone).width+14;
-  hudPill(zx,14,zw,32,frJob?(frJob.type==='taxi'?'#FFD23F':'#FF6B6B'):'#5BC0FF');
+  hudPill(zx,14,zw,32,frJob?({taxi:'#FFD23F',train:'#FF6B6B',fire:'#FF9F6B'}[frJob.type]):'#5BC0FF');
   ctx.save(); ctx.translate(zx+10,18); ctx.scale(20/24,20/24); ctx.fillStyle='#FFFFFF'; ctx.fill(FR_PIN,'evenodd'); ctx.strokeStyle=INK; ctx.lineWidth=2.6; ctx.stroke(FR_PIN); ctx.restore();
   ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(zone,zx+10+20+6,31);
   const wlabel=(night>0.5?'Noite':'Dia')+(rain?' · Chuva':'');
@@ -6090,8 +6160,8 @@ function drawFreeRoam(){
   ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(wlabel,wwx+12,31);
 
   // HUD — objetivo do trabalho
-  if(frJob && frJob.type==='taxi' && frJob.stage==='free'){
-    hudFont(900,15); const goal='Passeie pela cidade · aguarde uma corrida';
+  if(frJob && (frJob.type==='taxi'||frJob.type==='fire') && frJob.stage==='free'){
+    hudFont(900,15); const goal=frJob.type==='fire'?'Patrulhe a cidade · aguarde um alarme':'Passeie pela cidade · aguarde uma corrida';
     const gw=ctx.measureText(goal).width+32, gx=W/2-gw/2+40;
     hudPill(gx,12,gw,40,'#FFF8E7'); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(goal,gx+16,33);
   }
@@ -6111,7 +6181,8 @@ function drawFreeRoam(){
   if(frJob && jobTarget && !(frJob.type==='taxi' && frJob.stage!=='pickup' && frJob.stage!=='drop')){
     const dist=Math.round(Math.hypot(jobTarget.x-frPlayer.tx,jobTarget.y-frPlayer.ty)*10);
     let goal;
-    if(frJob.type==='taxi') goal = frJob.stage==='pickup' ? `Busque o passageiro ${placeName(frJob.pass)} · ${dist} m` : `Leve ${placeName(frJob.dest)} · ${dist} m`;
+    if(frJob.type==='fire') goal = frJob.near ? 'Segure ESPAÇO para jogar água!' : `Incêndio no ${frJob.fire.name} · ${dist} m`;
+    else if(frJob.type==='taxi') goal = frJob.stage==='pickup' ? `Busque o passageiro ${placeName(frJob.pass)} · ${dist} m` : `Leve ${placeName(frJob.dest)} · ${dist} m`;
     else {
       const tt=trainTarget();
       goal = frJob.boarding>0 ? 'Passageiros subindo e descendo...'
@@ -6129,6 +6200,13 @@ function drawFreeRoam(){
     ctx.fillStyle='#FF6B6B'; ctx.strokeStyle=INK; ctx.lineWidth=2.5;
     ctx.beginPath(); ctx.moveTo(0,-12); ctx.lineTo(9,6); ctx.lineTo(0,2); ctx.lineTo(-9,6); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
+    if(frJob.type==='fire' && frJob.fire){
+      const sw=160, sx3=W/2-sw/2+40, lv=frJob.fire.level/100;
+      ctx.fillStyle='#FFFFFF'; roundRect(ctx,sx3,60,sw,14,7,true,false);
+      ctx.fillStyle=lv>0.7?'#FF6B6B':'#FF9F6B'; roundRect(ctx,sx3,60,Math.max(8,sw*lv),14,7,true,false);
+      ctx.strokeStyle=INK; ctx.lineWidth=2.5; roundRect(ctx,sx3,60,sw,14,7,false,true);
+      hudFont(900,12); ctx.fillStyle=INK; ctx.textAlign='right'; ctx.fillText('fogo',sx3-8,68);
+    }
     if(frJob.type==='train'){
       const t=frJob.train, sw=160, sx3=W/2-sw/2+40;
       ctx.fillStyle='#FFFFFF'; roundRect(ctx,sx3,60,sw,14,7,true,false);
@@ -6148,7 +6226,7 @@ function drawFreeRoam(){
 
   // HUD — teclas
   if(frJob){
-    const hints = frJob.type==='taxi' ? [['W A S D','dirigir'],['Esc','sair']] : [['W','acelerar'],['S','frear'],['A D','virar'],['Esc','sair']];
+    const hints = frJob.type==='fire' ? [['W A S D','dirigir'],['Espaço','água'],['Esc','sair']] : frJob.type==='taxi' ? [['W A S D','dirigir'],['Esc','sair']] : [['W','acelerar'],['S','frear'],['A D','virar'],['Esc','sair']];
     hudFont(900,13);
     let pw=12; hints.forEach(([k,l])=>{ pw += k.split(' ').length*32 + ctx.measureText(l).width + 18; });
     const py=H-16-46;
