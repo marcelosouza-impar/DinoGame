@@ -5342,10 +5342,9 @@ function loadHouseData(){
   let d=null;
   try{ d=JSON.parse(localStorage.getItem('dinogame_house3d')||'null'); }catch(e){}
   if(!d||!d.items) d={items:[],wall:0,floor:0};
-  if(!d.furnished){
-    const busy=(o)=>{ const f=FURNITURE.find(z=>z.id===o.id); for(let x=o.tx;x<o.tx+f.w;x++)for(let y=o.ty;y<o.ty+f.d;y++){ const k=d.items.findIndex(it=>{ const g=FURNITURE.find(z=>z.id===it.id); const fw=it.r?g.d:g.w, fd=it.r?g.w:g.d; return x>=it.tx&&x<it.tx+fw&&y>=it.ty&&y<it.ty+fd; }); if(k>=0) return true; } return false; };
-    HOUSE_DEFAULT_ITEMS.forEach(o=>{ if(!busy(o)) d.items.push({...o,r:0}); });
-    d.furnished=true;
+  if(d.furnished!==2){
+    d.items=HOUSE_DEFAULT_ITEMS.map(o=>({...o,r:0}));
+    d.furnished=2;
     localStorage.setItem('dinogame_house3d',JSON.stringify(d));
   }
   return d;
@@ -5390,6 +5389,11 @@ function houseErase(){
   let i=itemAt(tx,ty,true); if(i<0) i=itemAt(tx,ty,false);
   if(i<0) return;
   const o=houseData.items.splice(i,1)[0]; houseUndo.push({op:'del',o,i}); saveHouseData();
+}
+function houseResetDefault(){
+  if(!confirm('Voltar a casa para os móveis originais? Os móveis que você colocou serão removidos.')) return;
+  houseData.items=HOUSE_DEFAULT_ITEMS.map(o=>({...o,r:0})); houseUndo=[]; saveHouseData();
+  houseMsg={text:'Casa arrumada como original',until:performance.now()+2000};
 }
 function houseUndoAction(){
   const a=houseUndo.pop(); if(!a) return;
@@ -5514,6 +5518,7 @@ function drawHouse(){
   btn(W-12-90-86,12,78,40,'Chão',()=>{houseData.floor++;saveHouseData();},FLOOR_COLORS[(houseData.floor+1)%FLOOR_COLORS.length]);
   btn(W-12-90-172,12,78,40,'Parede',()=>{houseData.wall++;saveHouseData();},WALL_COLORS[(houseData.wall+1)%WALL_COLORS.length]);
   btn(W-12-90-252,12,72,40,'Girar',()=>{houseRot^=1;});
+  btn(W-12-90-338,12,80,40,'Original',()=>houseResetDefault(),'#FFF3C4');
   const room = hp.x<7 ? 'Sala' : 'Quarto';
   hudFont(900,13); const rw=ctx.measureText(room).width+24; hudPill(102,60,rw,28,'#E6F6FF'); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(room,114,75);
   if(houseMsg && performance.now()<houseMsg.until){
