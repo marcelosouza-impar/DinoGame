@@ -1294,14 +1294,24 @@ function renderWorldMap(){
   ov.classList.remove('win-mode');
   ov.style.display='flex';
   const places = trArray('placeNames');
-  const routes = {1:[2,3],2:[4],3:[4],4:[]};
-  const reachable = routes[phase] || [];
   const nodes = places.map((name,idx)=>{
     const p = idx+1;
-    const locked = p > unlockedPhase;
-    const active = p === phase || reachable.includes(p);
-    return `<button class="map-node ${locked?'locked':'unlocked'} ${active?'active':''}" ${locked?'':'onclick="launchPhase('+p+')"'}>`+
-      `<b>${tr('phaseHud')} ${p}</b><br>${locked?'🔒 '+tr('locked'):'📍 '+name}</button>`;
+    const locked = p > phase;
+    const isCurrent = p === phase;
+    const completed = p < phase;
+    let style='', icon='', sub='';
+    if(locked){
+      style='opacity:.28;cursor:not-allowed;border-color:rgba(80,80,100,.25);filter:grayscale(.8);';
+      icon='🔒'; sub=tr('locked');
+    } else if(isCurrent){
+      style='border-color:#ffe66d;box-shadow:0 0 0 2px rgba(255,230,109,.5),0 8px 24px rgba(255,230,109,.18);background:rgba(28,22,6,.88);';
+      icon='▶'; sub=`<span style="color:#ffe66d;font-size:5px">VOCÊ ESTÁ AQUI</span>`;
+    } else {
+      style='border-color:rgba(74,222,128,.35);';
+      icon='✅'; sub=name;
+    }
+    return `<button class="map-node" style="${style}" ${locked?'disabled':'onclick="launchPhase('+p+')"'}>`+
+      `<b>${icon} ${tr('phaseHud')} ${p}</b><br>${sub}</button>`;
   }).join('');
   ov.innerHTML = `<div class="ocard">
     <h2>${isSecretPhase ? 'Fase Secreta' : tr('worldMap')}</h2>
