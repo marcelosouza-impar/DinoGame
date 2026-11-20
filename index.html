@@ -1075,8 +1075,12 @@ window.addEventListener('keydown', e => {
   if(e.code==='KeyM'){ toggleMute(); return; }
   if(state==='house'){
     if(e.code==='Escape') exitHouse();
-    else if(e.code==='KeyX') houseErase=!houseErase;
     else if(e.code==='KeyZ' && (e.ctrlKey||e.metaKey)) houseUndoAction();
+    else if(e.code==='Space'){ e.preventDefault(); housePlace(); }
+    else if(e.code==='KeyX') houseErase();
+    else if(e.code==='KeyR') houseRot^=1;
+    else if(e.code==='KeyE' && Math.hypot(hp.x-(HR_DOOR.x+.5),hp.y-(HR_DOOR.y))<1.4) exitHouse();
+    else { const m=e.code.match(/^Digit(\d)$/); if(m){ const n=+m[1]; houseSel = n===0 ? 9 : n-1; } }
     return;
   }
   if(e.code==='KeyE'&&state==='freeroam'&&nearHouseDoor()){ enterHouse(); return; }
@@ -5331,57 +5335,74 @@ function playSavedPhase(id){
 }
 
 
-// ─── CASA POR DENTRO ─────────────────────────────────────────────────────────
-const HOUSE_FLOOR = 300, HOUSE_DRAWER = 338;
+// ─── CASA POR DENTRO (3D) ────────────────────────────────────────────────────
+const HOUSE_DRAWER = 362;
+const HR_W = 14, HR_H = 11;
 const WALL_COLORS = ['#FFE0F0','#E6F6FF','#FFF3C4','#E8F9DF','#EDE3FF','#FFE9D6'];
-const FLOOR_COLORS = ['#C98B5B','#B9B6D0','#E9C9A6','#7ED957','#5BC0FF'];
+const FLOOR_COLORS = ['#C98B5B','#B9B6D0','#E9C9A6','#9BE66F','#A7DEFF'];
+const HR_DOOR = {x:2, y:HR_H-1};
+function hrWall(x,y){
+  if(x<0||y<0||x>=HR_W||y>=HR_H) return true;
+  if(x===0||y===0||x===HR_W-1||y===HR_H-1) return true;
+  if(x===7 && !(y>=4&&y<=6)) return true;
+  return false;
+}
 const FURNITURE = [
-  {id:'cama', name:'Cama', w:150, h:60, draw:(c,x,y)=>{ fb(c,x,y-34,150,26,8,'#C98B5B'); fb(c,x+6,y-48,138,18,8,'#FFFFFF'); fb(c,x+50,y-50,94,22,8,'#FF8FC7'); fb(c,x+8,y-58,36,14,7,'#FFFFFF'); fb(c,x,y-60,12,60,5,'#B37548'); fb(c,x+138,y-44,12,44,5,'#B37548'); }},
-  {id:'sofa', name:'Sofá', w:140, h:62, draw:(c,x,y)=>{ fb(c,x,y-62,140,36,14,'#5BC0FF'); fb(c,x+12,y-36,116,22,8,'#A7DEFF'); fb(c,x,y-40,20,32,8,'#2F8FD0'); fb(c,x+120,y-40,20,32,8,'#2F8FD0'); fb(c,x+10,y-10,10,10,3,'#2B2A4C'); fb(c,x+120,y-10,10,10,3,'#2B2A4C'); }},
-  {id:'mesa', name:'Mesa', w:100, h:50, draw:(c,x,y)=>{ fb(c,x,y-50,100,12,5,'#C98B5B'); fb(c,x+8,y-40,10,40,3,'#B37548'); fb(c,x+82,y-40,10,40,3,'#B37548'); }},
-  {id:'cadeira', name:'Cadeira', w:40, h:64, draw:(c,x,y)=>{ fb(c,x+4,y-64,10,64,3,'#B37548'); fb(c,x+4,y-30,34,8,4,'#C98B5B'); fb(c,x+30,y-22,8,22,3,'#B37548'); }},
-  {id:'estante', name:'Estante', w:80, h:130, draw:(c,x,y)=>{ fb(c,x,y-130,80,130,6,'#C98B5B'); ['#FF6B6B','#5BC0FF','#FFD23F','#7ED957','#B18CFF'].forEach((col,i)=>{ fb(c,x+8+i*13,y-120,10,30,2,col); fb(c,x+10+i*12,y-80,9,30,2,['#FF9F6B','#7ED957','#FF8FC7','#5BC0FF','#FFD23F'][i]); }); fb(c,x+6,y-88,68,6,2,'#B37548'); fb(c,x+6,y-48,68,6,2,'#B37548'); }},
-  {id:'tv', name:'TV', w:90, h:84, draw:(c,x,y)=>{ fb(c,x+10,y-24,70,24,5,'#C98B5B'); fb(c,x,y-84,90,58,8,'#2B2A4C'); fb(c,x+8,y-77,74,44,5,'#5BC0FF'); c.fillStyle='rgba(255,255,255,.35)'; c.fillRect(x+12,y-73,20,8); }},
-  {id:'planta', name:'Planta', w:44, h:76, draw:(c,x,y)=>{ fb(c,x+8,y-28,28,28,6,'#FF9F6B'); [[22,-62,14],[10,-48,11],[34,-48,11]].forEach(([dx,dy,r])=>{ c.beginPath(); c.arc(x+dx,y+dy,r,0,Math.PI*2); c.fillStyle='#7ED957'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.stroke(); }); }},
-  {id:'luminaria', name:'Luminária', w:40, h:116, draw:(c,x,y)=>{ fb(c,x+8,y-8,24,8,4,'#2B2A4C'); fb(c,x+17,y-92,6,86,3,'#7A7798'); c.beginPath(); c.moveTo(x+4,y-90); c.lineTo(x+12,y-116); c.lineTo(x+28,y-116); c.lineTo(x+36,y-90); c.closePath(); c.fillStyle='#FFD23F'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.stroke(); }},
-  {id:'tapete', name:'Tapete', w:160, h:14, rug:true, draw:(c,x,y)=>{ c.beginPath(); c.ellipse(x+80,y-6,80,10,0,0,Math.PI*2); c.fillStyle='#B18CFF'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.stroke(); c.beginPath(); c.ellipse(x+80,y-6,52,6,0,0,Math.PI*2); c.strokeStyle='#FFFFFF'; c.lineWidth=2; c.stroke(); }},
-  {id:'geladeira', name:'Geladeira', w:62, h:124, draw:(c,x,y)=>{ fb(c,x,y-124,62,124,10,'#FFFFFF'); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; c.beginPath(); c.moveTo(x,y-80); c.lineTo(x+62,y-80); c.stroke(); fb(c,x+48,y-112,6,22,3,'#B9B6D0'); fb(c,x+48,y-70,6,30,3,'#B9B6D0'); }},
-  {id:'quadro', name:'Quadro', w:70, h:52, wall:true, draw:(c,x,y)=>{ fb(c,x,y-52,70,52,6,'#C98B5B'); fb(c,x+7,y-45,56,38,3,'#8ED8FF'); c.fillStyle='#7ED957'; c.beginPath(); c.ellipse(x+35,y-7,26,12,0,Math.PI,0); c.fill(); c.fillStyle='#FFE27A'; c.beginPath(); c.arc(x+50,y-34,6,0,Math.PI*2); c.fill(); }},
-  {id:'relogio', name:'Relógio', w:44, h:44, wall:true, draw:(c,x,y)=>{ c.beginPath(); c.arc(x+22,y-22,20,0,Math.PI*2); c.fillStyle='#FFFFFF'; c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=3; c.stroke(); c.lineWidth=2.5; c.beginPath(); c.moveTo(x+22,y-22); c.lineTo(x+22,y-36); c.moveTo(x+22,y-22); c.lineTo(x+32,y-22); c.stroke(); }},
+  {id:'cama',      name:'Cama',      w:1, d:2, h:.38, side:'#C98B5B', top:'#FF8FC7', deco:'cama'},
+  {id:'sofa',      name:'Sofá',      w:2, d:1, h:.45, side:'#2F8FD0', top:'#5BC0FF'},
+  {id:'mesa',      name:'Mesa',      w:1, d:1, h:.45, side:'#B37548', top:'#C98B5B'},
+  {id:'cadeira',   name:'Cadeira',   w:1, d:1, h:.3,  side:'#B37548', top:'#FFD23F', inset:.25},
+  {id:'estante',   name:'Estante',   w:1, d:1, h:1.0, side:'#C98B5B', top:'#B37548', deco:'livros', inset:.2},
+  {id:'tv',        name:'TV',        w:1, d:1, h:.75, side:'#2B2A4C', top:'#2B2A4C', deco:'tela', inset:.3},
+  {id:'aquario',   name:'Aquário',   w:1, d:1, h:.6,  side:'#A7DEFF', top:'#5BC0FF', deco:'peixe', inset:.15},
+  {id:'planta',    name:'Planta',    w:1, d:1, h:.3,  side:'#FF9F6B', top:'#7A4A2E', inset:.3, bush:'#7ED957'},
+  {id:'luminaria', name:'Luminária', w:1, d:1, h:.9,  side:'#7A7798', top:'#7A7798', inset:.42, shade:'#FFD23F'},
+  {id:'geladeira', name:'Geladeira', w:1, d:1, h:1.1, side:'#FFFFFF', top:'#E4E2EE', deco:'porta', inset:.1},
+  {id:'bau',       name:'Baú',       w:1, d:1, h:.4,  side:'#D9733F', top:'#FF9F6B', inset:.1},
+  {id:'tapete',    name:'Tapete',    w:2, d:2, h:.02, side:'#B18CFF', top:'#B18CFF', rug:true},
 ];
-function fb(c,x,y,w,h,r,fill){ c.fillStyle=fill; c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; roundRect(c,x,y,w,h,Math.min(r,w/2,h/2),true,true); }
-let houseData=null, houseSel=0, houseErase=false, houseUndo=[], houseButtons=[], houseDino={x:120,vx:0,facing:1,frame:0}, houseReturn=null;
-function loadHouseData(){ try{ const d=JSON.parse(localStorage.getItem('dinogame_house')||'null'); if(d&&d.items) return d; }catch(e){} return {items:[],wall:0,floor:0}; }
-function saveHouseData(){ localStorage.setItem('dinogame_house',JSON.stringify(houseData)); }
-function nearHouseDoor(){ return loadCareer().house && !frDriving && !frJob && Math.hypot(frPlayer.tx-(HOUSE_SPOT.tx+.5),frPlayer.ty-(HOUSE_SPOT.ty-.4))<1.3; }
+let houseData=null, houseSel=0, houseRot=0, houseUndo=[], houseButtons=[], hp={x:2.5,y:8.5,facing:-Math.PI/2,frame:0,moving:false}, houseMsg=null;
+function loadHouseData(){ try{ const d=JSON.parse(localStorage.getItem('dinogame_house3d')||'null'); if(d&&d.items) return d; }catch(e){} return {items:[],wall:0,floor:0}; }
+function saveHouseData(){ localStorage.setItem('dinogame_house3d',JSON.stringify(houseData)); }
+function nearHouseDoor(){ return loadCareer().house && !frDriving && !frJob && Math.hypot(frPlayer.tx-(HOUSE_SPOT.tx+1),frPlayer.ty-(HOUSE_SPOT.ty-.4))<1.6; }
+function itemFoot(o){ const f=FURNITURE.find(x=>x.id===o.id); return o.r ? [f.d,f.w] : [f.w,f.d]; }
+function itemAt(x,y,solidOnly){
+  return houseData.items.findIndex(o=>{ const f=FURNITURE.find(z=>z.id===o.id); if(solidOnly&&f.rug) return false; const [fw,fd]=itemFoot(o); return x>=o.tx&&x<o.tx+fw&&y>=o.ty&&y<o.ty+fd; });
+}
+function hrBlocked(x,y){ const ix=Math.floor(x), iy=Math.floor(y); return hrWall(ix,iy) || itemAt(ix,iy,true)>=0; }
 function enterHouse(){
-  houseData=loadHouseData(); houseUndo=[]; houseErase=false;
-  houseDino={x:120,vx:0,facing:1,frame:0};
-  houseReturn={tx:frPlayer.tx,ty:frPlayer.ty};
+  houseData=loadHouseData(); houseUndo=[]; houseRot=0;
+  hp={x:HR_DOOR.x+.5,y:HR_DOOR.y-.6,facing:-Math.PI/2,frame:0,moving:false};
+  houseMsg={text:'Bem-vindo! Espaço coloca · R gira · X apaga',until:performance.now()+3500};
   state='house';
 }
 function exitHouse(){
   saveHouseData();
   state='freeroam';
-  frPlayer.tx=HOUSE_SPOT.tx+.5; frPlayer.ty=HOUSE_SPOT.ty-.6; frPlayer.facing=-Math.PI/2;
+  frPlayer.tx=HOUSE_SPOT.tx+1; frPlayer.ty=HOUSE_SPOT.ty-.6; frPlayer.facing=-Math.PI/2;
 }
-function houseItemBox(o){ const f=FURNITURE.find(x=>x.id===o.id); return [o.x,o.y-f.h,f.w,f.h]; }
-function houseClick(cx,cy){
-  const hit=houseButtons.find(b=>cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h);
-  if(hit){ hit.fn(); return; }
-  if(cy>=HOUSE_DRAWER || cy<64) return;
-  if(houseErase){
-    for(let i=houseData.items.length-1;i>=0;i--){
-      const [bx,by,bw,bh]=houseItemBox(houseData.items[i]);
-      if(cx>=bx&&cx<=bx+bw&&cy>=by-6&&cy<=by+bh+6){ const o=houseData.items.splice(i,1)[0]; houseUndo.push({op:'del',o,i}); saveHouseData(); return; }
-    }
-    return;
+function houseTarget(){
+  const tx=Math.floor(hp.x+Math.cos(hp.facing)*1.3), ty=Math.floor(hp.y+Math.sin(hp.facing)*1.3);
+  const f=FURNITURE[houseSel]; const [fw,fd]=houseRot?[f.d,f.w]:[f.w,f.d];
+  let ok=true;
+  for(let x=tx;x<tx+fw;x++)for(let y=ty;y<ty+fd;y++){
+    if(hrWall(x,y)) ok=false;
+    const k=itemAt(x,y,false);
+    if(k>=0){ const g=FURNITURE.find(z=>z.id===houseData.items[k].id); if(!(g.rug||f.rug)) ok=false; else if(g.rug&&f.rug) ok=false; }
+    if(!f.rug && Math.floor(hp.x)===x && Math.floor(hp.y)===y) ok=false;
   }
-  const f=FURNITURE[houseSel];
-  const x=Math.round(Math.max(4,Math.min(W-f.w-4,cx-f.w/2)));
-  const y=f.wall ? Math.round(Math.max(70+f.h,Math.min(HOUSE_FLOOR-20,cy+f.h/2))) : HOUSE_FLOOR;
-  const o={id:f.id,x,y};
+  return {tx,ty,fw,fd,ok};
+}
+function housePlace(){
+  const t=houseTarget(); if(!t.ok){ houseMsg={text:'Não cabe aí',until:performance.now()+1200,bad:true}; return; }
+  const o={id:FURNITURE[houseSel].id,tx:t.tx,ty:t.ty,r:houseRot};
   houseData.items.push(o); houseUndo.push({op:'add',o}); saveHouseData();
+}
+function houseErase(){
+  const tx=Math.floor(hp.x+Math.cos(hp.facing)*1.3), ty=Math.floor(hp.y+Math.sin(hp.facing)*1.3);
+  let i=itemAt(tx,ty,true); if(i<0) i=itemAt(tx,ty,false);
+  if(i<0) return;
+  const o=houseData.items.splice(i,1)[0]; houseUndo.push({op:'del',o,i}); saveHouseData();
 }
 function houseUndoAction(){
   const a=houseUndo.pop(); if(!a) return;
@@ -5389,38 +5410,98 @@ function houseUndoAction(){
   else houseData.items.splice(Math.min(a.i,houseData.items.length),0,a.o);
   saveHouseData();
 }
+function houseClick(cx,cy){
+  const hit=houseButtons.find(b=>cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h);
+  if(hit){ hit.fn(); return; }
+  if(cy>64 && cy<HOUSE_DRAWER) housePlace();
+}
 function updateHouse(){
-  const d=houseDino;
-  const r=keys['KeyD']||keys['ArrowRight'], l=keys['KeyA']||keys['ArrowLeft'];
-  d.vx = r ? 3.2 : l ? -3.2 : 0;
-  if(r) d.facing=1; else if(l) d.facing=-1;
-  d.x=Math.max(10,Math.min(W-70,d.x+d.vx));
-  if(d.vx) d.frame++;
+  const turn=.05, spd=.05;
+  if(keys['KeyA']||keys['ArrowLeft']) hp.facing-=turn;
+  if(keys['KeyD']||keys['ArrowRight']) hp.facing+=turn;
+  let mv=0; if(keys['KeyW']||keys['ArrowUp']) mv=spd; if(keys['KeyS']||keys['ArrowDown']) mv=-spd*.6;
+  hp.moving=!!mv;
+  if(mv){
+    const nx=hp.x+Math.cos(hp.facing)*mv, ny=hp.y+Math.sin(hp.facing)*mv, r=.22;
+    if(!hrBlocked(nx+Math.sign(Math.cos(hp.facing)*mv)*r,hp.y)) hp.x=nx;
+    if(!hrBlocked(hp.x,ny+Math.sign(Math.sin(hp.facing)*mv)*r)) hp.y=ny;
+    hp.frame++;
+  }
 }
 function drawHouse(){
   houseButtons=[];
-  const INK='#2B2A4C';
-  // parede, janela e chão
-  ctx.fillStyle=WALL_COLORS[houseData.wall%WALL_COLORS.length]; ctx.fillRect(0,0,W,HOUSE_FLOOR);
-  ctx.fillStyle='rgba(43,42,76,.05)'; for(let x=0;x<W;x+=40) ctx.fillRect(x,0,18,HOUSE_FLOOR);
-  fb(ctx,W/2-70,90,140,100,12,'#8ED8FF');
-  ctx.strokeStyle=INK; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(W/2,92); ctx.lineTo(W/2,188); ctx.moveTo(W/2-68,140); ctx.lineTo(W/2+68,140); ctx.stroke();
-  ctx.fillStyle='#FFFFFF'; ctx.beginPath(); ctx.arc(W/2-30,118,10,0,Math.PI*2); ctx.arc(W/2-16,114,13,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle=FLOOR_COLORS[houseData.floor%FLOOR_COLORS.length]; ctx.fillRect(0,HOUSE_FLOOR,W,H-HOUSE_FLOOR);
-  ctx.strokeStyle='rgba(43,42,76,.18)'; ctx.lineWidth=2;
-  for(let x=0;x<W;x+=60){ ctx.beginPath(); ctx.moveTo(x,HOUSE_FLOOR); ctx.lineTo(x-20,HOUSE_DRAWER); ctx.stroke(); }
-  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(0,HOUSE_FLOOR); ctx.lineTo(W,HOUSE_FLOOR); ctx.stroke();
-  // porta de saída
-  fb(ctx,14,HOUSE_FLOOR-110,62,110,10,'#C98B5B'); ctx.fillStyle='#FFD23F'; ctx.beginPath(); ctx.arc(64,HOUSE_FLOOR-52,5,0,Math.PI*2); ctx.fill(); ctx.stroke();
-  // móveis: tapetes primeiro
-  const items=[...houseData.items].sort((a,b)=>(FURNITURE.find(f=>f.id===b.id).rug?1:0)-(FURNITURE.find(f=>f.id===a.id).rug?1:0));
-  items.forEach(o=>{ const f=FURNITURE.find(x=>x.id===o.id); if(f){ ctx.save(); f.draw(ctx,o.x,o.y); ctx.restore(); } });
+  const INK='#2B2A4C', FOCAL=370, CAM_H=.55, HOR=Math.round(H*0.36);
+  const camA=hp.facing;
+  let back=1.5; while(back>0.25 && hrWall(Math.floor(hp.x-Math.cos(camA)*back),Math.floor(hp.y-Math.sin(camA)*back))) back-=0.1;
+  const camX=hp.x-Math.cos(camA)*back, camY=hp.y-Math.sin(camA)*back;
+  const cosA=Math.cos(-camA), sinA=Math.sin(-camA);
+  const proj=(wx,wy,wz)=>{ const dx=wx-camX, dy=wy-camY; const lz=dx*cosA-dy*sinA, lx=dx*sinA+dy*cosA; if(lz<0.06) return null; const sc=FOCAL/lz; return {x:W/2+lx*sc,y:HOR+(CAM_H-wz)*sc,sc,d:lz}; };
+  const quad=pts=>{ ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.closePath(); };
+  const lw=p=>Math.max(.8,Math.min(4,p.sc*.012));
+  const wallC=WALL_COLORS[houseData.wall%WALL_COLORS.length], floorC=FLOOR_COLORS[houseData.floor%FLOOR_COLORS.length];
+  ctx.fillStyle='#FFF8E7'; ctx.fillRect(0,0,W,HOR); ctx.fillStyle=floorC; ctx.fillRect(0,HOR,W,H-HOR);
+
+  // piso
+  for(let y=1;y<HR_H-1;y++)for(let x=1;x<HR_W-1;x++){
+    if(hrWall(x,y)) continue;
+    const q=[proj(x,y,0),proj(x+1,y,0),proj(x+1,y+1,0),proj(x,y+1,0)];
+    if(q.some(v=>!v)) continue;
+    ctx.fillStyle=(x+y)%2?floorC:shadeHex(floorC,.94); quad(q); ctx.fill();
+    ctx.strokeStyle='rgba(43,42,76,.15)'; ctx.lineWidth=1; ctx.stroke();
+  }
+  // caixas: paredes e móveis
+  const boxes=[];
+  for(let y=0;y<HR_H;y++)for(let x=0;x<HR_W;x++) if(hrWall(x,y)) boxes.push({x0:x,y0:y,x1:x+1,y1:y+1,h:1.05,side:wallC,top:shadeHex(wallC,.8),wall:true,tx:x,ty:y});
+  houseData.items.forEach(o=>{
+    const f=FURNITURE.find(z=>z.id===o.id); const [fw,fd]=itemFoot(o); const ins=f.inset||0;
+    boxes.push({x0:o.tx+ins,y0:o.ty+ins,x1:o.tx+fw-ins,y1:o.ty+fd-ins,h:f.h,side:f.side,top:f.top,f,o,rug:f.rug});
+  });
+  const t=houseTarget(), tf=FURNITURE[houseSel];
+  boxes.push({x0:t.tx+(tf.inset||0),y0:t.ty+(tf.inset||0),x1:t.tx+t.fw-(tf.inset||0),y1:t.ty+t.fd-(tf.inset||0),h:tf.h,side:t.ok?'rgba(126,217,87,.35)':'rgba(255,107,107,.35)',top:t.ok?'rgba(126,217,87,.45)':'rgba(255,107,107,.45)',ghost:true,rug:tf.rug});
+  boxes.forEach(b=>b.dist=((b.x0+b.x1)/2-camX)**2+((b.y0+b.y1)/2-camY)**2);
+  boxes.sort((a,b)=>(a.rug!==b.rug)?(a.rug?-1:1):b.dist-a.dist);
+  const inset=(p0,p1,p1t,p0t,u0,v0,u1,v1)=>{ const L=(a,b,k)=>({x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k}); const P=(u,v)=>L(L(p0t,p1t,u),L(p0,p1,u),v); return [P(u0,v0),P(u1,v0),P(u1,v1),P(u0,v1)]; };
+  boxes.forEach(b=>{
+    const A=proj(b.x0,b.y0,0),B=proj(b.x1,b.y0,0),C=proj(b.x1,b.y1,0),D=proj(b.x0,b.y1,0);
+    const At=proj(b.x0,b.y0,b.h),Bt=proj(b.x1,b.y0,b.h),Ct=proj(b.x1,b.y1,b.h),Dt=proj(b.x0,b.y1,b.h);
+    const face=(p0,p1,p1t,p0t,col,outer)=>{
+      if(!p0||!p1||!p1t||!p0t) return;
+      ctx.fillStyle=col; quad([p0,p1,p1t,p0t]); ctx.fill();
+      if(!b.ghost){ ctx.strokeStyle=INK; ctx.lineWidth=lw(p0); ctx.stroke(); }
+      if(b.wall && outer && b.h>1){
+        const onOuter=(b.ty===0&&b.tx%3===1)||(b.tx===HR_W-1&&b.ty%3===1)||(b.tx===0&&b.ty%3===2);
+        if(onOuter){ ctx.fillStyle='#8ED8FF'; quad(inset(p0,p1,p1t,p0t,.18,.2,.82,.65)); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=lw(p0)*.8; ctx.stroke(); }
+        if(b.tx===HR_DOOR.x&&b.ty===HR_DOOR.y){ ctx.fillStyle='#C98B5B'; quad(inset(p0,p1,p1t,p0t,.18,.12,.82,1)); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=lw(p0)*.8; ctx.stroke(); }
+      }
+      if(b.f && outer){
+        const dc=b.f.deco;
+        if(dc==='tela'){ ctx.fillStyle='#5BC0FF'; quad(inset(p0,p1,p1t,p0t,.1,.1,.9,.6)); ctx.fill(); }
+        if(dc==='livros'){ ['#FF6B6B','#FFD23F','#7ED957','#5BC0FF'].forEach((c2,i)=>{ ctx.fillStyle=c2; quad(inset(p0,p1,p1t,p0t,.1+i*.2,.12,.26+i*.2,.42)); ctx.fill(); ctx.fillStyle=['#B18CFF','#FF9F6B','#FF8FC7','#7ED957'][i]; quad(inset(p0,p1,p1t,p0t,.1+i*.2,.55,.26+i*.2,.85)); ctx.fill(); }); }
+        if(dc==='peixe'){ ctx.fillStyle='#5BC0FF'; quad(inset(p0,p1,p1t,p0t,.05,.25,.95,.95)); ctx.fill(); ctx.fillStyle='#FF9F6B'; quad(inset(p0,p1,p1t,p0t,.35,.5,.55,.65)); ctx.fill(); }
+        if(dc==='porta'){ ctx.strokeStyle=INK; ctx.lineWidth=lw(p0); const q=inset(p0,p1,p1t,p0t,0,.38,1,.38); ctx.beginPath(); ctx.moveTo(q[0].x,q[0].y); ctx.lineTo(q[1].x,q[1].y); ctx.stroke(); }
+      }
+    };
+    const inside = camX>b.x0&&camX<b.x1&&camY>b.y0&&camY<b.y1;
+    if(!inside){
+      const outY = camY>b.y1, outX = camX>b.x1;
+      if(camY>b.y1) face(D,C,Ct,Dt,shadeHex(b.side.startsWith('#')?b.side:'#FFFFFF',1),true); else if(camY<b.y0) face(A,B,Bt,At,b.side.startsWith('#')?shadeHex(b.side,.9):b.side,true);
+      if(camX>b.x1) face(B,C,Ct,Bt,b.side.startsWith('#')?shadeHex(b.side,.85):b.side,true); else if(camX<b.x0) face(A,D,Dt,At,b.side.startsWith('#')?shadeHex(b.side,.85):b.side,true);
+    }
+    if(At&&Bt&&Ct&&Dt){ ctx.fillStyle=b.top; quad([At,Bt,Ct,Dt]); ctx.fill(); if(!b.ghost){ ctx.strokeStyle=INK; ctx.lineWidth=lw(At); ctx.stroke(); } }
+    if(b.f && b.f.deco==='cama' && Dt && Ct){ ctx.fillStyle='#FFFFFF'; const p=[proj(b.x0+.15,b.y0+.15,b.h+.02),proj(b.x1-.15,b.y0+.15,b.h+.02),proj(b.x1-.15,b.y0+.6,b.h+.02),proj(b.x0+.15,b.y0+.6,b.h+.02)]; if(p.every(Boolean)){ quad(p); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=lw(p[0]); ctx.stroke(); } }
+    const bush=b.f&&b.f.bush, shade=b.f&&b.f.shade;
+    if(bush||shade){
+      const c=proj((b.x0+b.x1)/2,(b.y0+b.y1)/2,b.h+(bush?.22:.08));
+      if(c){ const r=c.sc*(bush?.28:.18); ctx.fillStyle=bush||shade; ctx.strokeStyle=INK; ctx.lineWidth=lw(c);
+        if(bush){ ctx.beginPath(); ctx.arc(c.x,c.y,r,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.3)'; ctx.beginPath(); ctx.arc(c.x-r*.3,c.y-r*.35,r*.35,0,Math.PI*2); ctx.fill(); }
+        else { ctx.beginPath(); ctx.moveTo(c.x-r,c.y+r*.5); ctx.lineTo(c.x-r*.5,c.y-r*.7); ctx.lineTo(c.x+r*.5,c.y-r*.7); ctx.lineTo(c.x+r,c.y+r*.5); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      }
+    }
+  });
+
   // personagem
-  ctx.save();
-  if(houseDino.facing<0){ ctx.translate(houseDino.x*2+48,0); ctx.scale(-1,1); }
-  if(selectedChar==='caveman') drawCavemanOn(ctx,houseDino.x,HOUSE_FLOOR,houseDino.frame,false,0.999);
-  else drawDinoOn(ctx,houseDino.x,HOUSE_FLOOR,houseDino.frame,false,1,{vx:houseDino.vx,vy:0,onGround:true,idleMs:0,npc:true});
-  ctx.restore();
+  if(selectedChar==='caveman') drawCavemanOn(ctx,W/2-20,HOUSE_DRAWER-14,hp.frame,false,0.72);
+  else drawDinoOn(ctx,W/2-20,HOUSE_DRAWER-14,hp.frame,false,0.72,{vx:hp.moving?3:0,vy:0,onGround:true,idleMs:0,npc:true});
 
   // barra do topo
   ctx.save(); ctx.textBaseline='middle';
@@ -5428,26 +5509,36 @@ function drawHouse(){
   btn(12,12,80,40,'Sair',()=>exitHouse(),'#FF8FC7');
   hudFont(700,18,'d'); const title=playerName?`Casa de ${playerName}`:'Sua casa'; const tw=ctx.measureText(title).width+28;
   hudPill(102,12,tw,40,'#FFF8E7'); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(title,116,33);
-  let bx=102+tw+10;
-  btn(bx,12,92,40,'Colocar',()=>{houseErase=false;},houseErase?'#FFFFFF':'#7ED957'); bx+=100;
-  btn(bx,12,88,40,'Apagar',()=>{houseErase=true;},houseErase?'#FF6B6B':'#FFFFFF'); bx+=96;
-  btn(W-12-80,12,80,40,'Desfazer',()=>houseUndoAction());
-  btn(W-12-80-88,12,80,40,'Chão',()=>{houseData.floor++;saveHouseData();},FLOOR_COLORS[(houseData.floor+1)%FLOOR_COLORS.length]);
-  btn(W-12-80-176,12,80,40,'Parede',()=>{houseData.wall++;saveHouseData();},WALL_COLORS[(houseData.wall+1)%WALL_COLORS.length]);
+  btn(W-12-90,12,90,40,'Desfazer',()=>houseUndoAction());
+  btn(W-12-90-86,12,78,40,'Chão',()=>{houseData.floor++;saveHouseData();},FLOOR_COLORS[(houseData.floor+1)%FLOOR_COLORS.length]);
+  btn(W-12-90-172,12,78,40,'Parede',()=>{houseData.wall++;saveHouseData();},WALL_COLORS[(houseData.wall+1)%WALL_COLORS.length]);
+  btn(W-12-90-252,12,72,40,'Girar',()=>{houseRot^=1;});
+  const room = hp.x<7 ? 'Sala' : 'Quarto';
+  hudFont(900,13); const rw=ctx.measureText(room).width+24; hudPill(102,60,rw,28,'#E6F6FF'); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(room,114,75);
+  if(houseMsg && performance.now()<houseMsg.until){
+    hudFont(900,14); const mw=ctx.measureText(houseMsg.text).width+30;
+    hudPill(W/2-mw/2,96,mw,34,houseMsg.bad?'#FFB3B3':'#7ED957'); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(houseMsg.text,W/2,114);
+  }
 
-  // gaveta de móveis
+  // gaveta
   const dy=HOUSE_DRAWER;
   ctx.fillStyle='#FFF8E7'; ctx.strokeStyle=INK; ctx.lineWidth=4;
-  ctx.beginPath(); ctx.moveTo(-4,H+4); ctx.lineTo(-4,dy+26); ctx.quadraticCurveTo(-4,dy,22,dy); ctx.lineTo(W-22,dy); ctx.quadraticCurveTo(W+4,dy,W+4,dy+26); ctx.lineTo(W+4,H+4); ctx.closePath(); ctx.fill(); ctx.stroke();
-  hudFont(900,13); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(`Móveis · ${houseData.items.length} na casa · clique na sala para colocar`,18,dy+18);
+  ctx.beginPath(); ctx.moveTo(-4,H+4); ctx.lineTo(-4,dy+20); ctx.quadraticCurveTo(-4,dy,20,dy); ctx.lineTo(W-20,dy); ctx.quadraticCurveTo(W+4,dy,W+4,dy+20); ctx.lineTo(W+4,H+4); ctx.closePath(); ctx.fill(); ctx.stroke();
+  hudFont(800,12); ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText('W/S andar · A/D virar · Espaço colocar · R girar · X apagar · Ctrl+Z desfazer · Esc sair',16,dy+14);
   FURNITURE.forEach((f,i)=>{
-    const sel=i===houseSel && !houseErase, cw=56, ch=62, cx=16+i*(cw+8), cy=dy+34-(sel?5:0);
-    ctx.fillStyle=INK; roundRect(ctx,cx,cy+(sel?6:4),cw,ch,14,true,false);
+    const sel=i===houseSel, cw=56, ch=58, cx=16+i*(cw+8), cy=dy+26-(sel?4:0);
+    ctx.fillStyle=INK; roundRect(ctx,cx,cy+(sel?5:3),cw,ch,14,true,false);
     ctx.fillStyle=sel?'#FFD23F':'#FFFFFF'; ctx.strokeStyle=INK; ctx.lineWidth=3; roundRect(ctx,cx,cy,cw,ch,14,true,true);
-    const k=Math.min(44/f.w,34/f.h,1);
-    ctx.save(); ctx.translate(cx+cw/2-f.w*k/2, cy+6+34); ctx.scale(k,k); f.draw(ctx,0,0); ctx.restore();
+    // miniatura: caixa isométrica simples
+    const ix=cx+cw/2, iy=cy+30, sw=f.rug?20:14, hh=Math.min(22,6+f.h*16);
+    ctx.lineWidth=2;
+    ctx.fillStyle=f.top; ctx.beginPath(); ctx.moveTo(ix,iy-hh-7); ctx.lineTo(ix+sw,iy-hh); ctx.lineTo(ix,iy-hh+7); ctx.lineTo(ix-sw,iy-hh); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=shadeHex(f.side,.9); ctx.beginPath(); ctx.moveTo(ix-sw,iy-hh); ctx.lineTo(ix,iy-hh+7); ctx.lineTo(ix,iy+7); ctx.lineTo(ix-sw,iy); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=shadeHex(f.side,.75); ctx.beginPath(); ctx.moveTo(ix+sw,iy-hh); ctx.lineTo(ix,iy-hh+7); ctx.lineTo(ix,iy+7); ctx.lineTo(ix+sw,iy); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if(f.bush||f.shade){ ctx.fillStyle=f.bush||f.shade; ctx.beginPath(); ctx.arc(ix,iy-hh-9,8,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
     hudFont(900,12); ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText(f.name.length>8?f.name.slice(0,7)+'.':f.name,cx+cw/2,cy+ch-8);
-    houseButtons.push({x:cx,y:cy,w:cw,h:ch,fn:()=>{houseSel=i;houseErase=false;}});
+    hudFont(700,11,'d'); ctx.fillStyle='#4A4968'; ctx.fillText(i<9?String(i+1):i===9?'0':'',cx+8,cy+9);
+    houseButtons.push({x:cx,y:cy,w:cw,h:ch,fn:()=>{houseSel=i;}});
   });
   ctx.restore();
 }
@@ -5813,7 +5904,7 @@ const FR_MAP=[
   [9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],
 ];
 const FR_BLDG={
-  10:{c:'#FFE0F0',d:'#FF8FC7',t:'#D94848',fl:2,house:true},
+  10:{c:'#FFE0F0',d:'#FF8FC7',t:'#D94848',fl:3,house:true},
   3:{c:'#A7DEFF',d:'#5BC0FF',t:'#2F8FD0',fl:5},
   4:{c:'#FFB3B3',d:'#FF6B6B',t:'#D94848',fl:3},
   5:{c:'#C3F0A0',d:'#7ED957',t:'#4DB85C',fl:4},
@@ -5927,6 +6018,7 @@ function pickGarageColor(kind,color){
 function applyHouse(){
   const c=loadCareer();
   FR_MAP[HOUSE_SPOT.ty][HOUSE_SPOT.tx] = c.house ? 10 : 2;
+  FR_MAP[HOUSE_SPOT.ty][HOUSE_SPOT.tx+1] = c.house ? 10 : 2;
 }
 function jobPay(n,label){
   totalCoins+=n; frJob.earned+=n; saveProgress();
@@ -6381,8 +6473,8 @@ function drawFreeRoam(){
         ctx.strokeStyle=INK; ctx.lineWidth=lw(pat); ctx.stroke();
         if(fog>.02){ctx.fillStyle=`rgba(${SKY},${fog})`;quad([pat,pbt,pct,pdt]);ctx.fill();}
       }
-      if(b.house && pat && dist<120){
-        const sp=proj(tx+.5,ty+.5,wh+0.35);
+      if(b.house && pat && dist<120 && tx===HOUSE_SPOT.tx){
+        const sp=proj(tx+1,ty+.5,wh+0.35);
         if(sp){
           const label = playerName ? `Casa de ${playerName}` : 'Sua casa';
           hudFont(900,Math.max(12,Math.min(16,sp.sc*.045)));
@@ -6455,6 +6547,7 @@ function drawFreeRoam(){
   const treeList = wrapX ? [-1,0,1].flatMap(k=>FR_TREES.map(([x,y])=>[x+FR_SZ*(Math.floor(camX/FR_SZ)+k),y])) : FR_TREES;
   treeList.forEach(([tx,ty])=>{
     if(Math.abs(ty+0.5-TRAIN_Y)<0.7) return;
+    if(FR_MAP[Math.floor(ty+.5)] && FR_MAP[Math.floor(ty+.5)][Math.floor(tx+.5)]===10) return;
     const dist2=(tx+0.5-camX)**2+(ty+0.5-camY)**2;if(dist2>250)return;
     const p0=proj(tx+0.5,ty+0.5,0),p1=proj(tx+0.5,ty+0.5,0.28),p2=proj(tx+0.5,ty+0.5,0.62);
     if(!p0||!p1||!p2)return;
