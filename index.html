@@ -150,13 +150,14 @@
     background:var(--white);color:var(--ink);font-family:var(--font-ui);font-size:var(--fs-min);line-height:1.6;padding:10px;cursor:pointer;
     box-shadow:var(--shadow-1);}
   .shop-item:hover{transform:translateY(-2px);}
-  .shop-item.bought{opacity:.48;cursor:default;}
+  .shop-item.bought{background:var(--sun);cursor:default;}
+  .shop-item b{display:block;font-size:14px;margin-bottom:2px;}
   .story-art{width:100%;height:90px;border-radius:12px;background:rgba(255,255,255,.4);border:var(--stroke) solid var(--ink);}
-  .wardrobe-card{max-width:380px;padding:12px;gap:6px;}
+  .wardrobe-card{max-width:760px;padding:12px;gap:6px;}
   .wardrobe-card h2{font-size:22px !important;}
   .wardrobe-card .sub{font-size:var(--fs-min);line-height:1.4;}
   .wardrobe-row{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;width:100%;}
-  .skin-card{width:60px;border:var(--stroke) solid var(--ink);border-radius:10px;background:var(--white);
+  .skin-card{width:92px;border:var(--stroke) solid var(--ink);border-radius:10px;background:var(--white);
     color:var(--ink);font-family:var(--font-ui);font-size:var(--fs-min);line-height:1.2;padding:4px;cursor:pointer;text-align:center;
     box-shadow:var(--shadow-1);}
   .skin-card canvas{width:32px;height:24px;margin:0 auto 2px;border-radius:4px;background:rgba(142,216,255,.2);}
@@ -184,6 +185,15 @@
 
   .keycap{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;background:var(--white);
     border:var(--stroke) solid var(--ink);border-radius:9px;box-shadow:0 3px 0 var(--ink);font:700 13px var(--font-display);color:var(--ink);vertical-align:middle;}
+
+  .tag{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:1px 8px 1px 2px;background:var(--white);border:2px solid var(--ink);
+    border-radius:999px;font:900 12px var(--font-ui);color:var(--ink);white-space:nowrap;}
+  .tag .tag-dot{width:18px;height:18px;border-radius:50%;background:var(--sun);border:2px solid var(--ink);display:inline-flex;align-items:center;justify-content:center;font:700 11px var(--font-display);}
+  .tag svg{display:block;}
+  .ocard.wide{max-width:760px;}
+  .map-node b{display:block;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
+  .row-card{display:flex;align-items:center;gap:10px;width:100%;background:var(--white);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;text-align:left;}
 
   /* ── CENA 800x450 (menu e mapa) ── */
   .scene{position:relative;width:800px;height:450px;color:var(--ink);font-family:var(--font-ui);}
@@ -404,14 +414,14 @@ const EDITOR_BTYPES = [
 const I18N = {
   pt: {
     play:'Jogar', back:'Voltar', start:'Começar', continue:'Continuar', nextPhase:'Próxima Fase', newGame:'Novo Jogo', playAgain:'Jogar Novamente',
-    tagline:'Colete os ovos 🥚 · Elimine inimigos · Atravesse o portal',
+    tagline:'Colete os ovos · Elimine inimigos · Atravesse o portal',
     controls1:'<b>↑ W Espaço</b> — Pular (duplo) &nbsp;·&nbsp; <b>↓ S</b> — Agachar',
     controls2:'<b>← A</b> — Voltar &nbsp;·&nbsp; <b>→ D</b> — Avançar',
-    controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fogo (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Clava (Caveman)',
+    controls3:'<b>Z / X</b> — Fogo (Dino) &nbsp;·&nbsp; <b>Z / X</b> — Clava (Caveman)',
     chooseCharacter:'Escolha seu personagem', agile:'Ágil · Pulo duplo', fire:'fogo', robust:'Robusto · Clava', attack:'atacar',
     difficulty:'DIFICULDADE', easy:'FÁCIL', normal:'NORMAL', hard:'DIFÍCIL',
-    gameOver:'💀 Game Over', betterLuck:'Melhor sorte na próxima!', youDied:'☠ Você morreu!', livesLeft:'Vidas restantes',
-    phaseComplete:p=>`✅ Fase ${p} Completa!`, timeBonus:(s,b)=>`Tempo restante: ${s}s · Bônus: +${b} pts`,
+    gameOver:'Game Over', betterLuck:'Melhor sorte na próxima!', youDied:'Você morreu!', livesLeft:'Vidas restantes',
+    phaseComplete:p=>`Fase ${p} Completa!`, timeBonus:(s,b)=>`Tempo restante: ${s}s · Bônus: +${b} pts`,
     paused:'PAUSADO', pauseHint:'Pressione P ou clique ⏸ para continuar',
     quitTitle:'Sair para o menu principal?', quitBody:'O progresso será perdido.', language:'Idioma',
     phaseHud:'FASE', ptsHud:'PTS', enter:'ENTRAR', collectEggs:'COLETE OS OVOS',
@@ -442,14 +452,14 @@ const I18N = {
   },
   en: {
     play:'Play', back:'Back', start:'Start', continue:'Continue', nextPhase:'Next Phase', newGame:'New Game', playAgain:'Play Again',
-    tagline:'Collect eggs 🥚 · Defeat enemies · Cross the portal',
+    tagline:'Collect eggs · Defeat enemies · Cross the portal',
     controls1:'<b>↑ W Space</b> — Jump (double) &nbsp;·&nbsp; <b>↓ S</b> — Duck',
     controls2:'<b>← A</b> — Move left &nbsp;·&nbsp; <b>→ D</b> — Move right',
-    controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fire (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Club (Caveman)',
+    controls3:'<b>Z / X</b> — Fire (Dino) &nbsp;·&nbsp; <b>Z / X</b> — Club (Caveman)',
     chooseCharacter:'Choose your character', agile:'Agile · Double jump', fire:'fire', robust:'Strong · Club', attack:'attack',
     difficulty:'DIFFICULTY', easy:'EASY', normal:'NORMAL', hard:'HARD',
-    gameOver:'💀 Game Over', betterLuck:'Better luck next time!', youDied:'☠ You died!', livesLeft:'Lives left',
-    phaseComplete:p=>`✅ Phase ${p} Complete!`, timeBonus:(s,b)=>`Time left: ${s}s · Bonus: +${b} pts`,
+    gameOver:'Game Over', betterLuck:'Better luck next time!', youDied:'You died!', livesLeft:'Lives left',
+    phaseComplete:p=>`Phase ${p} Complete!`, timeBonus:(s,b)=>`Time left: ${s}s · Bonus: +${b} pts`,
     paused:'PAUSED', pauseHint:'Press P or click ⏸ to continue',
     quitTitle:'Exit to main menu?', quitBody:'Progress will be lost.', language:'Language',
     phaseHud:'PHASE', ptsHud:'PTS', enter:'ENTER', collectEggs:'COLLECT EGGS',
@@ -480,14 +490,14 @@ const I18N = {
   },
   es: {
     play:'Jugar', back:'Volver', start:'Empezar', continue:'Continuar', nextPhase:'Siguiente Fase', newGame:'Nuevo Juego', playAgain:'Jugar de Nuevo',
-    tagline:'Recoge huevos 🥚 · Elimina enemigos · Cruza el portal',
+    tagline:'Recoge huevos · Elimina enemigos · Cruza el portal',
     controls1:'<b>↑ W Espacio</b> — Saltar (doble) &nbsp;·&nbsp; <b>↓ S</b> — Agacharse',
     controls2:'<b>← A</b> — Volver &nbsp;·&nbsp; <b>→ D</b> — Avanzar',
-    controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fuego (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Garrote (Caveman)',
+    controls3:'<b>Z / X</b> — Fuego (Dino) &nbsp;·&nbsp; <b>Z / X</b> — Garrote (Caveman)',
     chooseCharacter:'Elige tu personaje', agile:'Ágil · Doble salto', fire:'fuego', robust:'Fuerte · Garrote', attack:'atacar',
     difficulty:'DIFICULTAD', easy:'FÁCIL', normal:'NORMAL', hard:'DIFÍCIL',
-    gameOver:'💀 Game Over', betterLuck:'¡Mejor suerte la próxima!', youDied:'☠ ¡Has muerto!', livesLeft:'Vidas restantes',
-    phaseComplete:p=>`✅ Fase ${p} Completa!`, timeBonus:(s,b)=>`Tiempo restante: ${s}s · Bono: +${b} pts`,
+    gameOver:'Game Over', betterLuck:'¡Mejor suerte la próxima!', youDied:'¡Has muerto!', livesLeft:'Vidas restantes',
+    phaseComplete:p=>`Fase ${p} Completa!`, timeBonus:(s,b)=>`Tiempo restante: ${s}s · Bono: +${b} pts`,
     paused:'PAUSADO', pauseHint:'Presiona P o haz clic en ⏸ para continuar',
     quitTitle:'¿Salir al menú principal?', quitBody:'Se perderá el progreso.', language:'Idioma',
     phaseHud:'FASE', ptsHud:'PTS', enter:'ENTRAR', collectEggs:'RECOGE LOS HUEVOS',
@@ -601,6 +611,14 @@ function unlockAchievement(id){
   if(a) achieveNotifQueue.push(a);
 }
 
+function coinTag(n){ return `<span class="tag"><span class="tag-dot">$</span>${n}</span>`; }
+function checkTag(label){ return `<span class="tag" style="padding-left:6px"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>${label}</span>`; }
+function lockTag(label){ return `<span class="tag" style="padding-left:6px"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2B2A4C" stroke-width="2.8" stroke-linecap="round"><path d="M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3"/></svg>${label}</span>`; }
+function heartsHTML(n,max=3){
+  let h=''; for(let i=0;i<Math.max(max,n);i++) h+=`<svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="${i<n?'#FF6B6B':'#E4E2EE'}" stroke="#2B2A4C" stroke-width="2.4" stroke-linejoin="round"/></svg>`;
+  return `<span role="img" aria-label="${n} vidas" style="display:inline-flex;gap:4px">${h}</span>`;
+}
+
 function renderDiary(){
   const ov = document.getElementById('overlay');
   const rows = phaseDiary.length ? phaseDiary.map(e=>`
@@ -626,7 +644,7 @@ function renderAchievements(){
   const rows = ACHIEVEMENTS.map(a=>{
     const got = unlockedAchievements.has(a.id);
     return `<div style="display:flex;align-items:center;gap:10px;width:100%;background:${got?'var(--sun)':'var(--white)'};border:3px ${got?'solid':'dashed'} var(--ink);border-radius:14px;padding:8px 12px;opacity:${got?1:.7};">
-      <span style="font-size:20px;">${a.icon}</span>
+      <span style="width:40px;height:40px;border-radius:12px;border:3px solid var(--ink);background:${got?'var(--white)':'#EDEBF5'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${svgIcon(got?ICONS.star:ICONS.lock,22)}</span>
       <div style="text-align:left;flex:1;">
         <div style="font-size:15px;font-weight:900;color:var(--ink);">${a.name}</div>
         <div style="font-size:12px;font-weight:700;color:var(--ink-soft);">${a.desc}</div>
@@ -634,11 +652,11 @@ function renderAchievements(){
       ${got?'<span style="font-size:12px;font-weight:900;color:var(--ink);">Feita</span>':''}
     </div>`;
   }).join('');
-  ov.innerHTML = `<div class="ocard">
-    <h2>🏅 Conquistas</h2>
+  ov.innerHTML = `<div class="ocard wide">
+    <h2>Conquistas</h2>
     <p class="sub">${unlockedAchievements.size}/${ACHIEVEMENTS.length} desbloqueadas</p>
     <div class="divider"></div>
-    ${rows}
+    <div class="two-col">${rows}</div>
     <div class="divider"></div>
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
   </div>`;
@@ -1404,24 +1422,21 @@ function askPlayerName(){
 
 function showHowToPlay(){
   const ov = document.getElementById('overlay');
+  const k = t=>`<span class="keycap">${t}</span>`;
   ov.innerHTML = `<div class="ocard">
-    <h2>🎮 Como Jogar</h2>
+    <h2>Como Jogar</h2>
     <div class="divider"></div>
-    <div class="khint" style="text-align:left;width:100%;">
-      <b>⌨️ Teclado:</b><br>
-      ← → &nbsp; Andar<br>
-      ↑ / W / Espaço &nbsp; Pular (2x = pulo duplo!)<br>
-      ↓ / S &nbsp; Abaixar<br>
-      Z / X / F &nbsp; Atacar<br>
-      Q / E &nbsp; Usar power-ups<br>
-      M &nbsp; Música ligada/desligada<br>
-      P &nbsp; Pausar<br><br>
-      <b>📱 Celular:</b><br>
-      Use os botões ◀ ▶ ▼ A B na tela!<br><br>
-      <b>🎯 Objetivo:</b><br>
-      Colete ovos 🥚, derrote inimigos,<br>
-      alcance o portal no fim da fase!<br>
-      Cuide da vida ❤️ e junte moedas 💰
+    <div class="khint" style="text-align:left;width:100%;line-height:2.5">
+      <b>Teclado</b><br>
+      ${k('←')} ${k('→')} andar<br>
+      ${k('↑')} ${k('W')} ${k('Espaço')} pular (duas vezes = pulo duplo)<br>
+      ${k('↓')} ${k('S')} abaixar &nbsp; ${k('Z')} ${k('X')} ${k('F')} atacar<br>
+      ${k('Q')} ${k('E')} usar power-ups &nbsp; ${k('M')} música &nbsp; ${k('P')} pausar<br>
+      <b>Celular</b><br>
+      Use as setas, Pular e Fogo na tela.<br>
+      <b>Objetivo</b><br>
+      Colete os ovos, derrote inimigos e alcance o portal no fim da fase.
+      Cuide da vida e junte moedas.
     </div>
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
   </div>`;
@@ -1468,15 +1483,15 @@ function renderOnlineLocal(){
   ov.classList.remove('win-mode');
   ov.style.display='flex';
   ov.innerHTML = `<div class="ocard">
-    <h2>🌐 Dino Online Local</h2>
+    <h2>Dino Online Local</h2>
     <p class="sub">Desafios para compartilhar sem conta, sem login e sem salvar online.</p>
     <div class="map-grid">
-      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(daily)})'><b>📅 ${daily.title}</b><br>Fase ${daily.phase} · ${daily.difficulty} · Código ${challengeCode(daily)}</button>
-      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(weekly)})'><b>🎪 ${weekly.title}</b><br>Fase ${weekly.phase} · +ovos · Código ${challengeCode(weekly)}</button>
-      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(lightning)})'><b>⚡ ${lightning.title}</b><br>Fase curta · mais pontos</button>
-      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(ghostChallenge())})'><b>👻 Corrida fantasma</b><br>${ghostText}</button>
-      <button class="map-node unlocked" onclick="showLeaderboard()"><b>🏆 Placar local</b><br>Recordes neste navegador</button>
-      <button class="map-node unlocked" onclick="renderChallengeCode()"><b>🔗 Código de desafio</b><br>Gere um código para amigos repetirem</button>
+      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(daily)})'><b>${daily.title}</b><br>Fase ${daily.phase} · ${daily.difficulty} · Código ${challengeCode(daily)}</button>
+      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(weekly)})'><b>${weekly.title}</b><br>Fase ${weekly.phase} · +ovos · Código ${challengeCode(weekly)}</button>
+      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(lightning)})'><b>${lightning.title}</b><br>Fase curta · mais pontos</button>
+      <button class="map-node unlocked" onclick='startOnlineChallenge(${JSON.stringify(ghostChallenge())})'><b>Corrida fantasma</b><br>${ghostText}</button>
+      <button class="map-node unlocked" onclick="showLeaderboard()"><b>Placar local</b><br>Recordes neste navegador</button>
+      <button class="map-node unlocked" onclick="renderChallengeCode()"><b>Código de desafio</b><br>Gere um código para amigos repetirem</button>
     </div>
     <button class="btn sec" onclick="renderMainMenu()">← ${tr('back')}</button>
   </div>`;
@@ -1486,10 +1501,10 @@ function renderChallengeCode(){
   const cfg = dailyChallenge();
   const code = challengeCode(cfg);
   document.getElementById('overlay').innerHTML = `<div class="ocard">
-    <h2>🔗 Código de desafio</h2>
+    <h2>Código de desafio</h2>
     <p class="score-big">${code}</p>
     <p class="sub">Mesmo sem internet, outro jogador pode escolher o desafio do dia e comparar o código.</p>
-    <button class="btn" onclick='startOnlineChallenge(${JSON.stringify(cfg)})'>▶ Jogar código</button>
+    <button class="btn" onclick='startOnlineChallenge(${JSON.stringify(cfg)})'>Jogar código</button>
     <button class="btn sec" onclick="renderOnlineLocal()">← ${tr('back')}</button>
   </div>`;
 }
@@ -1510,9 +1525,9 @@ function showLeaderboard(){
   let lb = JSON.parse(localStorage.getItem('dinogame_leaderboard') || '[]');
   let html = lb.length ? lb.map((entry, i) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:var(--white);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;font-size:15px;font-weight:900;color:var(--ink);"><span>${i+1}. ${entry.name||'???'} — ${entry.score} pts</span><span style="color:var(--ink-soft);font-size:12px;font-weight:700;">${entry.mode || 'Normal'} · Fase ${entry.phase} · ${entry.date}</span></div>`).join('') : '<p class="sub">Nenhum recorde ainda.</p>';
   ov.innerHTML = `<div class="ocard">
-    <h2>🏆 Recordes</h2>
+    <h2>Recordes</h2>
     <div class="divider"></div>
-    <div style="width:100%;max-width:300px;margin:10px 0;">
+    <div style="width:100%;display:flex;flex-direction:column;gap:6px;margin:4px 0;">
       ${html}
     </div>
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
@@ -1655,12 +1670,12 @@ function renderBase(){
   const rare = discoveredEggs.size;
   const babies = ['rainbow','fossil','ghost','dragon'].filter(k=>discoveredEggs.has(k)).length;
   document.getElementById('overlay').innerHTML = `<div class="ocard">
-    <h2>🏠 Base Dino</h2>
-    <p class="sub">${tr('coins')}: ${totalCoins} · ${tr('petLevel')}: ${petLevel} · Ovos raros: ${rare}</p>
+    <h2>Base Dino</h2>
+    <p class="sub">${coinTag(totalCoins)} &nbsp; ${tr('petLevel')}: ${petLevel} · Ovos raros: ${rare}</p>
     <div class="map-grid">
-      <button class="map-node unlocked" onclick="renderNest()"><b>🥚 Ninho dos ovos</b><br>${rare} ovos raros salvos</button>
-      <button class="map-node unlocked" onclick="renderAlbum()"><b>🦕 Bebês dinossauros</b><br>${babies} bebês descobertos</button>
-      <button class="map-node unlocked" onclick="renderShop()"><b>⬆ Melhorias</b><br>Pulo, velocidade, tempo e resistência</button>
+      <button class="map-node unlocked" onclick="renderNest()"><b>Ninho dos ovos</b><br>${rare} ovos raros salvos</button>
+      <button class="map-node unlocked" onclick="renderAlbum()"><b>Bebês dinossauros</b><br>${babies} bebês descobertos</button>
+      <button class="map-node unlocked" onclick="renderShop()"><b>Melhorias</b><br>Pulo, velocidade, tempo e resistência</button>
     </div>
     <button class="btn sec" onclick="renderWorldMap()">← ${tr('back')}</button>
   </div>`;
@@ -1670,10 +1685,10 @@ function renderNest(){
   const eggNames = {gold:'Dourado',blue:'Azul',red:'Vermelho',rainbow:'Arco-íris',fossil:'Fóssil',ghost:'Fantasma',dragon:'Dragão'};
   const cards = Object.keys(eggNames).map(k=>{
     const ok = discoveredEggs.has(k);
-    return `<button class="map-node ${ok?'unlocked':'locked'}"><b>${ok?'🥚 '+eggNames[k]:'???'}</b><br>${ok?'Salvo no ninho':tr('locked')}</button>`;
+    return `<button class="map-node ${ok?'unlocked':'locked'}"><b>${ok?eggNames[k]:'???'}</b>${ok?checkTag('Salvo no ninho'):lockTag(tr('locked'))}</button>`;
   }).join('');
   document.getElementById('overlay').innerHTML = `<div class="ocard">
-    <h2>🥚 Ninho dos ovos</h2>
+    <h2>Ninho dos ovos</h2>
     <div class="map-grid">${cards}</div>
     <button class="btn sec" onclick="renderBase()">← ${tr('back')}</button>
   </div>`;
@@ -1708,14 +1723,14 @@ function launchPhase(p){
 function renderShop(){
   const ov = document.getElementById('overlay');
   const item = (id,title,desc,cost,bought)=>`<button class="shop-item ${bought?'bought':''}" onclick="buyShopItem('${id}')">
-    <b>${title}</b><br>${desc}<br>${bought?'✅ '+tr('bought'):'💰 '+cost}
+    <b>${title}</b>${desc}<br>${bought?checkTag(tr('bought')):coinTag(cost)}
   </button>`;
   const levelItem = (id,title,desc,cost,level,max)=>`<button class="shop-item ${level>=max?'bought':''}" onclick="buyShopItem('${id}')">
-    <b>${title}</b><br>${desc}<br>${level>=max?'✅ MAX':'Nv '+level+'/'+max+' · 💰 '+cost}
+    <b>${title}</b>${desc}<br>${level>=max?checkTag('Máximo'):`<span class="tag" style="padding-left:8px">Nível ${level}/${max}</span> ${coinTag(cost)}`}
   </button>`;
-  ov.innerHTML = `<div class="ocard">
+  ov.innerHTML = `<div class="ocard wide">
     <h2>${tr('shop')}</h2>
-    <p class="sub">${tr('coins')}: ${totalCoins}</p>
+    <p class="sub">${coinTag(totalCoins)}</p>
     <div class="shop-row">
       ${item('petRange',tr('shopPet'),tr('shopPetDesc'),6,shopUpgrades.petRange>=3)}
       ${item('extraLife',tr('shopLife'),tr('shopLifeDesc'),10,shopUpgrades.extraLife)}
@@ -1765,28 +1780,26 @@ function renderWardrobe(){
     const action = owned ? `${tr('select')}` : `${tr('price')}: ${s.cost}`;
     return `<button class="skin-card ${selected?'selected':''}" onclick="chooseSkin('${char}','${s.id}')">
       <canvas id="skin-${char}-${s.id}" width="48" height="36"></canvas>
-      <b>${s.name}</b><br>${selected?'✅ '+tr('selected'):owned?action:'💰 '+action}
+      <b>${s.name}</b><br>${selected?checkTag('Em uso'):owned?action:coinTag(s.cost)}
     </button>`;
   }).join('');
   const accessoryCards = char => ACCESSORIES[char].map(a=>{
     const owned = ownedAccessories[char].has(a.id);
     const active = selectedAccessory[char].includes(a.id);
-    const icon = {none:'—',sunglasses:'🕶',glasses:'👓',cap:'🧢',headphones:'🎧',bow:'🎀'}[a.id] || '•';
-    const label = active ? '✅ Equipado' : owned ? tr('select') : '💰 '+a.cost;
+    const label = active ? checkTag('Em uso') : owned ? tr('select') : coinTag(a.cost);
     return `<button class="skin-card ${active?'selected':''}" onclick="chooseAccessory('${char}','${a.id}')">
-      <span style="font-size:12px;display:block;line-height:16px">${icon}</span>
       <b>${a.name}</b><br>${label}
     </button>`;
   }).join('');
-  ov.innerHTML = `<div class="ocard wardrobe-card">
-    <h2>👕 ${tr('wardrobe')}</h2>
-    <p class="sub">💰 ${tr('coins')}: ${totalCoins}</p>
+  ov.innerHTML = `<div class="ocard wardrobe-card wide">
+    <h2>${tr('wardrobe')}</h2>
+    <p class="sub">${coinTag(totalCoins)}</p>
     <div class="divider"></div>
 
-    <p class="sub" style="color:#4ecdc4">DINOSAURO</p>
+    <p class="sub" style="color:var(--ink);font-weight:900">DINOSSAURO</p>
     <div style="display:flex;gap:5px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-        <canvas id="preview-full-dino" width="58" height="48" style="border-radius:6px;background:rgba(78,205,196,.08);border:1px solid rgba(78,205,196,.2);"></canvas>
+        <canvas id="preview-full-dino" width="58" height="48" style="border-radius:12px;background:#E6F6FF;border:3px solid var(--ink);"></canvas>
         <span style="font-size:12px;font-weight:800;color:var(--ink);">Preview</span>
       </div>
       <div style="flex:1;min-width:130px;">
@@ -1797,10 +1810,10 @@ function renderWardrobe(){
     </div>
     <div class="divider"></div>
 
-    <p class="sub" style="color:#fbbf24">CAVEMAN</p>
+    <p class="sub" style="color:var(--ink);font-weight:900">CAVEMAN</p>
     <div style="display:flex;gap:5px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-        <canvas id="preview-full-caveman" width="58" height="48" style="border-radius:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);"></canvas>
+        <canvas id="preview-full-caveman" width="58" height="48" style="border-radius:12px;background:#FFF3C4;border:3px solid var(--ink);"></canvas>
         <span style="font-size:12px;font-weight:800;color:var(--ink);">Preview</span>
       </div>
       <div style="flex:1;min-width:130px;">
@@ -1811,7 +1824,7 @@ function renderWardrobe(){
     </div>
     <div class="divider"></div>
 
-    <p class="sub">PETS</p>
+    <p class="sub" style="color:var(--ink);font-weight:900">PETS</p>
     <div class="wardrobe-row">${skinCards('baby')}${skinCards('saber')}</div>
     <button class="btn sec" onclick="stopWardrobeAnimation();renderWorldMap()">← ${tr('back')}</button>
   </div>`;
@@ -1895,8 +1908,8 @@ function renderWardrobePreviews(){
       if(!cvs) return;
       const c = cvs.getContext('2d');
       c.clearRect(0,0,cvs.width,cvs.height);
-      c.fillStyle='rgba(78,205,196,.10)';
-      roundRect(c,4,4,cvs.width-8,cvs.height-8,8,true,false);
+      c.fillStyle='#E6F6FF';
+      roundRect(c,2,2,cvs.width-4,cvs.height-4,8,true,false);
       const oldSkin = selectedSkin[char];
       const oldAcc  = selectedAccessory[char];
       selectedSkin[char] = s.id;
@@ -1915,7 +1928,7 @@ function renderAlbum(){
   const names = {ptero:'Ptero',trex:'T-Rex',anky:'Anky',raptor:'Raptor'};
   const cards = ['ptero','trex','anky','raptor'].map(k=>{
     const ok = discoveredCreatures.has(k);
-    return `<button class="map-node album-node ${ok?'unlocked':'locked'}"><b>${ok?names[k]:'???'}</b><br>${ok?'✅':'🔒'} ${ok?tr('album'):tr('locked')}</button>`;
+    return `<button class="map-node album-node ${ok?'unlocked':'locked'}"><b>${ok?names[k]:'???'}</b>${ok?checkTag(tr('album')):lockTag(tr('locked'))}</button>`;
   }).join('');
   const eggNames = {gold:'Ovo Dourado',blue:'Ovo Azul',red:'Ovo Vermelho',rainbow:'Ovo Arco-íris',fossil:'Ovo Fóssil',ghost:'Ovo Fantasma',dragon:'Ovo Dragão'};
   const eggStories = {gold:'Brilha quando sente coragem.',blue:'Carrega tempo congelado.',red:'Protege quem está em perigo.',rainbow:'Nasce quando o pet confia em você.',fossil:'Guarda memória antiga.',ghost:'Some e volta sorrindo.',dragon:'Solta faíscas antes de nascer.'};
@@ -1994,7 +2007,7 @@ function showStoryBetweenPhases(){
     <h2>${place}</h2>
     <canvas class="story-art" id="storyCanvas" width="420" height="110"></canvas>
     <p class="sub">${tr('storyNext', phase)}<br>${tr('storyBody')}</p>
-    <button class="btn" onclick="launchPhase(${phase})">▶ ${tr('continue')}</button>
+    <button class="btn" onclick="launchPhase(${phase})">${tr('continue')}</button>
     <button class="btn sec" onclick="renderWorldMap()">${tr('worldMap')}</button>
   </div>`;
   setTimeout(drawStoryCanvas,20);
@@ -2031,12 +2044,12 @@ function saveScore(){
 function finishOnlineChallenge(){
   if(!onlineChallenge) return '';
   const seconds = Math.ceil(onlineRunFrames / 60);
-  let msg = `<p class="sub" style="color:#a5f3fc">${onlineChallenge.title} · ${seconds}s · Código ${challengeCode(onlineChallenge)}</p>`;
+  let msg = `<p class="sub" style="color:var(--ink);font-weight:900">${onlineChallenge.title} · ${seconds}s · Código ${challengeCode(onlineChallenge)}</p>`;
   if(onlineChallenge.ghost){
     const old = Number(localStorage.getItem('dinogame_ghost_best') || 0);
     if(!old || onlineRunFrames < old){
       localStorage.setItem('dinogame_ghost_best', String(onlineRunFrames));
-      msg += `<p class="sub" style="color:#ffe66d">Novo melhor fantasma local!</p>`;
+      msg += `<p class="sub" style="color:var(--ink);font-weight:900">Novo melhor fantasma local!</p>`;
     }
   }
   saveScore();
@@ -2047,25 +2060,24 @@ function showOverlay(type){
   const ov = document.getElementById('overlay');
   ov.style.display='flex';
   ov.classList.remove('win-mode');
-  const hearts = '♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,3-lives));
   if(type==='gameover'){
     saveScore();
     const isNewRecord = score > 0 && score >= currentHighScore;
     const recordLine = isNewRecord
       ? `<p class="sub" style="color:var(--ink);font-size:16px;font-weight:900">Novo recorde!</p>`
-      : (currentHighScore > 0 ? `<p class="sub" style="color:#4a6070">Recorde: ${currentHighScore} pts</p>` : '');
+      : (currentHighScore > 0 ? `<p class="sub">Recorde: ${currentHighScore} pts</p>` : '');
     ov.innerHTML=card(`<h2>${tr('gameOver')}</h2><div class="divider"></div>
       <p class="sub">${tr('betterLuck')}</p>
       ${recordLine}
-      <span class="score-big" style="font-size:${isNewRecord?'26px':'20px'};${isNewRecord?'color:#ffe66d;text-shadow:0 0 20px rgba(255,230,109,.8)':''}">${score} pts</span>
-      <button class="btn" onclick="showCharSelect()">▶ ${tr('newGame')}</button>
+      <span class="score-big" style="${isNewRecord?'background:var(--sun);border:3px solid var(--ink);border-radius:999px;padding:2px 18px':''}">${score} pts</span>
+      <button class="btn" onclick="showCharSelect()">${tr('newGame')}</button>
       <p class="credits">${tr('creditsText')}</p>`);
     state='dead';
   } else if(type==='dead'){
     ov.innerHTML=card(`<h2>${tr('youDied')}</h2><div class="divider"></div>
       <p class="sub">${tr('livesLeft')}</p>
-      <span style="font-size:18px;letter-spacing:4px">${hearts}</span>
-      <button class="btn" onclick="restartPhase()">▶ ${tr('continue')}</button>`);
+      ${heartsHTML(lives)}
+      <button class="btn" onclick="restartPhase()">${tr('continue')}</button>`);
     state='dead';
   } else if(type==='phaseclear'){
     const secsLeft = Math.ceil(phaseFramesLeft/60);
@@ -2078,21 +2090,21 @@ function showOverlay(type){
     ov.innerHTML=card(`<h2>${tr('phaseComplete', phase)}</h2><div class="divider"></div>
       <p class="sub">${tr('timeBonus', secsLeft, timeBonus)}</p>
       ${onlineMsg}
-      <p class="sub" style="color:#94a3b8">${diffLabel}</p>
+      <p class="sub"><span class="tag" style="padding-left:8px">${diffLabel}</span></p>
       <span class="score-big">${score} pts</span>
-      <button class="btn" onclick="${wasOnline?'renderOnlineLocal()':'nextPhase()'}">▶ ${wasOnline?'Online Local':tr('nextPhase')}</button>`);
+      <button class="btn" onclick="${wasOnline?'renderOnlineLocal()':'nextPhase()'}">${wasOnline?'Online Local':tr('nextPhase')}</button>`);
     state='phaseclear';
   } else if(type==='secretclear'){
     totalCoins += 8; score += 800; saveProgress();
-    ov.innerHTML=card(`<h2>🌀 Fase secreta completa!</h2><div class="divider"></div>
-      <p class="sub">Bônus: +8 moedas · +800 pts</p>
+    ov.innerHTML=card(`<h2>Fase secreta completa!</h2><div class="divider"></div>
+      <p class="sub">Bônus: ${coinTag('+8')} · +800 pts</p>
       <span class="score-big">${score} pts</span>
-      <button class="btn" onclick="finishSecretPhase()">▶ ${tr('continue')}</button>`);
+      <button class="btn" onclick="finishSecretPhase()">${tr('continue')}</button>`);
     state='phaseclear';
   } else if(type==='win'){
     saveScore();
     ov.classList.add('win-mode');
-    ov.innerHTML=`<button class="btn" onclick="showCharSelect()">▶ ${tr('playAgain')}</button><p class="credits" style="margin-top:8px">${tr('creditsText')}</p>`;
+    ov.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><button class="btn" onclick="showCharSelect()">${tr('playAgain')}</button><p class="credits" style="background:var(--white);border:2px solid var(--ink);border-radius:999px;padding:2px 12px">${tr('creditsText')}</p></div>`;
     state='win';
     winTimer=0;
     return;
