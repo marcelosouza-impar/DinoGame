@@ -364,6 +364,7 @@ let state = 'menu';
 let score = 0, lives = 3, phase = 1;
 const MAX_PHASES = 7;
 const SECRET_PHASE = 50;
+const PASSEIO_PHASE = 60;
 let scrollX = 0;
 let currentLen = 4000;
 let portalX = 0;
@@ -1173,14 +1174,15 @@ const THEMES = [
 // ─── PHASE GENERATION ─────────────────────────────────────────────────────────
 function generatePhase(p){
   const secret = p === SECRET_PHASE;
+  const passeio = p === PASSEIO_PHASE;
   const cp = (p === 99 && customPhaseConfig) ? customPhaseConfig : null;
   if(cp){ currentTheme = THEMES[cp.theme]; }
-  else { currentTheme = secret ? THEMES[3] : THEMES[(p-1) % THEMES.length]; }
-  let len = cp ? (cp.platforms ? 5000 : 3200) : (secret ? 2600 : 4000 + (p-1)*800);
+  else { currentTheme = secret ? THEMES[3] : passeio ? THEMES[0] : THEMES[(p-1) % THEMES.length]; }
+  let len = passeio ? 120000 : cp ? (cp.platforms ? 5000 : 3200) : (secret ? 2600 : 4000 + (p-1)*800);
   if(onlineChallenge && onlineChallenge.short) len = Math.floor(len * .72);
   currentLen = len;
-  portalX = len - 220;
-  secretPortalX = secret ? 0 : Math.floor(len * 0.68);
+  portalX = passeio ? 1e9 : len - 220;
+  secretPortalX = (secret || passeio) ? 0 : Math.floor(len * 0.68);
 
   weatherParticles = [];
 
@@ -1236,7 +1238,7 @@ function generatePhase(p){
   const cpItems = (cp && cp.items) || [];
   const cpEnemies = (cp && cp.enemies) || [];
   const cpEggs = cpItems.filter(o=>o.kind==='egg');
-  const eggCount = cpEggs.length ? 0 : cp ? cp.eggs : ((secret ? 6 : 2+p) + (onlineChallenge ? (onlineChallenge.bonusEggs || 0) : 0));
+  const eggCount = (cpEggs.length || passeio) ? 0 : cp ? cp.eggs : ((secret ? 6 : 2+p) + (onlineChallenge ? (onlineChallenge.bonusEggs || 0) : 0));
   const eggKinds = ['normal','normal','gold','blue','red','rainbow','fossil','ghost','dragon'];
   for(let i=0;i<eggCount;i++){
     const onPlat = phasePlatforms.length>0 && i%2===1;
@@ -1252,7 +1254,7 @@ function generatePhase(p){
 
   // obstáculos
   phaseObstacles = [];
-  if(((p >= 3 && !secret) || cp) && !cpEnemies.length){
+  if(((p >= 3 && !secret && !passeio) || cp) && !cpEnemies.length){
     const obsTypes = ['rock','cactus','fire','log'];
     const obsCount = cp ? [1,3,6][cp.enemy] : (DIFF[difficulty].obsBase + (p-2)*2);
     for(let i=0;i<obsCount;i++){
@@ -1269,7 +1271,7 @@ function generatePhase(p){
   // coins
   phaseCoins = [];
   const cpCoins = cpItems.filter(o=>o.kind==='coin');
-  const coinCount = cpCoins.length ? 0 : secret ? 24 : 8 + phase * 2;
+  const coinCount = cpCoins.length ? 0 : passeio ? 260 : secret ? 24 : 8 + phase * 2;
   cpCoins.forEach(o=>phaseCoins.push({x:o.x,y:o.y,collected:false,bob:Math.random()*Math.PI*2}));
   for(let i = 0; i < coinCount; i++){
     phaseCoins.push({
@@ -1287,7 +1289,7 @@ function generatePhase(p){
   powerupItems = []; inventory = []; activeEffects = {speed:0, shield:0, fire:0};
   const puTypes = ['speed','shield','fire'];
   const cpPowerups = cpItems.filter(o=>['speed','shield','fire'].includes(o.kind));
-  const puCount = cpPowerups.length ? 0 : secret ? 4 : 1 + phase;
+  const puCount = cpPowerups.length ? 0 : passeio ? 40 : secret ? 4 : 1 + phase;
   cpPowerups.forEach(o=>powerupItems.push({x:o.x-10,y:o.y,type:o.kind,collected:false,bob:Math.random()*Math.PI*2}));
   for(let i = 0; i < puCount; i++){
     powerupItems.push({
@@ -1315,7 +1317,7 @@ function generatePhase(p){
   // enemies
   phaseEnemies = [];
   const enemyTypes = ['ptero','trex','anky','raptor'];
-  const enemyCount = cpEnemies.length ? 0 : cp ? [1,3,6][cp.enemy] : (secret ? 0 : DIFF[difficulty].enemyBase + p + (onlineChallenge ? (onlineChallenge.enemyBonus || 0) : 0));
+  const enemyCount = (cpEnemies.length || passeio) ? 0 : cp ? [1,3,6][cp.enemy] : (secret ? 0 : DIFF[difficulty].enemyBase + p + (onlineChallenge ? (onlineChallenge.enemyBonus || 0) : 0));
   const speedMult = DIFF[difficulty].speedMult;
   for(let i=0;i<enemyCount;i++){
     const t = enemyTypes[Math.floor(Math.random()*enemyTypes.length)];
@@ -1387,6 +1389,7 @@ function svgIcon(d,size=24,fill=false){
 const ICONS={
   play:'M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z',
   city:'M3 21h18M5 21V9l5-3v15M14 21V4l5 3v14',
+  walk:'M13 4a2 2 0 1 1 0 .01M10 21l2-6 3 3v3M8 12l3-3 3 2 3 1M12 15l-1-6',
   lock:'M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3',
   user:'M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21c1-4 4-6 8-6s7 2 8 6',
   gear:'M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
@@ -1441,7 +1444,10 @@ function renderMainMenu(){
     <div class="logo"><span style="color:var(--grass)">Dino</span><span style="color:var(--sun);margin-left:44px">Game</span></div>
     <div class="menu-col">
       <button class="btn" onclick="showCharSelect()">${svgIcon(ICONS.play,26,true)}${tr('play')}</button>
-      <button class="btn sec" onclick="startFreeRoam()">${svgIcon(ICONS.city,22)}Jogo Livre</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn sec" style="flex:1;font-size:17px;padding:0 8px" onclick="startFreeRoam()">${svgIcon(ICONS.city,18)}Jogo Livre</button>
+        <button class="btn sec" style="flex:1;font-size:17px;padding:0 8px" onclick="startPasseio()">${svgIcon(ICONS.walk,18)}Passeio</button>
+      </div>
       ${canCreate
         ? `<button class="btn sec" onclick="renderPhaseCreator()">Criar Fase</button>`
         : `<button class="btn-locked" disabled>${svgIcon(ICONS.lock,18)}Criar Fase · 700 moedas</button>`}
@@ -2203,6 +2209,10 @@ function update(){
 
   // day/night cycle
   dayNight = (Math.sin(frameCount / 900 * Math.PI) + 1) / 2;
+  if(phase === PASSEIO_PHASE){
+    const ti = Math.floor((scrollX + player.x) / 4000) % THEMES.length;
+    if(currentTheme !== THEMES[ti]) currentTheme = THEMES[ti];
+  }
 
   // day/night music transition
   const tod = dayNight < 0.4 ? 'night' : 'day';
@@ -3438,6 +3448,7 @@ function drawHUD(){
   x+=w+8;
 
   // ovos
+  if(phase !== PASSEIO_PHASE){
   const eggsCol=phaseEggs.filter(e=>e.collected).length;
   const eggTxt=`${eggsCol}/${phaseEggs.length}`;
   w=8+18+8+ctx.measureText(eggTxt).width+12;
@@ -3445,6 +3456,7 @@ function drawHUD(){
   ctx.fillStyle='#FFF8E7'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2;
   ctx.beginPath(); ctx.ellipse(x+8+9,my,8,10.5,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
   ctx.fillStyle=HUD_INK; ctx.fillText(eggTxt,x+8+18+8,my+1);
+  }
 
   // nível do pet (segunda linha)
   hudFont(900,13);
@@ -3459,6 +3471,7 @@ function drawHUD(){
   ctx.strokeStyle=HUD_INK; ctx.lineWidth=1.8; roundRect(ctx,pbx,pby,48,10,5,false,true);
 
   // progresso da fase + bandeira
+  if(phase !== PASSEIO_PHASE){
   const prog = portalX>0 ? Math.min(1,Math.max(0,(scrollX+player.x)/portalX)) : 0;
   const bw=150, bx=W/2-bw/2-8, bh=16, by=Y+9;
   ctx.fillStyle='#FFFFFF'; roundRect(ctx,bx,by,bw,bh,8,true,false);
@@ -3473,8 +3486,10 @@ function drawHUD(){
   ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.beginPath(); ctx.moveTo(fx,by+bh+4); ctx.lineTo(fx,by-6); ctx.stroke();
   ctx.fillStyle='#FF6B6B'; ctx.beginPath(); ctx.moveTo(fx,by-6); ctx.lineTo(fx+14,by-6); ctx.lineTo(fx+10,by-1); ctx.lineTo(fx+14,by+4); ctx.lineTo(fx,by+4); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
 
   // tempo
+  const by=Y+9, bh=16;
   if(state==='playing' && phaseFramesLeft>0){
     const secs=Math.max(0,Math.ceil(phaseFramesLeft/60));
     const tt=`${String(Math.floor(secs/60)).padStart(2,'0')}:${String(secs%60).padStart(2,'0')}`;
@@ -3536,7 +3551,7 @@ function drawHUD(){
   drawPlaceName();
 }
 
-function phaseLabel(){ return isSecretPhase ? 'Fase secreta' : phase===99 ? 'Minha fase' : `${tr('phaseHud')} ${phase}`; }
+function phaseLabel(){ return isSecretPhase ? 'Fase secreta' : phase===PASSEIO_PHASE ? 'Passeio' : phase===99 ? 'Minha fase' : `${tr('phaseHud')} ${phase}`; }
 
 function drawPlaceName(){
   if(!currentTheme) return;
@@ -5403,6 +5418,17 @@ function frTileFloorColor(wx,wy){const tx=Math.floor(wx),ty=Math.floor(wy);if(tx
 
 function frIso(tx,ty,cx,cy){return{x:(tx-ty)*FR_TW/2+cx, y:(tx+ty)*FR_TH/2+cy};}
 function frBlocked(tx,ty){const ix=Math.floor(tx),iy=Math.floor(ty);if(ix<0||iy<0||ix>=FR_SZ||iy>=FR_SZ)return true;return FR_MAP[iy][ix]>=3;}
+
+function startPasseio(){
+  stopMenuAnimation();
+  onlineChallenge = null; onlineRunFrames = 0;
+  phase = PASSEIO_PHASE; isSecretPhase = false;
+  score = 0; lives = 3;
+  document.getElementById('overlay').style.display='none';
+  beginPhase();
+  phaseFramesLeft = 0;
+  state = 'playing';
+}
 
 function startFreeRoam(){
   stopMenuAnimation();
