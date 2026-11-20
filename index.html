@@ -257,7 +257,14 @@ let hpBarAnim = 3;
 let currentHighScore = parseInt(localStorage.getItem('dinogame_highscore') || '0');
 let menuAnimRAF = null, menuAnimTick = 0;
 let customPhaseConfig = null;
-let editorBlocks = [], editorEnemyLevel = 0;
+let editorBlocks = [], editorEnemyLevel = 0, editorBlockType = 0;
+const EDITOR_BTYPES = [
+  {name:'Madeira', w:100, h:20, draw:(c,x,y,w,h)=>{ c.fillStyle='#854d0e'; c.fillRect(x,y,w,h); c.fillStyle='#a0633a'; for(let i=0;i<h;i+=6){c.fillRect(x,y+i,w,2);} c.strokeStyle='#5a2d0a'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
+  {name:'Pedra',   w:44, h:44, draw:(c,x,y,w,h)=>{ c.fillStyle='#6b7280'; c.fillRect(x,y,w,h); c.fillStyle='#9ca3af'; c.fillRect(x+2,y+2,w-4,8); c.fillRect(x+2,y+14,w/2-4,8); c.fillRect(x+w/2+2,y+14,w/2-4,8); c.strokeStyle='#374151'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
+  {name:'Grama',   w:80, h:22, draw:(c,x,y,w,h)=>{ c.fillStyle='#854d0e'; c.fillRect(x,y+8,w,h-8); c.fillStyle='#4ade80'; c.fillRect(x,y,w,10); c.fillStyle='#22c55e'; for(let i=0;i<w;i+=8){c.fillRect(x+i,y,4,6);} c.strokeStyle='#166534'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
+  {name:'Tijolo',  w:60, h:30, draw:(c,x,y,w,h)=>{ c.fillStyle='#b45309'; c.fillRect(x,y,w,h); c.fillStyle='#d97706'; const bh=10,bw=28; for(let r=0;r*bh<h;r++){const off=r%2?bw/2:0; for(let col=-1;col*bw<w+bw;col++){c.fillRect(x+col*bw+off+1,y+r*bh+1,bw-2,bh-2);}} c.strokeStyle='#92400e'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
+  {name:'Gelo',    w:50, h:50, draw:(c,x,y,w,h)=>{ c.fillStyle='rgba(147,210,255,0.85)'; c.fillRect(x,y,w,h); c.fillStyle='rgba(255,255,255,0.5)'; c.fillRect(x+4,y+4,w/2,6); c.fillRect(x+4,y+14,w/3,4); c.strokeStyle='#60a5fa'; c.lineWidth=1.5; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
+];
 
 const I18N = {
   pt: {
@@ -757,6 +764,7 @@ window.addEventListener('keydown', e => {
     if(e.code==='KeyB') placeEditorBlock(player.x+scrollX, player.y);
     if(e.code==='Enter') renderEditorFinish();
     if(e.code==='Backspace'||e.code==='Delete') editorBlocks.pop();
+    const kNum=parseInt(e.key); if(kNum>=1&&kNum<=EDITOR_BTYPES.length) editorBlockType=kNum-1;
   }
 });
 window.addEventListener('keyup', e => {
@@ -774,9 +782,15 @@ canvas.addEventListener('mousedown', e => {
   if(state==='editor'){
     e.preventDefault();
     const r=canvas.getBoundingClientRect();
-    const wx=(e.clientX-r.left)*(W/r.width)+scrollX;
-    const wy=(e.clientY-r.top)*(H/r.height);
-    placeEditorBlock(wx,wy);
+    const cx=(e.clientX-r.left)*(W/r.width);
+    const cy=(e.clientY-r.top)*(H/r.height);
+    if(cy>GROUND+10){
+      // clique na gaveta: seleciona tipo de bloco
+      const slot=Math.floor(cx/(W/EDITOR_BTYPES.length));
+      if(slot>=0&&slot<EDITOR_BTYPES.length) editorBlockType=slot;
+    } else {
+      placeEditorBlock(cx+scrollX, cy);
+    }
     return;
   }
   if(state !== 'playing' || paused) return;
@@ -4486,36 +4500,44 @@ function updateEditor(){
 }
 
 function placeEditorBlock(wx, wy){
-  const bx=Math.round((wx-40)/80)*80;
-  const by=wy!==undefined?Math.min(wy+22,GROUND):player.y;
-  if(editorBlocks.some(b=>Math.abs(b.x-bx)<10&&Math.abs(b.y-by)<10)) return;
-  editorBlocks.push({x:bx,y:by,w:80,type:'stone'});
+  const bt=EDITOR_BTYPES[editorBlockType];
+  const bx=Math.round((wx-bt.w/2)/bt.w)*bt.w;
+  const by=wy!==undefined?Math.min(Math.round(wy/bt.h)*bt.h,GROUND):player.y;
+  if(editorBlocks.some(b=>Math.abs(b.x-bx)<8&&Math.abs(b.y-by)<8)) return;
+  editorBlocks.push({x:bx,y:by,w:bt.w,h:bt.h,typeIdx:editorBlockType,type:'stone'});
+}
+
+function drawEditorBlock(c,b,sx){
+  const bt=EDITOR_BTYPES[b.typeIdx]||EDITOR_BTYPES[0];
+  bt.draw(c,sx,b.y-bt.h,b.w,bt.h);
 }
 
 function drawEditor(){
-  const skyG=ctx.createLinearGradient(0,0,0,H);
+  // sky
+  const skyG=ctx.createLinearGradient(0,0,0,GROUND);
   skyG.addColorStop(0,'#4ab6ed'); skyG.addColorStop(1,'#c8f0a0');
-  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,GROUND);
+  // ground strip
   ctx.fillStyle='#72c94b'; ctx.fillRect(0,GROUND,W,8);
   ctx.fillStyle='#85512e'; ctx.fillRect(0,GROUND+8,W,H-GROUND-8);
   // grid
   ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=1;
-  for(let gx=Math.floor(scrollX/80)*80;gx<scrollX+W+80;gx+=80){
+  for(let gx=Math.floor(scrollX/60)*60;gx<scrollX+W+60;gx+=60){
     ctx.beginPath(); ctx.moveTo(gx-scrollX,0); ctx.lineTo(gx-scrollX,GROUND); ctx.stroke();
   }
   // blocos colocados
   for(const b of editorBlocks){
     const sx=b.x-scrollX;
-    if(sx>-b.w-10&&sx<W+10){
-      ctx.fillStyle='#7c3f10'; roundRect(ctx,sx,b.y-22,b.w,22,4,true,false);
-      ctx.fillStyle='#a0633a'; roundRect(ctx,sx,b.y-22,b.w,7,4,true,false);
-      ctx.strokeStyle='#5a2d0a'; ctx.lineWidth=1.5; roundRect(ctx,sx,b.y-22,b.w,22,4,false,true);
-    }
+    if(sx>-b.w-10&&sx<W+10) drawEditorBlock(ctx,b,sx);
   }
-  // preview bloco no player
-  const previewX=Math.round((player.x-40+scrollX)/80)*80-scrollX;
-  ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.5;
-  ctx.setLineDash([5,4]); roundRect(ctx,previewX,player.y-22,80,22,4,false,true); ctx.setLineDash([]);
+  // preview do bloco selecionado no player
+  const bt=EDITOR_BTYPES[editorBlockType];
+  const previewX=Math.round((player.x-bt.w/2+scrollX)/bt.w)*bt.w-scrollX;
+  ctx.save(); ctx.globalAlpha=0.4;
+  bt.draw(ctx,previewX,player.y-bt.h,bt.w,bt.h);
+  ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5;
+  ctx.setLineDash([5,4]); ctx.strokeRect(previewX,player.y-bt.h,bt.w,bt.h); ctx.setLineDash([]);
   // fim da fase
   const endX=currentLen-220-scrollX;
   if(endX>-20&&endX<W+20){
@@ -4526,14 +4548,46 @@ function drawEditor(){
   }
   // player
   if(typeof drawDinoOn==='function') drawDinoOn(ctx,player.x-scrollX,player.y,player.frame,false,1);
-  // HUD
-  ctx.fillStyle='rgba(5,10,22,.88)'; roundRect(ctx,8,8,W-16,30,6,true,false);
-  ctx.strokeStyle='rgba(78,205,196,.25)'; ctx.lineWidth=1; roundRect(ctx,8,8,W-16,30,6,false,true);
-  ctx.fillStyle='#4ecdc4'; ctx.font='6px "Press Start 2P"';
+
+  // ── GAVETA DE BLOCOS ──────────────────────────────────────────────────────
+  const drawerY=GROUND+10, drawerH=H-GROUND-10;
+  ctx.fillStyle='rgba(5,10,22,0.92)'; ctx.fillRect(0,drawerY,W,drawerH);
+  ctx.strokeStyle='rgba(78,205,196,0.25)'; ctx.lineWidth=1; ctx.strokeRect(0,drawerY,W,drawerH);
+  const slotW=Math.floor(W/EDITOR_BTYPES.length);
+  EDITOR_BTYPES.forEach((bt,i)=>{
+    const sx=i*slotW, sy=drawerY+4, sw=slotW-8, sh=drawerH-16;
+    const isActive=i===editorBlockType;
+    // slot bg
+    ctx.fillStyle=isActive?'rgba(78,205,196,0.18)':'rgba(255,255,255,0.04)';
+    roundRect(ctx,sx+4,sy,sw,sh,6,true,false);
+    ctx.strokeStyle=isActive?'#4ecdc4':'rgba(255,255,255,0.1)';
+    ctx.lineWidth=isActive?2:1;
+    roundRect(ctx,sx+4,sy,sw,sh,6,false,true);
+    // preview do bloco (miniatura centrada no slot)
+    const scale=Math.min((sw-12)/bt.w, (sh-20)/bt.h, 1);
+    const bw=Math.round(bt.w*scale), bh=Math.round(bt.h*scale);
+    const bx=sx+4+(sw-bw)/2, by=sy+(sh-bh)/2-4;
+    ctx.save(); bt.draw(ctx,bx,by,bw,bh); ctx.restore();
+    // nome
+    ctx.fillStyle=isActive?'#4ecdc4':'#5a7a8a';
+    ctx.font='4.5px "Press Start 2P"';
+    ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText(bt.name,sx+slotW/2,sy+sh);
+    // tecla de atalho
+    ctx.fillStyle=isActive?'#ffe66d':'#2a3a4a';
+    ctx.font='4px "Press Start 2P"';
+    ctx.textBaseline='top';
+    ctx.fillText(`[${i+1}]`,sx+slotW/2,sy+3);
+  });
+
+  // HUD topo
+  ctx.fillStyle='rgba(5,10,22,.88)'; roundRect(ctx,8,8,W-16,28,6,true,false);
+  ctx.strokeStyle='rgba(78,205,196,.25)'; ctx.lineWidth=1; roundRect(ctx,8,8,W-16,28,6,false,true);
+  ctx.fillStyle='#4ecdc4'; ctx.font='5.5px "Press Start 2P"';
   ctx.textAlign='left'; ctx.textBaseline='middle';
-  ctx.fillText('B = Bloco  ·  ESPAÇO = Pular  ·  DEL = Desfazer  ·  ENTER = Concluir',16,23);
+  ctx.fillText('B/CLIQUE=Bloco  ·  1-5=Tipo  ·  DEL=Desfazer  ·  ENTER=Concluir',16,22);
   ctx.fillStyle='#ffe66d'; ctx.textAlign='right';
-  ctx.fillText(`${editorBlocks.length} blocos`,W-16,23);
+  ctx.fillText(`${editorBlocks.length} blocos`,W-16,22);
 }
 
 function renderEditorFinish(){
