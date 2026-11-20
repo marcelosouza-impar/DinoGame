@@ -182,6 +182,9 @@
   .dino-svg.m-idle .lid{animation:dinoBlink 3.6s infinite}
   .dino-svg.m-idle .headP{animation:dinoNod 2.4s ease-in-out infinite}
 
+  .keycap{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;background:var(--white);
+    border:var(--stroke) solid var(--ink);border-radius:9px;box-shadow:0 3px 0 var(--ink);font:700 13px var(--font-display);color:var(--ink);vertical-align:middle;}
+
   /* ── CENA 800x450 (menu e mapa) ── */
   .scene{position:relative;width:800px;height:450px;color:var(--ink);font-family:var(--font-ui);}
   .scene-bg{position:absolute;inset:0;overflow:visible;pointer-events:none;}
@@ -367,7 +370,7 @@ let hpBarAnim = 3;
 let currentHighScore = parseInt(localStorage.getItem('dinogame_highscore') || '0');
 let menuAnimRAF = null, menuAnimTick = 0;
 let customPhaseConfig = null;
-let editorBlocks = [], editorEnemyLevel = 0, editorBlockType = 0;
+let editorBlocks = [], editorEnemyLevel = 0, editorBlockType = 0, editorErase = false, edButtons = [];
 // combo
 let stompCombo = 0, stompComboTimer = 0;
 // achievements
@@ -391,11 +394,11 @@ let phaseNoDamage = true;
 let phaseLever = null;
 let boulderRoll = null;
 const EDITOR_BTYPES = [
-  {name:'Madeira', w:100, h:20, draw:(c,x,y,w,h)=>{ c.fillStyle='#854d0e'; c.fillRect(x,y,w,h); c.fillStyle='#a0633a'; for(let i=0;i<h;i+=6){c.fillRect(x,y+i,w,2);} c.strokeStyle='#5a2d0a'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
-  {name:'Pedra',   w:44, h:44, draw:(c,x,y,w,h)=>{ c.fillStyle='#6b7280'; c.fillRect(x,y,w,h); c.fillStyle='#9ca3af'; c.fillRect(x+2,y+2,w-4,8); c.fillRect(x+2,y+14,w/2-4,8); c.fillRect(x+w/2+2,y+14,w/2-4,8); c.strokeStyle='#374151'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
-  {name:'Grama',   w:80, h:22, draw:(c,x,y,w,h)=>{ c.fillStyle='#854d0e'; c.fillRect(x,y+8,w,h-8); c.fillStyle='#4ade80'; c.fillRect(x,y,w,10); c.fillStyle='#22c55e'; for(let i=0;i<w;i+=8){c.fillRect(x+i,y,4,6);} c.strokeStyle='#166534'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
-  {name:'Tijolo',  w:60, h:30, draw:(c,x,y,w,h)=>{ c.fillStyle='#b45309'; c.fillRect(x,y,w,h); c.fillStyle='#d97706'; const bh=10,bw=28; for(let r=0;r*bh<h;r++){const off=r%2?bw/2:0; for(let col=-1;col*bw<w+bw;col++){c.fillRect(x+col*bw+off+1,y+r*bh+1,bw-2,bh-2);}} c.strokeStyle='#92400e'; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
-  {name:'Gelo',    w:50, h:50, draw:(c,x,y,w,h)=>{ c.fillStyle='rgba(147,210,255,0.85)'; c.fillRect(x,y,w,h); c.fillStyle='rgba(255,255,255,0.5)'; c.fillRect(x+4,y+4,w/2,6); c.fillRect(x+4,y+14,w/3,4); c.strokeStyle='#60a5fa'; c.lineWidth=1.5; c.strokeRect(x+.5,y+.5,w-1,h-1); }},
+  {name:'Madeira', w:100, h:20, draw:(c,x,y,w,h)=>{ c.fillStyle='#C98B5B'; roundRect(c,x,y,w,h,6,true,false); c.strokeStyle='#B37548'; c.lineWidth=2; c.beginPath(); c.moveTo(x+4,y+h/2); c.lineTo(x+w-4,y+h/2); for(let i=w/3;i<w-4;i+=w/3){c.moveTo(x+i,y+3);c.lineTo(x+i,y+h-3);} c.stroke(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; roundRect(c,x,y,w,h,6,false,true); }},
+  {name:'Pedra',   w:44, h:44, draw:(c,x,y,w,h)=>{ c.fillStyle='#B9B6D0'; roundRect(c,x,y,w,h,9,true,false); c.fillStyle='#D9D7EA'; roundRect(c,x+4,y+4,w-8,h*0.28,5,true,false); c.fillStyle='#9A97B8'; c.beginPath(); c.arc(x+w*0.7,y+h*0.68,w*0.09,0,Math.PI*2); c.arc(x+w*0.32,y+h*0.62,w*0.06,0,Math.PI*2); c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; roundRect(c,x,y,w,h,9,false,true); }},
+  {name:'Grama',   w:80, h:22, draw:(c,x,y,w,h)=>{ c.fillStyle='#C98B5B'; roundRect(c,x,y,w,h,8,true,false); c.fillStyle='#7ED957'; c.beginPath(); c.moveTo(x,y+h*0.55); for(let i=0;i<=w;i+=w/6){c.quadraticCurveTo(x+i+w/12,y+h*0.85,x+Math.min(w,i+w/6),y+h*0.55);} c.lineTo(x+w,y+8); c.quadraticCurveTo(x+w,y,x+w-8,y); c.lineTo(x+8,y); c.quadraticCurveTo(x,y,x,y+8); c.closePath(); c.fill(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; roundRect(c,x,y,w,h,8,false,true); }},
+  {name:'Tijolo',  w:60, h:30, draw:(c,x,y,w,h)=>{ c.fillStyle='#FF9F6B'; roundRect(c,x,y,w,h,5,true,false); c.strokeStyle='#D9733F'; c.lineWidth=2; c.beginPath(); for(let r=1;r<3;r++){c.moveTo(x+3,y+r*h/3);c.lineTo(x+w-3,y+r*h/3);} for(let r=0;r<3;r++){const off=r%2?w/4:w/2; for(let cx2=off;cx2<w-3;cx2+=w/2){c.moveTo(x+cx2,y+r*h/3+2);c.lineTo(x+cx2,y+(r+1)*h/3-2);}} c.stroke(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; roundRect(c,x,y,w,h,5,false,true); }},
+  {name:'Gelo',    w:50, h:50, draw:(c,x,y,w,h)=>{ c.fillStyle='#D6F1FF'; roundRect(c,x,y,w,h,10,true,false); c.fillStyle='#FFFFFF'; roundRect(c,x+6,y+6,w*0.45,6,3,true,false); roundRect(c,x+6,y+16,w*0.25,5,2.5,true,false); c.strokeStyle='#5BC0FF'; c.lineWidth=2; c.beginPath(); c.moveTo(x+w*0.6,y+h*0.55); c.lineTo(x+w*0.8,y+h*0.8); c.stroke(); c.strokeStyle='#2B2A4C'; c.lineWidth=2.5; roundRect(c,x,y,w,h,10,false,true); }},
 ];
 
 const I18N = {
@@ -961,6 +964,7 @@ window.addEventListener('keydown', e => {
     if(e.code==='KeyB') placeEditorBlock(player.x+scrollX, player.y);
     if(e.code==='Enter') renderEditorFinish();
     if(e.code==='Backspace'||e.code==='Delete') editorBlocks.pop();
+    if(e.code==='KeyX') editorErase=!editorErase;
     const kNum=parseInt(e.key); if(kNum>=1&&kNum<=EDITOR_BTYPES.length) editorBlockType=kNum-1;
   }
 });
@@ -981,12 +985,15 @@ canvas.addEventListener('mousedown', e => {
     const r=canvas.getBoundingClientRect();
     const cx=(e.clientX-r.left)*(W/r.width);
     const cy=(e.clientY-r.top)*(H/r.height);
-    if(cy>GROUND+10){
-      // clique na gaveta: seleciona tipo de bloco
-      const slot=Math.floor(cx/(W/EDITOR_BTYPES.length));
-      if(slot>=0&&slot<EDITOR_BTYPES.length) editorBlockType=slot;
+    const hit=edButtons.find(b=>cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h);
+    if(hit){ hit.fn(); return; }
+    if(cy>=ED_DRAWER_Y) return;
+    const wx=cx+scrollX, wy=cy+ED_OFF;
+    if(editorErase){
+      const i=editorBlocks.findIndex(b=>wx>=b.x&&wx<=b.x+b.w&&wy>=b.y-b.h&&wy<=b.y);
+      if(i>=0) editorBlocks.splice(i,1);
     } else {
-      placeEditorBlock(cx+scrollX, cy);
+      placeEditorBlock(wx, wy);
     }
     return;
   }
@@ -4986,13 +4993,13 @@ setHudButtonTitles();
 function renderPhaseCreator(){
   const ov = document.getElementById('overlay');
   ov.innerHTML = `<div class="ocard">
-    <h2>🎨 Criar Fase</h2>
-    <p class="sub" style="color:#a855f7">Desbloqueado com 700 moedas!</p>
+    <h2>Criar Fase</h2>
+    <p class="sub">Desbloqueado com 700 moedas!</p>
     <div class="divider"></div>
     <p class="sub">Construa sua fase no editor visual.<br>Ande pelo cenário e coloque blocos para criar plataformas.</p>
-    <div class="khint">
-      <b>B</b> = Colocar bloco &nbsp;·&nbsp; <b>CLIQUE</b> = Colocar bloco<br>
-      <b>DEL</b> = Desfazer último &nbsp;·&nbsp; <b>ENTER</b> = Concluir e jogar
+    <div class="khint" style="text-align:left;line-height:2.4">
+      <span class="keycap">B</span> ou clique: colocar bloco &nbsp; <span class="keycap">X</span> colocar/apagar<br>
+      <span class="keycap">1</span>–<span class="keycap">5</span> tipo de bloco &nbsp; <span class="keycap">DEL</span> desfazer &nbsp; <span class="keycap">ENTER</span> testar
     </div>
     <button class="btn" onclick="startEditor()">Entrar no Editor</button>
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
@@ -5060,95 +5067,159 @@ function drawEditorBlock(c,b,sx){
   bt.draw(c,sx,b.y-bt.h,b.w,bt.h);
 }
 
+const ED_OFF = 44, ED_DRAWER_Y = 338;
+const ED_ICON = {
+  back:new Path2D('M15 5l-7 7 7 7'),
+  undo:new Path2D('M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3'),
+  plus:new Path2D('M12 5v14M5 12h14'),
+  erase:new Path2D('M7 21h10M5 15l9-9 5 5-9 9H8z'),
+  play:new Path2D('M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z')
+};
+function edIcon(path,x,y,size,fill){
+  ctx.save(); ctx.translate(x,y); ctx.scale(size/24,size/24);
+  ctx.strokeStyle=HUD_INK; ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round';
+  if(fill){ ctx.fillStyle=HUD_INK; ctx.fill(path); } else ctx.stroke(path);
+  ctx.restore();
+}
+function edRoundBtn(x,y,icon,fn,bg='#FFFFFF'){
+  ctx.fillStyle=HUD_INK; ctx.beginPath(); ctx.arc(x+22,y+26,22,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=bg; ctx.strokeStyle=HUD_INK; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x+22,y+22,20.5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  edIcon(icon,x+11,y+11,22,false);
+  edButtons.push({x,y,w:44,h:44,fn});
+}
+
 function drawEditor(){
-  // sky
-  const skyG=ctx.createLinearGradient(0,0,0,GROUND);
-  skyG.addColorStop(0,'#4ab6ed'); skyG.addColorStop(1,'#c8f0a0');
-  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,GROUND);
-  // ground strip
-  ctx.fillStyle='#72c94b'; ctx.fillRect(0,GROUND,W,8);
-  ctx.fillStyle='#85512e'; ctx.fillRect(0,GROUND+8,W,H-GROUND-8);
-  // grid
-  ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=1;
+  edButtons=[];
+  // céu
+  ctx.fillStyle='#8ED8FF'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#FFFFFF';
+  [[140,90],[470,70],[690,120]].forEach(([cx,cy],i)=>{
+    const x0=cx-((scrollX*0.2+i*200)%(W+200))+100;
+    [[0,0,14],[18,-7,19],[38,1,13]].forEach(([dx,dy,r])=>{ctx.beginPath();ctx.arc(x0+dx,cy+dy,r,0,Math.PI*2);ctx.fill();});
+    roundRect(ctx,x0-8,cy,56,12,6,true,false);
+  });
+  ctx.save(); ctx.translate(0,-ED_OFF);
+  // chão
+  ctx.fillStyle='#C98B5B'; ctx.fillRect(0,GROUND,W,H+ED_OFF-GROUND);
+  ctx.fillStyle='#B37548';
+  for(let gx=Math.floor(scrollX/90)*90;gx<scrollX+W+90;gx+=90){ ctx.beginPath(); ctx.arc(gx-scrollX+30,GROUND+40,6,0,Math.PI*2); ctx.arc(gx-scrollX+70,GROUND+62,4,0,Math.PI*2); ctx.fill(); }
+  ctx.fillStyle='#7ED957'; ctx.fillRect(0,GROUND-4,W,18);
+  ctx.strokeStyle=HUD_INK; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(0,GROUND-4); ctx.lineTo(W,GROUND-4); ctx.moveTo(0,GROUND+14); ctx.lineTo(W,GROUND+14); ctx.stroke();
+  // grade
+  ctx.strokeStyle='rgba(43,42,76,.08)'; ctx.lineWidth=1;
   for(let gx=Math.floor(scrollX/60)*60;gx<scrollX+W+60;gx+=60){
-    ctx.beginPath(); ctx.moveTo(gx-scrollX,0); ctx.lineTo(gx-scrollX,GROUND); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx-scrollX,ED_OFF); ctx.lineTo(gx-scrollX,GROUND-4); ctx.stroke();
   }
-  // blocos colocados
+  // blocos
   for(const b of editorBlocks){
     const sx=b.x-scrollX;
     if(sx>-b.w-10&&sx<W+10) drawEditorBlock(ctx,b,sx);
   }
-  // preview do bloco selecionado no player
+  // prévia do bloco
   const bt=EDITOR_BTYPES[editorBlockType];
-  const previewX=Math.round((player.x-bt.w/2+scrollX)/bt.w)*bt.w-scrollX;
-  ctx.save(); ctx.globalAlpha=0.4;
-  bt.draw(ctx,previewX,player.y-bt.h,bt.w,bt.h);
-  ctx.restore();
-  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5;
-  ctx.setLineDash([5,4]); ctx.strokeRect(previewX,player.y-bt.h,bt.w,bt.h); ctx.setLineDash([]);
+  if(!editorErase){
+    const previewX=Math.round((player.x-bt.w/2+scrollX)/bt.w)*bt.w-scrollX;
+    ctx.save(); ctx.globalAlpha=0.45; bt.draw(ctx,previewX,player.y-bt.h,bt.w,bt.h); ctx.restore();
+    ctx.strokeStyle=HUD_INK; ctx.lineWidth=2; ctx.setLineDash([6,5]);
+    ctx.strokeRect(previewX,player.y-bt.h,bt.w,bt.h); ctx.setLineDash([]);
+  }
   // fim da fase
   const endX=currentLen-220-scrollX;
-  if(endX>-20&&endX<W+20){
-    ctx.fillStyle='rgba(168,85,247,0.4)'; ctx.fillRect(endX,GROUND-70,16,70);
-    ctx.fillStyle='#a855f7'; ctx.font='5px "Press Start 2P"';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('FIM',endX+8,GROUND-82);
+  if(endX>-40&&endX<W+40){
+    ctx.strokeStyle=HUD_INK; ctx.lineWidth=4; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(endX,GROUND-4); ctx.lineTo(endX,GROUND-90); ctx.stroke();
+    ctx.fillStyle='#FF6B6B'; ctx.lineWidth=3; ctx.lineJoin='round';
+    ctx.beginPath(); ctx.moveTo(endX,GROUND-90); ctx.lineTo(endX+40,GROUND-90); ctx.lineTo(endX+30,GROUND-78); ctx.lineTo(endX+40,GROUND-66); ctx.lineTo(endX,GROUND-66); ctx.closePath(); ctx.fill(); ctx.stroke();
+    hudFont(900,12); ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText('FIM',endX+6,GROUND-77);
   }
-  // player
+  // jogador
   if(typeof drawDinoOn==='function') drawDinoOn(ctx,player.x-scrollX,player.y,player.frame,false,1);
+  ctx.restore();
 
-  // ── GAVETA DE BLOCOS ──────────────────────────────────────────────────────
-  const drawerY=GROUND+10, drawerH=H-GROUND-10;
-  ctx.fillStyle='rgba(5,10,22,0.92)'; ctx.fillRect(0,drawerY,W,drawerH);
-  ctx.strokeStyle='rgba(78,205,196,0.25)'; ctx.lineWidth=1; ctx.strokeRect(0,drawerY,W,drawerH);
-  const slotW=Math.floor(W/EDITOR_BTYPES.length);
-  EDITOR_BTYPES.forEach((bt,i)=>{
-    const sx=i*slotW, sy=drawerY+4, sw=slotW-8, sh=drawerH-16;
-    const isActive=i===editorBlockType;
-    // slot bg
-    ctx.fillStyle=isActive?'rgba(78,205,196,0.18)':'rgba(255,255,255,0.04)';
-    roundRect(ctx,sx+4,sy,sw,sh,6,true,false);
-    ctx.strokeStyle=isActive?'#4ecdc4':'rgba(255,255,255,0.1)';
-    ctx.lineWidth=isActive?2:1;
-    roundRect(ctx,sx+4,sy,sw,sh,6,false,true);
-    // preview do bloco (miniatura centrada no slot)
-    const scale=Math.min((sw-12)/bt.w, (sh-20)/bt.h, 1);
-    const bw=Math.round(bt.w*scale), bh=Math.round(bt.h*scale);
-    const bx=sx+4+(sw-bw)/2, by=sy+(sh-bh)/2-4;
-    ctx.save(); bt.draw(ctx,bx,by,bw,bh); ctx.restore();
-    // nome
-    ctx.fillStyle=isActive?'#4ecdc4':'#5a7a8a';
-    ctx.font='4.5px "Press Start 2P"';
-    ctx.textAlign='center'; ctx.textBaseline='bottom';
-    ctx.fillText(bt.name,sx+slotW/2,sy+sh);
-    // tecla de atalho
-    ctx.fillStyle=isActive?'#ffe66d':'#2a3a4a';
-    ctx.font='4px "Press Start 2P"';
-    ctx.textBaseline='top';
-    ctx.fillText(`[${i+1}]`,sx+slotW/2,sy+3);
+  // ── BARRA DO TOPO ──
+  ctx.save(); ctx.textBaseline='middle';
+  edRoundBtn(14,12,ED_ICON.back,()=>{ state='menu'; renderMainMenu(); });
+  hudFont(700,19,'d');
+  const titleW=ctx.measureText('Minha fase').width+32;
+  hudPill(68,12,titleW,44); ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText('Minha fase',84,35);
+  // Colocar / Apagar
+  const gx=68+titleW+10;
+  hudFont(900,13);
+  const w1=ctx.measureText('Colocar').width+40, w2=ctx.measureText('Apagar').width+40;
+  hudPill(gx,12,w1+w2+12,44);
+  [['Colocar',ED_ICON.plus,false,'#7ED957',w1],['Apagar',ED_ICON.erase,true,'#FF6B6B',w2]].forEach(([lbl,ic,er,col,bw],i)=>{
+    const bx=gx+5+(i?w1+2:0), by=18, act=editorErase===er;
+    if(act){ ctx.fillStyle=col; ctx.strokeStyle=HUD_INK; ctx.lineWidth=2; roundRect(ctx,bx,by,bw,32,16,true,true); }
+    edIcon(ic,bx+10,by+8,16,false);
+    hudFont(900,13); ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText(lbl,bx+30,by+17);
+    edButtons.push({x:bx,y:by,w:bw,h:32,fn:()=>{editorErase=er;}});
   });
+  // Testar + Desfazer
+  hudFont(700,22,'d');
+  const tw=ctx.measureText('Testar').width+60, tx=W-14-tw;
+  ctx.fillStyle=HUD_INK; roundRect(ctx,tx,14,tw,52,26,true,false);
+  ctx.fillStyle='#FFD23F'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=4; roundRect(ctx,tx,8,tw,52,26,true,true);
+  edIcon(ED_ICON.play,tx+16,22,22,true);
+  ctx.fillStyle=HUD_INK; ctx.textAlign='left'; ctx.fillText('Testar',tx+44,35);
+  edButtons.push({x:tx,y:8,w:tw,h:52,fn:()=>renderEditorFinish()});
+  edRoundBtn(tx-54,12,ED_ICON.undo,()=>editorBlocks.pop());
 
-  // HUD topo
-  ctx.fillStyle='rgba(5,10,22,.88)'; roundRect(ctx,8,8,W-16,28,6,true,false);
-  ctx.strokeStyle='rgba(78,205,196,.25)'; ctx.lineWidth=1; roundRect(ctx,8,8,W-16,28,6,false,true);
-  ctx.fillStyle='#4ecdc4'; ctx.font='5.5px "Press Start 2P"';
-  ctx.textAlign='left'; ctx.textBaseline='middle';
-  ctx.fillText('B/CLIQUE=Bloco  ·  1-5=Tipo  ·  DEL=Desfazer  ·  ENTER=Concluir',16,22);
-  ctx.fillStyle='#ffe66d'; ctx.textAlign='right';
-  ctx.fillText(`${editorBlocks.length} blocos`,W-16,22);
+  // ── GAVETA ──
+  const dy=ED_DRAWER_Y;
+  ctx.fillStyle='#FFF8E7'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(-4,H+4); ctx.lineTo(-4,dy+26); ctx.quadraticCurveTo(-4,dy,22,dy); ctx.lineTo(W-22,dy); ctx.quadraticCurveTo(W+4,dy,W+4,dy+26); ctx.lineTo(W+4,H+4); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // aba + contador + posição
+  hudFont(900,13);
+  const tabW=ctx.measureText('Blocos').width+28;
+  ctx.fillStyle=HUD_INK; roundRect(ctx,16,dy+10,tabW,28,14,true,false);
+  ctx.fillStyle='#FFFFFF'; ctx.textAlign='center'; ctx.fillText('Blocos',16+tabW/2,dy+25);
+  const barW=240, barX=W-16-barW, barY=dy+12;
+  const cnt=`${editorBlocks.length} blocos`;
+  ctx.fillStyle=HUD_INK; ctx.textAlign='right'; ctx.fillText(cnt,barX-12,dy+25);
+  ctx.fillStyle='#FFFFFF'; roundRect(ctx,barX,barY,barW,24,12,true,false);
+  ctx.save(); roundRect(ctx,barX,barY,barW,24,12,false,false); ctx.clip();
+  ctx.fillStyle='#C98B5B'; ctx.fillRect(barX,barY+16,barW,8);
+  ctx.fillStyle=HUD_INK;
+  editorBlocks.forEach(b=>ctx.fillRect(barX+b.x/currentLen*barW-1,barY+8,3,8));
+  ctx.fillStyle='#FF6B6B'; ctx.fillRect(barX+(currentLen-220)/currentLen*barW,barY+4,3,12);
+  const winW=Math.max(16,W/currentLen*barW), winX=barX+scrollX/currentLen*barW;
+  ctx.fillStyle='rgba(255,210,63,.45)'; roundRect(ctx,winX,barY+1,winW,22,11,true,false);
+  ctx.strokeStyle=HUD_INK; ctx.lineWidth=2.5; roundRect(ctx,winX,barY+1,winW,22,11,false,true);
+  ctx.restore();
+  ctx.strokeStyle=HUD_INK; ctx.lineWidth=3; roundRect(ctx,barX,barY,barW,24,12,false,true);
+  // cartões de bloco
+  EDITOR_BTYPES.forEach((b,i)=>{
+    const sel=i===editorBlockType, sw=72, sh=62;
+    const sx=28+i*(sw+16), sy=dy+48-(sel?6:0);
+    ctx.fillStyle=HUD_INK; roundRect(ctx,sx,sy+(sel?7:4),sw,sh,18,true,false);
+    ctx.fillStyle=sel?'#FFD23F':'#FFFFFF'; ctx.strokeStyle=HUD_INK; ctx.lineWidth=3;
+    roundRect(ctx,sx,sy,sw,sh,18,true,true);
+    const k=Math.min((sw-18)/b.w,24/b.h,1), bw=b.w*k, bh=b.h*k;
+    ctx.save(); b.draw(ctx,sx+(sw-bw)/2,sy+8+(26-bh)/2,bw,bh); ctx.restore();
+    hudFont(900,12); ctx.fillStyle=HUD_INK; ctx.textAlign='center'; ctx.fillText(b.name,sx+sw/2,sy+sh-12);
+    ctx.fillStyle='#FFFFFF'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(sx+2,sy+2,12,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    hudFont(700,12,'d'); ctx.fillStyle=HUD_INK; ctx.fillText(String(i+1),sx+2,sy+3);
+    edButtons.push({x:sx-10,y:sy-10,w:sw+10,h:sh+10,fn:()=>{editorBlockType=i;editorErase=false;}});
+  });
+  // dica de teclas
+  hudFont(800,12); ctx.fillStyle='#4A4968'; ctx.textAlign='right';
+  ctx.fillText('B coloca · X apaga · DEL desfaz · ENTER testa',W-16,dy+90);
+  ctx.restore();
 }
 
 function renderEditorFinish(){
   const ov=document.getElementById('overlay');
   ov.innerHTML=`<div class="ocard">
-    <h2>🦕 Escolha os inimigos</h2>
+    <h2>Escolha os inimigos</h2>
+    <p class="sub">${editorBlocks.length} blocos na sua fase</p>
     <div class="divider"></div>
     <div class="diff-row">
-      <button class="diff-btn facil active" id="ed-e0" onclick="edEnemySel(0,this)">😴 Poucos</button>
-      <button class="diff-btn normal" id="ed-e1" onclick="edEnemySel(1,this)">⚔️ Médio</button>
-      <button class="diff-btn dificil" id="ed-e2" onclick="edEnemySel(2,this)">💀 Muitos</button>
+      <button class="diff-btn facil active" id="ed-e0" onclick="edEnemySel(0,this)">Poucos</button>
+      <button class="diff-btn normal" id="ed-e1" onclick="edEnemySel(1,this)">Médio</button>
+      <button class="diff-btn dificil" id="ed-e2" onclick="edEnemySel(2,this)">Muitos</button>
     </div>
     <div class="divider"></div>
+    <button class="btn" onclick="launchEditorPhase()">Jogar fase</button>
     <button class="btn sec" onclick="document.getElementById('overlay').style.display='none';state='editor';">← Voltar ao Editor</button>
   </div>`;
   ov.style.display='flex';
