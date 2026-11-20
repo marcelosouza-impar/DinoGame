@@ -52,14 +52,14 @@
 
   /* ── OVERLAY ── */
   #overlay{
-    position:absolute;inset:0;
+    position:fixed;inset:0;
     background:var(--sky);
-    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-    padding:16px 8px 24px;
+    display:flex;flex-direction:column;align-items:center;
+    padding:0;
     z-index:20;color:var(--ink);text-align:center;
-    overflow-y:auto;overflow-x:hidden;
-    -webkit-overflow-scrolling:touch;
+    overflow:hidden;justify-content:center;
   }
+  #overlay > *{transform-origin:center center;flex-shrink:0;margin:0;}
   #overlay.ov-center{justify-content:center;padding:0;}
   #overlay.win-mode{
     background:transparent !important;
@@ -68,13 +68,13 @@
   }
   .ocard,.card{
     background:var(--cream);border:var(--stroke) solid var(--ink);border-radius:var(--radius-card);
-    padding:26px 36px;display:flex;flex-direction:column;align-items:center;gap:12px;
+    padding:16px 28px;display:flex;flex-direction:column;align-items:center;gap:10px;
     box-shadow:var(--shadow-2);
-    max-width:480px;width:94%;flex-shrink:0;
+    max-width:460px;width:94%;flex-shrink:0;
     margin:auto;
   }
-  #overlay h1{font-size:32px;color:var(--ink);font-family:var(--font-display);line-height:1.3;}
-  #overlay h2{font-size:22px;color:var(--ink);font-family:var(--font-display);}
+  #overlay h1{font-size:26px;color:var(--ink);font-family:var(--font-display);line-height:1.2;}
+  #overlay h2{font-size:18px;color:var(--ink);font-family:var(--font-display);}
   .sub{font-size:var(--fs-min);color:var(--ink-soft);line-height:1.8;letter-spacing:.2px;}
   .khint{
     font-size:var(--fs-min);color:var(--ink);line-height:2;
@@ -85,47 +85,52 @@
   .divider{width:100%;height:2px;background:var(--ink);opacity:.12;}
   .score-big{font-size:28px;color:var(--ink);font-family:var(--font-display);}
   /* ── BOTÃO PRIMÁRIO ── */
-  .btn,.btn-primary{height:56px;padding:0 32px;background:var(--sun);
+  .btn,.btn-primary{height:46px;padding:0 26px;background:var(--sun);
     border:var(--stroke-strong) solid var(--ink);border-radius:var(--radius-pill);
-    box-shadow:var(--shadow-3);font:700 var(--fs-btn-1) var(--font-display);
-    color:var(--ink);cursor:pointer;transition:transform var(--t-fast) var(--spring);}
+    box-shadow:var(--shadow-2);font:700 20px var(--font-display);
+    color:var(--ink);cursor:pointer;transition:transform var(--t-fast) var(--spring);
+    display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
   .btn:hover,.btn-primary:hover{transform:translateY(-3px) scale(1.03);}
   .btn:active,.btn-primary:active{transform:translateY(3px);}
   /* ── BOTÃO SECUNDÁRIO ── */
-  .btn.sec,.btn-secondary{height:44px;padding:0 22px;background:var(--white);
+  .btn.sec,.btn-secondary{height:38px;padding:0 18px;background:var(--white);
     border:var(--stroke) solid var(--ink);border-radius:var(--radius-pill);
-    box-shadow:var(--shadow-2);font:600 var(--fs-btn-2) var(--font-display);
-    color:var(--ink);cursor:pointer;transition:transform var(--t-fast) var(--spring);}
+    box-shadow:var(--shadow-1);font:600 15px var(--font-display);
+    color:var(--ink);cursor:pointer;transition:transform var(--t-fast) var(--spring);
+    display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
   .btn.sec:hover,.btn-secondary:hover{transform:translateY(-3px) scale(1.03);}
   .btn.sec:active,.btn-secondary:active{transform:translateY(3px);}
   .diff-row{display:flex;gap:8px;justify-content:center;margin-top:2px;flex-wrap:wrap;}
-  .diff-btn{padding:0 20px;height:44px;font:700 var(--fs-btn-2) var(--font-display);
+  .diff-btn{padding:0 16px;height:38px;font:700 15px var(--font-display);
     border-radius:var(--radius-pill);border:var(--stroke) solid var(--ink);cursor:pointer;
-    box-shadow:var(--shadow-1);transition:transform var(--t-fast) var(--spring);}
+    box-shadow:var(--shadow-1);transition:transform var(--t-fast) var(--spring);
+    display:inline-flex;align-items:center;justify-content:center;}
   .diff-btn:hover{transform:translateY(-2px);}
   .diff-btn.facil  {background:#7ED957;color:var(--ink);}
   .diff-btn.normal {background:var(--blue);color:var(--ink);}
   .diff-btn.dificil{background:var(--coral);color:var(--ink);}
   .diff-btn.active {outline:var(--stroke-strong) solid var(--ink);outline-offset:2px;}
   .lang-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
-  .lang-btn{min-width:110px;padding:0 16px;height:44px;font:700 var(--fs-btn-2) var(--font-display);
+  .lang-btn{min-width:100px;padding:0 14px;height:38px;font:700 15px var(--font-display);
     border-radius:var(--radius-pill);border:var(--stroke) solid var(--ink);cursor:pointer;
     background:var(--white);color:var(--ink);
-    box-shadow:var(--shadow-1);transition:transform var(--t-fast) var(--spring);}
+    box-shadow:var(--shadow-1);transition:transform var(--t-fast) var(--spring);
+    display:inline-flex;align-items:center;justify-content:center;}
   .lang-btn:hover{transform:translateY(-2px);}
   .credits{font-size:var(--fs-min);color:var(--ink-soft);letter-spacing:.2px;margin-top:4px;line-height:1.8;}
 
   /* ── CHARACTER SELECT ── */
   .char-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
   .char-card{
-    width:130px;border:2px solid rgba(78,205,196,.2);border-radius:14px;
-    background:rgba(20,30,55,.7);padding:14px 10px 10px;cursor:pointer;
+    width:130px;border:var(--stroke) solid var(--ink);border-radius:var(--radius-card);
+    background:var(--white);padding:14px 10px 10px;cursor:pointer;
     display:flex;flex-direction:column;align-items:center;gap:8px;
-    transition:border-color .2s,box-shadow .2s,transform .15s;
+    box-shadow:var(--shadow-1);
+    transition:box-shadow .2s,transform var(--t-fast) var(--spring);
   }
-  .char-card:hover{border-color:rgba(78,205,196,.6);transform:translateY(-3px);box-shadow:0 8px 30px rgba(78,205,196,.2);}
-  .char-card.selected{border-color:#4ecdc4;box-shadow:0 0 0 2px #4ecdc4,0 8px 30px rgba(78,205,196,.35);}
-  .char-card canvas{border-radius:8px;background:rgba(255,255,255,.04);}
+  .char-card:hover{transform:translateY(-3px);}
+  .char-card.selected{background:var(--sun);border-width:var(--stroke-strong);box-shadow:0 8px 0 var(--ink);transform:translateY(-4px);}
+  .char-card canvas{border-radius:8px;background:rgba(142,216,255,.2);}
   .char-name{font-size:var(--fs-min);color:var(--ink);letter-spacing:.2px;font-weight:800;}
   .char-desc{font-size:var(--fs-min);color:var(--ink-soft);letter-spacing:.1px;line-height:1.6;text-align:center;}
   .map-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;}
@@ -193,34 +198,34 @@
     <button class="mbtn" id="mbJump"  style="right:10px;bottom:52px;width:58px;height:54px">B</button>
   </div>
   <!-- Loading screen -->
-  <div id="loadingScreen" style="position:absolute;inset:0;z-index:99;background:#090d14;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#4ecdc4;font-family:'Press Start 2P',monospace;">
-    <div style="font-size:22px;margin-bottom:18px;">🦕 DinoGame</div>
-    <div style="width:200px;height:8px;background:rgba(78,205,196,.15);border-radius:8px;overflow:hidden;">
-      <div id="loadBar" style="width:0%;height:100%;background:linear-gradient(90deg,#4ecdc4,#ffe66d);border-radius:8px;transition:width .3s;"></div>
+  <div id="loadingScreen" style="position:absolute;inset:0;z-index:99;background:var(--sky);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink);font-family:var(--font-display);">
+    <div style="font-size:36px;font-weight:700;margin-bottom:18px;">DinoGame</div>
+    <div style="width:220px;height:16px;background:var(--white);border:3px solid var(--ink);border-radius:999px;overflow:hidden;">
+      <div id="loadBar" style="width:0%;height:100%;background:var(--sun);transition:width .3s;"></div>
     </div>
-    <div style="font-size:6px;color:#4a6070;margin-top:10px;">Carregando...</div>
+    <div style="font-size:14px;font-family:var(--font-ui);font-weight:800;margin-top:10px;">Carregando...</div>
   </div>
-  <div id="overlay" style="display:none;">
+</div>
+
+<div id="overlay" style="display:none;">
     <div class="ocard" id="menuCard">
-      <h1>🌎 DinoGame</h1>
+      <h1>DinoGame</h1>
       <div class="divider"></div>
       <h2>Escolha o idioma</h2>
       <p class="sub">Choose language · Elige idioma</p>
       <div class="lang-row">
-        <button class="lang-btn" onclick="setLanguage('pt')">🇧🇷<br>Português</button>
-        <button class="lang-btn" onclick="setLanguage('en')">🇺🇸<br>English</button>
-        <button class="lang-btn" onclick="setLanguage('es')">🇪🇸<br>Español</button>
+        <button class="lang-btn" onclick="setLanguage('pt')">Português</button>
+        <button class="lang-btn" onclick="setLanguage('en')">English</button>
+        <button class="lang-btn" onclick="setLanguage('es')">Español</button>
       </div>
       <p class="credits">Martin Coradi de Souza · 2026 · Co-autoria: Claude Code</p>
     </div>
   </div>
-</div>
-
 <script>
 // ─── RESPONSIVE SCALING ────────────────────────────────────────────────────────
 (function applyScale(){
   const CW=800,CH=450;
-  const SIZE=.72;
+  const SIZE=1.0;
   function resize(){
     const vw=window.innerWidth, vh=window.innerHeight;
     const s=Math.min(vw/CW, vh/CH) * SIZE;
@@ -237,8 +242,26 @@
       mob.classList.toggle('active',isTouch);
     }
   }
+  function fitOverlay(){
+    const ov=document.getElementById('overlay');
+    if(!ov||ov.classList.contains('win-mode'))return;
+    const vw=window.innerWidth, vh=window.innerHeight;
+    const base=Math.min(vw/CW, vh/CH);
+    [...ov.children].forEach(card=>{
+      card.style.transform='none';
+      const w=card.offsetWidth, h=card.offsetHeight;
+      if(!w||!h)return;
+      const s=Math.min(base, (vw*0.96)/w, (vh*0.96)/h);
+      card.style.transform='scale('+s+')';
+    });
+  }
+  window.fitOverlay=fitOverlay;
   resize();
-  window.addEventListener('resize',resize);
+  fitOverlay();
+  window.addEventListener('resize',()=>{resize();fitOverlay();});
+  new MutationObserver(()=>requestAnimationFrame(fitOverlay))
+    .observe(document.getElementById('overlay'),{childList:true,attributes:true,attributeFilter:['style','class']});
+  document.fonts&&document.fonts.ready.then(fitOverlay);
 })();
 
 // ─── CANVAS ───────────────────────────────────────────────────────────────────
@@ -312,7 +335,7 @@ const I18N = {
     controls2:'<b>← A</b> — Voltar &nbsp;·&nbsp; <b>→ D</b> — Avançar',
     controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fogo (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Clava (Caveman)',
     chooseCharacter:'Escolha seu personagem', agile:'Ágil · Pulo duplo', fire:'fogo', robust:'Robusto · Clava', attack:'atacar',
-    difficulty:'DIFICULDADE', easy:'🌿 FÁCIL', normal:'⚔ NORMAL', hard:'💀 DIFÍCIL',
+    difficulty:'DIFICULDADE', easy:'FÁCIL', normal:'NORMAL', hard:'DIFÍCIL',
     gameOver:'💀 Game Over', betterLuck:'Melhor sorte na próxima!', youDied:'☠ Você morreu!', livesLeft:'Vidas restantes',
     phaseComplete:p=>`✅ Fase ${p} Completa!`, timeBonus:(s,b)=>`Tempo restante: ${s}s · Bônus: +${b} pts`,
     paused:'PAUSADO', pauseHint:'Pressione P ou clique ⏸ para continuar',
@@ -350,7 +373,7 @@ const I18N = {
     controls2:'<b>← A</b> — Move left &nbsp;·&nbsp; <b>→ D</b> — Move right',
     controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fire (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Club (Caveman)',
     chooseCharacter:'Choose your character', agile:'Agile · Double jump', fire:'fire', robust:'Strong · Club', attack:'attack',
-    difficulty:'DIFFICULTY', easy:'🌿 EASY', normal:'⚔ NORMAL', hard:'💀 HARD',
+    difficulty:'DIFFICULTY', easy:'EASY', normal:'NORMAL', hard:'HARD',
     gameOver:'💀 Game Over', betterLuck:'Better luck next time!', youDied:'☠ You died!', livesLeft:'Lives left',
     phaseComplete:p=>`✅ Phase ${p} Complete!`, timeBonus:(s,b)=>`Time left: ${s}s · Bonus: +${b} pts`,
     paused:'PAUSED', pauseHint:'Press P or click ⏸ to continue',
@@ -388,7 +411,7 @@ const I18N = {
     controls2:'<b>← A</b> — Volver &nbsp;·&nbsp; <b>→ D</b> — Avanzar',
     controls3:'<b style="color:#fb923c">Z / X</b> — 🔥 Fuego (Dino) &nbsp;·&nbsp; <b style="color:#ffe66d">Z / X</b> — 🪓 Garrote (Caveman)',
     chooseCharacter:'Elige tu personaje', agile:'Ágil · Doble salto', fire:'fuego', robust:'Fuerte · Garrote', attack:'atacar',
-    difficulty:'DIFICULTAD', easy:'🌿 FÁCIL', normal:'⚔ NORMAL', hard:'💀 DIFÍCIL',
+    difficulty:'DIFICULTAD', easy:'FÁCIL', normal:'NORMAL', hard:'DIFÍCIL',
     gameOver:'💀 Game Over', betterLuck:'¡Mejor suerte la próxima!', youDied:'☠ ¡Has muerto!', livesLeft:'Vidas restantes',
     phaseComplete:p=>`✅ Fase ${p} Completa!`, timeBonus:(s,b)=>`Tiempo restante: ${s}s · Bono: +${b} pts`,
     paused:'PAUSADO', pauseHint:'Presiona P o haz clic en ⏸ para continuar',
@@ -506,18 +529,16 @@ function unlockAchievement(id){
 
 function renderDiary(){
   const ov = document.getElementById('overlay');
-  const themeIcons = ['🌿','🌋','❄️','✨'];
   const rows = phaseDiary.length ? phaseDiary.map(e=>`
-    <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:8px;padding:6px 10px;margin:3px 0;">
-      <span style="font-size:14px;">${themeIcons[(e.phase-1)%4]||'🦕'}</span>
+    <div style="display:flex;align-items:center;gap:10px;width:100%;background:var(--white);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;">
       <div style="flex:1;text-align:left;">
-        <div style="font-size:6px;color:#4ecdc4;">Fase ${e.phase}</div>
-        <div style="font-size:5px;color:#94a3b8;">${e.date} · ⏱ ${e.time}s · 💰 ${e.coins}</div>
+        <div style="font-size:15px;font-weight:900;color:var(--ink);">Fase ${e.phase}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft);">${e.date} · ${e.time}s · ${e.coins} moedas</div>
       </div>
-      <span style="font-size:9px;">${e.noDamage?'🛡️':''}</span>
+      <span style="font-size:12px;font-weight:800;color:var(--ink);">${e.noDamage?'Sem dano':''}</span>
     </div>`).join('') : '<p class="sub">Nenhuma fase completada ainda.</p>';
-  ov.innerHTML = `<div class="ocard" style="max-height:85vh;overflow-y:auto;">
-    <h2>📖 Diário do Explorador</h2>
+  ov.innerHTML = `<div class="ocard">
+    <h2>Diário do Explorador</h2>
     <div class="divider"></div>
     ${rows}
     <div class="divider"></div>
@@ -530,16 +551,16 @@ function renderAchievements(){
   const ov = document.getElementById('overlay');
   const rows = ACHIEVEMENTS.map(a=>{
     const got = unlockedAchievements.has(a.id);
-    return `<div style="display:flex;align-items:center;gap:8px;background:${got?'rgba(78,205,196,.1)':'rgba(255,255,255,.03)'};border:1px solid ${got?'rgba(78,205,196,.3)':'rgba(255,255,255,.07)'};border-radius:8px;padding:6px 10px;margin:3px 0;opacity:${got?1:.45};">
-      <span style="font-size:14px;">${a.icon}</span>
-      <div style="text-align:left;">
-        <div style="font-size:6px;color:${got?'#4ecdc4':'#94a3b8'};">${a.name}</div>
-        <div style="font-size:5px;color:#64748b;">${a.desc}</div>
+    return `<div style="display:flex;align-items:center;gap:10px;width:100%;background:${got?'var(--sun)':'var(--white)'};border:3px ${got?'solid':'dashed'} var(--ink);border-radius:14px;padding:8px 12px;opacity:${got?1:.7};">
+      <span style="font-size:20px;">${a.icon}</span>
+      <div style="text-align:left;flex:1;">
+        <div style="font-size:15px;font-weight:900;color:var(--ink);">${a.name}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft);">${a.desc}</div>
       </div>
-      ${got?'<span style="margin-left:auto;font-size:8px;">✅</span>':''}
+      ${got?'<span style="font-size:12px;font-weight:900;color:var(--ink);">Feita</span>':''}
     </div>`;
   }).join('');
-  ov.innerHTML = `<div class="ocard" style="max-height:85vh;overflow-y:auto;">
+  ov.innerHTML = `<div class="ocard">
     <h2>🏅 Conquistas</h2>
     <p class="sub">${unlockedAchievements.size}/${ACHIEVEMENTS.length} desbloqueadas</p>
     <div class="divider"></div>
@@ -1181,14 +1202,14 @@ function showLanguageSelect(){
   ov.classList.remove('win-mode');
   ov.style.display = 'flex';
   ov.innerHTML = `<div class="ocard" id="menuCard">
-    <h1>🌎 DinoGame</h1>
+    <h1>DinoGame</h1>
     <div class="divider"></div>
     <h2>Escolha o idioma</h2>
     <p class="sub">Choose language · Elige idioma</p>
     <div class="lang-row">
-      <button class="lang-btn" onclick="setLanguage('pt')">🇧🇷<br>Português</button>
-      <button class="lang-btn" onclick="setLanguage('en')">🇺🇸<br>English</button>
-      <button class="lang-btn" onclick="setLanguage('es')">🇪🇸<br>Español</button>
+      <button class="lang-btn" onclick="setLanguage('pt')">Português</button>
+      <button class="lang-btn" onclick="setLanguage('en')">English</button>
+      <button class="lang-btn" onclick="setLanguage('es')">Español</button>
     </div>
     <p class="credits">${tr('creditsText')}</p>
   </div>`;
@@ -1346,7 +1367,7 @@ function startOnlineChallenge(cfg){
 function showLeaderboard(){
   const ov = document.getElementById('overlay');
   let lb = JSON.parse(localStorage.getItem('dinogame_leaderboard') || '[]');
-  let html = lb.length ? lb.map((entry, i) => `<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px;font-size:9px;color:#c8dde8;"><span>${i+1}. ${entry.name||'???'} — ${entry.score} pts</span><span style="color:#4a6070;font-size:6px;">${entry.mode || 'Normal'} · Fase ${entry.phase} · ${entry.date}</span></div>`).join('') : '<p class="sub">Nenhum recorde ainda.</p>';
+  let html = lb.length ? lb.map((entry, i) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:var(--white);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;font-size:15px;font-weight:900;color:var(--ink);"><span>${i+1}. ${entry.name||'???'} — ${entry.score} pts</span><span style="color:var(--ink-soft);font-size:12px;font-weight:700;">${entry.mode || 'Normal'} · Fase ${entry.phase} · ${entry.date}</span></div>`).join('') : '<p class="sub">Nenhum recorde ainda.</p>';
   ov.innerHTML = `<div class="ocard">
     <h2>🏆 Recordes</h2>
     <div class="divider"></div>
@@ -1374,12 +1395,12 @@ function showCharSelect(){
       <div class="char-card selected" id="cc-dino" onclick="selectChar('dino')">
         <canvas id="prev-dino" width="90" height="90"></canvas>
         <span class="char-name">DINOSSAURO</span>
-        <span class="char-desc">${tr('agile')}<br><b style="color:#fb923c">Z/X</b> = ${tr('fire')} 🔥</span>
+        <span class="char-desc">${tr('agile')}<br><b>Z/X</b> = ${tr('fire')}</span>
       </div>
       <div class="char-card" id="cc-caveman" onclick="selectChar('caveman')">
         <canvas id="prev-caveman" width="90" height="90"></canvas>
         <span class="char-name">CAVEMAN</span>
-        <span class="char-desc">${tr('robust')}<br><b style="color:#ffe66d">Z/X</b> = ${tr('attack')}</span>
+        <span class="char-desc">${tr('robust')}<br><b>Z/X</b> = ${tr('attack')}</span>
       </div>
     </div>
     <div class="divider"></div>
@@ -1453,17 +1474,17 @@ function renderWorldMap(){
     const completed = p < phase;
     let style='', icon='', sub='';
     if(locked){
-      style='opacity:.28;cursor:not-allowed;border-color:rgba(80,80,100,.25);filter:grayscale(.8);';
-      icon='🔒'; sub=tr('locked');
+      style='background:#EDEBF5;border-style:dashed;box-shadow:none;cursor:not-allowed;color:var(--ink-soft);';
+      icon=''; sub=tr('locked');
     } else if(isCurrent){
-      style='border-color:#ffe66d;box-shadow:0 0 0 2px rgba(255,230,109,.5),0 8px 24px rgba(255,230,109,.18);background:rgba(28,22,6,.88);';
-      icon='▶'; sub=`<span style="color:#ffe66d;font-size:5px">VOCÊ ESTÁ AQUI</span>`;
+      style='background:var(--sun);border-width:4px;box-shadow:var(--shadow-2);';
+      icon=''; sub=`<span style="font-weight:900">VOCÊ ESTÁ AQUI</span>`;
     } else {
-      style='border-color:rgba(74,222,128,.35);';
-      icon='✅'; sub=name;
+      style='background:#E8F9DF;';
+      icon=''; sub=name;
     }
     return `<button class="map-node" style="${style}" ${locked?'disabled':'onclick="launchPhase('+p+')"'}>`+
-      `<b>${icon} ${tr('phaseHud')} ${p}</b><br>${sub}</button>`;
+      `<b style="font-size:15px">${tr('phaseHud')} ${p}</b><br>${sub}</button>`;
   }).join('');
   ov.innerHTML = `<div class="ocard">
     <h2>${isSecretPhase ? 'Fase Secreta' : tr('worldMap')}</h2>
@@ -1615,11 +1636,11 @@ function renderWardrobe(){
     <div style="display:flex;gap:5px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
         <canvas id="preview-full-dino" width="58" height="48" style="border-radius:6px;background:rgba(78,205,196,.08);border:1px solid rgba(78,205,196,.2);"></canvas>
-        <span style="font-size:4px;color:#4ecdc4;">Preview</span>
+        <span style="font-size:12px;font-weight:800;color:var(--ink);">Preview</span>
       </div>
       <div style="flex:1;min-width:130px;">
         <div class="wardrobe-row">${skinCards('dino')}</div>
-        <p class="sub" style="margin:2px 0 1px;">Acessórios <span style="color:#94a3b8;font-size:4px;">(máx. 5)</span></p>
+        <p class="sub" style="margin:2px 0 1px;">Acessórios <span style="color:var(--ink-soft);font-size:12px;">(máx. 5)</span></p>
         <div class="wardrobe-row">${accessoryCards('dino')}</div>
       </div>
     </div>
@@ -1629,11 +1650,11 @@ function renderWardrobe(){
     <div style="display:flex;gap:5px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
         <canvas id="preview-full-caveman" width="58" height="48" style="border-radius:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);"></canvas>
-        <span style="font-size:4px;color:#fbbf24;">Preview</span>
+        <span style="font-size:12px;font-weight:800;color:var(--ink);">Preview</span>
       </div>
       <div style="flex:1;min-width:130px;">
         <div class="wardrobe-row">${skinCards('caveman')}</div>
-        <p class="sub" style="margin:2px 0 1px;">Acessórios <span style="color:#94a3b8;font-size:4px;">(máx. 5)</span></p>
+        <p class="sub" style="margin:2px 0 1px;">Acessórios <span style="color:var(--ink-soft);font-size:12px;">(máx. 5)</span></p>
         <div class="wardrobe-row">${accessoryCards('caveman')}</div>
       </div>
     </div>
@@ -1880,7 +1901,7 @@ function showOverlay(type){
     saveScore();
     const isNewRecord = score > 0 && score >= currentHighScore;
     const recordLine = isNewRecord
-      ? `<p class="sub" style="color:#ffe66d;font-size:8px">🏆 Novo recorde!</p>`
+      ? `<p class="sub" style="color:var(--ink);font-size:16px;font-weight:900">Novo recorde!</p>`
       : (currentHighScore > 0 ? `<p class="sub" style="color:#4a6070">Recorde: ${currentHighScore} pts</p>` : '');
     ov.innerHTML=card(`<h2>${tr('gameOver')}</h2><div class="divider"></div>
       <p class="sub">${tr('betterLuck')}</p>
@@ -4753,7 +4774,7 @@ function renderPhaseCreator(){
     <p class="sub" style="color:#a855f7">Desbloqueado com 700 moedas!</p>
     <div class="divider"></div>
     <p class="sub">Construa sua fase no editor visual.<br>Ande pelo cenário e coloque blocos para criar plataformas.</p>
-    <div class="khint" style="font-size:6px;line-height:2.2;">
+    <div class="khint">
       <b>B</b> = Colocar bloco &nbsp;·&nbsp; <b>CLIQUE</b> = Colocar bloco<br>
       <b>DEL</b> = Desfazer último &nbsp;·&nbsp; <b>ENTER</b> = Concluir e jogar
     </div>
