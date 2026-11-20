@@ -1393,6 +1393,7 @@ const ICONS={
   play:'M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z',
   city:'M3 21h18M5 21V9l5-3v15M14 21V4l5 3v14',
   work:'M4 8h16v11H4zM9 8V5h6v3M4 13h16',
+  plus:'M12 5v14M5 12h14',
   walk:'M13 4a2 2 0 1 1 0 .01M10 21l2-6 3 3v3M8 12l3-3 3 2 3 1M12 15l-1-6',
   lock:'M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3',
   user:'M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21c1-4 4-6 8-6s7 2 8 6',
@@ -1426,8 +1427,7 @@ function renderMainMenu(){
     {label:'Online',     bg:'#5BC0FF', d:ICONS.globe,  fn:'renderOnlineLocal()'},
     {label:'Recordes',   bg:'#FFD23F', d:ICONS.trophy, fn:'showLeaderboard()'},
     {label:'Conquistas', bg:'#FF9F6B', d:ICONS.star,   fn:'renderAchievements()', badge:unlockedAchievements.size},
-    {label:'Diário',     bg:'#B18CFF', d:ICONS.book,   fn:'renderDiary()'},
-    {label:'Trabalho',   bg:'#7ED957', d:ICONS.work,   fn:'renderCareer()'}
+    {label:'Diário',     bg:'#B18CFF', d:ICONS.book,   fn:'renderDiary()'}
   ].map(s=>`<button class="ico" onclick="${s.fn}"><span class="ico-box" style="background:${s.bg}">${svgIcon(s.d,26)}${s.badge?`<span class="badge">${s.badge}</span>`:''}</span><span class="ico-lbl">${s.label}</span></button>`).join('');
   ov.innerHTML = `<div class="scene" id="menuCard">
     <svg class="scene-bg" viewBox="0 0 800 450" aria-hidden="true">
@@ -1450,13 +1450,14 @@ function renderMainMenu(){
     <div class="logo"><span style="color:var(--grass)">Dino</span><span style="color:var(--sun);margin-left:44px">Game</span></div>
     <div class="menu-col">
       <button class="btn" onclick="showCharSelect()">${svgIcon(ICONS.play,26,true)}${tr('play')}</button>
-      <div style="display:flex;gap:10px">
-        <button class="btn sec" style="flex:1;font-size:17px;padding:0 8px" onclick="startFreeRoam()">${svgIcon(ICONS.city,18)}Jogo Livre</button>
-        <button class="btn sec" style="flex:1;font-size:17px;padding:0 8px" onclick="startPasseio()">${svgIcon(ICONS.walk,18)}Passeio</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn sec" style="font-size:17px;padding:0 8px" onclick="startFreeRoam()">${svgIcon(ICONS.city,18)}Jogo Livre</button>
+        <button class="btn sec" style="font-size:17px;padding:0 8px" onclick="startPasseio()">${svgIcon(ICONS.walk,18)}Passeio</button>
+        <button class="btn sec" style="font-size:17px;padding:0 8px" onclick="renderCareer()">${svgIcon(ICONS.work,18)}Trabalho</button>
+        ${canCreate
+          ? `<button class="btn sec" style="font-size:17px;padding:0 8px" onclick="renderPhaseCreator()">${svgIcon(ICONS.plus,18)}Criar Fase</button>`
+          : `<button class="btn-locked" disabled style="height:52px;flex-direction:column;gap:0;line-height:1.15;font-size:13px"><span style="display:inline-flex;align-items:center;gap:4px">${svgIcon(ICONS.lock,14)}Criar Fase</span><span>700 moedas</span></button>`}
       </div>
-      ${canCreate
-        ? `<button class="btn sec" onclick="renderPhaseCreator()">Criar Fase</button>`
-        : `<button class="btn-locked" disabled>${svgIcon(ICONS.lock,18)}Criar Fase · 700 moedas</button>`}
     </div>
     <div class="shortcuts">${shortcuts}</div>
   </div>`;
