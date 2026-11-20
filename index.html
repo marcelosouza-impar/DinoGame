@@ -5474,6 +5474,7 @@ const FR_MAP=[
   [9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],
 ];
 const FR_BLDG={
+  10:{c:'#FFE0F0',d:'#FF8FC7',t:'#D94848',fl:2,house:true},
   3:{c:'#A7DEFF',d:'#5BC0FF',t:'#2F8FD0',fl:5},
   4:{c:'#FFB3B3',d:'#FF6B6B',t:'#D94848',fl:3},
   5:{c:'#C3F0A0',d:'#7ED957',t:'#4DB85C',fl:4},
@@ -5516,16 +5517,43 @@ function placeName(p){
   const tx=Math.floor(p.x), ty=Math.floor(p.y);
   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
     const t=(FR_MAP[ty+dy]||[])[tx+dx];
+    if(t===10) return 'na sua casa';
     if(BLDG_NAMES[t]) return 'no prédio '+BLDG_NAMES[t];
   }
   return 'na calçada';
 }
-function loadCareer(){ try{ return Object.assign({earned:0,taxiRides:0,trainStops:0,fires:0}, JSON.parse(localStorage.getItem('dinogame_career')||'{}')); }catch(e){ return {earned:0,taxiRides:0,trainStops:0,fires:0}; } }
+const CAREER_DEFAULT={earned:0,taxiRides:0,trainStops:0,fires:0,house:false,colors:{taxi:'#FFD23F',train:'#FF6B6B',fire:'#FF6B6B'},owned:[]};
+function loadCareer(){ try{ const c=Object.assign(JSON.parse(JSON.stringify(CAREER_DEFAULT)), JSON.parse(localStorage.getItem('dinogame_career')||'{}')); c.colors=Object.assign({},CAREER_DEFAULT.colors,c.colors||{}); c.owned=c.owned||[]; return c; }catch(e){ return JSON.parse(JSON.stringify(CAREER_DEFAULT)); } }
+function saveCareer(c){ localStorage.setItem('dinogame_career',JSON.stringify(c)); }
+const GARAGE_COLORS={
+  taxi:[['#FFD23F','Amarelo'],['#FF8FC7','Rosa'],['#5BC0FF','Azul'],['#7ED957','Verde']],
+  train:[['#FF6B6B','Vermelho'],['#5BC0FF','Azul'],['#B18CFF','Roxo'],['#7ED957','Verde']],
+  fire:[['#FF6B6B','Vermelho'],['#FFD23F','Amarelo'],['#FF9F6B','Laranja'],['#B18CFF','Roxo']]
+};
+const HOUSE_SPOT={tx:10,ty:7};
+function buyHouse(){
+  const c=loadCareer(); if(c.house) return;
+  if(totalCoins<300){ alert(tr('notEnough')); return; }
+  totalCoins-=300; saveProgress(); c.house=true; saveCareer(c); renderCareer();
+}
+function pickGarageColor(kind,color){
+  const c=loadCareer(); const id=kind+color;
+  const isDefault=GARAGE_COLORS[kind][0][0]===color;
+  if(!isDefault && !c.owned.includes(id)){
+    if(totalCoins<40){ alert(tr('notEnough')); return; }
+    totalCoins-=40; saveProgress(); c.owned.push(id);
+  }
+  c.colors[kind]=color; saveCareer(c); renderCareer();
+}
+function applyHouse(){
+  const c=loadCareer();
+  FR_MAP[HOUSE_SPOT.ty][HOUSE_SPOT.tx] = c.house ? 10 : 2;
+}
 function jobPay(n,label){
   totalCoins+=n; frJob.earned+=n; saveProgress();
   const c=loadCareer(); c.earned+=n;
   if(frJob.type==='taxi') c.taxiRides++; else if(frJob.type==='fire') c.fires++; else c.trainStops++;
-  localStorage.setItem('dinogame_career',JSON.stringify(c));
+  saveCareer(c);
   frJob.msg={text:`${label} +${n} moedas`, until:performance.now()+2200, good:true};
 }
 function jobMsg(text,good){ frJob.msg={text,until:performance.now()+2000,good}; }
@@ -5567,6 +5595,23 @@ function renderCareer(){
         Quando tocar o alarme, corra com o caminhão e apague o fogo do prédio.
       </button>
     </div>
+    <div class="divider"></div>
+    <p class="sub" style="font-weight:900;color:var(--ink)">Casa e garagem · você tem ${coinTag(totalCoins)}</p>
+    <div class="row-card">
+      <div style="flex:1"><div style="font-size:15px;font-weight:900">Sua casa na cidade</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft)">Uma casa rosa com placa, ao lado dos trilhos</div></div>
+      ${c.house ? checkTag('Comprada') : `<button class="btn sec" style="height:36px;font-size:14px;padding:0 14px;background:var(--sun)" onclick="buyHouse()">Comprar · 300</button>`}
+    </div>
+    ${['taxi','train','fire'].map(kind=>`<div class="row-card">
+      <div style="width:90px;font-size:14px;font-weight:900">${{taxi:'Táxi',train:'Trem',fire:'Caminhão'}[kind]}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">
+        ${GARAGE_COLORS[kind].map(([col,name],i)=>{
+          const sel=c.colors[kind]===col, owned=i===0||c.owned.includes(kind+col);
+          return `<button onclick="pickGarageColor('${kind}','${col}')" title="${name}" style="display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 4px;border:3px solid var(--ink);border-radius:999px;background:${sel?'var(--sun)':'var(--white)'};font:900 12px var(--font-ui);color:var(--ink);cursor:pointer">
+            <span style="width:22px;height:22px;border-radius:50%;background:${col};border:2px solid var(--ink)"></span>${name}${owned?'':' · 40'}</button>`;
+        }).join('')}
+      </div>
+    </div>`).join('')}
     <button class="btn sec" onclick="renderMainMenu()">← Voltar</button>
   </div>`;
   ov.style.display='flex';
@@ -5574,19 +5619,19 @@ function renderCareer(){
 function startJob(type){
   startFreeRoam();
   if(type==='taxi'){
-    const taxi={tx:14.5,ty:3.0,color:'#FFD23F',occupied:true,facing:0,taxi:true};
+    const taxi={tx:14.5,ty:3.0,color:loadCareer().colors.taxi,occupied:true,facing:0,taxi:true};
     frCars.push(taxi); frDriving=taxi;
     frPlayer.tx=taxi.tx; frPlayer.ty=taxi.ty; frPlayer.facing=0;
     frJob={type:'taxi',earned:0,frames:0,stage:'free',offerAt:240,offerUntil:0,pass:null,dest:null,start:0,msg:null};
     jobMsg('Bom trabalho, taxista!',true);
   } else if(type==='fire'){
-    const truck={tx:14.5,ty:3.0,color:'#FF6B6B',occupied:true,facing:0,truck:true};
+    const truck={tx:14.5,ty:3.0,color:loadCareer().colors.fire,occupied:true,facing:0,truck:true};
     frCars.push(truck); frDriving=truck;
     frPlayer.tx=truck.tx; frPlayer.ty=truck.ty; frPlayer.facing=0;
     frJob={type:'fire',earned:0,frames:0,stage:'free',alarmAt:300,fire:null,spraying:false,msg:null};
     jobMsg('Bom trabalho, bombeiro!',true);
   } else {
-    frJob={type:'train',earned:0,frames:0,train:{x:1.2,dir:1,speed:0},boarding:0,riders:[],waiting:{},refill:{},lastStop:null,msg:null};
+    frJob={type:'train',trainColor:loadCareer().colors.train,earned:0,frames:0,train:{x:1.2,dir:1,speed:0},boarding:0,riders:[],waiting:{},refill:{},lastStop:null,msg:null};
     frPlayer.tx=1.2; frPlayer.ty=TRAIN_Y; frPlayer.facing=0;
     jobMsg('W acelera, S freia, A/D vira o trem',true);
   }
@@ -5716,6 +5761,7 @@ function startFreeRoam(){
   stopMenuAnimation();
   frJob = null;
   frClock = 0; frWeather = {rain:false, next:1800+Math.floor(Math.random()*1800)};
+  applyHouse();
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('overlay').style.display='none';
   frPlayer={tx:14.5,ty:3.0,vx:0,vy:0,frame:0,frameT:0,facing:Math.PI/2};
@@ -5942,6 +5988,16 @@ function drawFreeRoam(){
         ctx.strokeStyle=INK; ctx.lineWidth=lw(pat); ctx.stroke();
         if(fog>.02){ctx.fillStyle=`rgba(${SKY},${fog})`;quad([pat,pbt,pct,pdt]);ctx.fill();}
       }
+      if(b.house && pat && dist<120){
+        const sp=proj(tx+.5,ty+.5,wh+0.35);
+        if(sp){
+          const label = playerName ? `Casa de ${playerName}` : 'Sua casa';
+          hudFont(900,Math.max(12,Math.min(16,sp.sc*.045)));
+          const tw=ctx.measureText(label).width+20, th=24;
+          ctx.fillStyle='#FFFFFF'; ctx.strokeStyle=INK; ctx.lineWidth=2.5; roundRect(ctx,sp.x-tw/2,sp.y-th,tw,th,12,true,true);
+          ctx.fillStyle=INK; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(label,sp.x,sp.y-th/2+1);
+        }
+      }
       const fireHere = frJob && frJob.type==='fire' && frJob.fire && frJob.fire.tx===tx && frJob.fire.ty===ty;
       if(fireHere){
         const lv=frJob.fire.level/100, T=performance.now()/1000;
@@ -6122,7 +6178,7 @@ function drawFreeRoam(){
   if(frJob && frJob.type==='train'){
     const bx=W/2-115, by=H-150;
     ctx.fillStyle=INK; roundRect(ctx,bx,by+6,230,170,36,true,false);
-    ctx.fillStyle='#FF6B6B'; ctx.strokeStyle=INK; ctx.lineWidth=4; roundRect(ctx,bx,by,230,170,36,true,true);
+    ctx.fillStyle=frJob.trainColor||'#FF6B6B'; ctx.strokeStyle=INK; ctx.lineWidth=4; roundRect(ctx,bx,by,230,170,36,true,true);
     ctx.fillStyle='#D6F1FF'; roundRect(ctx,bx+28,by+18,174,62,18,true,true);
     ctx.save(); ctx.beginPath(); ctx.rect(bx+30,by+20,170,58); ctx.clip();
     drawDinoOn(ctx,W/2-28,by+96,frPlayer.frame,false,0.5);
